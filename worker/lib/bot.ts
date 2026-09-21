@@ -100,6 +100,30 @@ export async function ensureTelegramWebhook(env:Env,origin?:string){
  return {ok:true,url,bot:`@${me.username||''}`,webhook:info};
 }
 
+
+export async function repairTelegramBot(env:Env,origin:string){
+ if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN missing');
+ const base=appUrl(env,origin);
+ if(!base)throw new Error('Worker origin missing');
+ const me=await tgApi(env,'getMe',{});
+ // Reset any stale/incorrect webhook first, while preserving queued updates.
+ await tgApi(env,'deleteWebhook',{drop_pending_updates:false});
+ const webhookUrl=base+'/api/telegram/webhook';
+ const body:any={url:webhookUrl,allowed_updates:['message','callback_query'],drop_pending_updates:false};
+ const secret=telegramWebhookSecret(env);
+ if(secret)body.secret_token=secret;
+ await tgApi(env,'setWebhook',body);
+ await tgApi(env,'setMyCommands',{commands:[
+  {command:'start',description:'Open Chameleon Detailing'},
+  {command:'help',description:'Help'}
+ ]});
+ await tgApi(env,'setChatMenuButton',{menu_button:{type:'web_app',text:copy.en.menu,web_app:{url:base}}});
+ const info=await tgApi(env,'getWebhookInfo',{});
+ const expected=webhookUrl;
+ const actual=String(info?.url||'');
+ return {ok:actual===expected,bot:`@${me.username||''}`,botId:me.id,workerOrigin:base,expectedWebhook:expected,actualWebhook:actual,hasCustomSecret:!!secret,pendingUpdateCount:Number(info?.pending_update_count||0),lastErrorDate:info?.last_error_date||null,lastErrorMessage:info?.last_error_message||null,webhook:info,testBotUrl:`https://t.me/${me.username||'ChameleonDetailing_bot'}?start=webfix`};
+}
+
 export async function telegramBotHealth(env:Env){
  if(!env.BOT_TOKEN)return {ok:false,botConfigured:false,reason:'BOT_TOKEN missing'};
  try{

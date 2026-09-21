@@ -2,7 +2,7 @@
 
 Production-oriented Telegram Mini App + Cloudflare Worker for **@ChameleonDetailing_bot**.
 
-Version **1.1.2** — architecture v1.4, Telegram bot self-healing webhook, and corrected UA/PL/EN service localization.
+Version **1.1.3** — architecture v1.4, Telegram bot self-healing webhook, and corrected UA/PL/EN service localization.
 
 ## Names
 
@@ -102,3 +102,11 @@ The runtime also creates the minimum core schema defensively and UPSERTs canonic
 - `/__version` — deployed version
 - `/api/system/status` — Worker/DB/bot configuration flags
 - `/api/telegram/health` — Telegram bot + current webhook status
+
+
+### Emergency Telegram bot repair URL
+
+Set `TELEGRAM_SETUP_KEY` in Cloudflare, then open:
+`https://<worker-domain>/telegram/fix?key=<TELEGRAM_SETUP_KEY>`
+
+This browser page resets and re-registers the Telegram webhook against the exact Worker origin and prints Telegram diagnostics.

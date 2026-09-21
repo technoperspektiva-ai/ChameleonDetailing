@@ -3,11 +3,13 @@ import {validateInitData} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getSetting,upsertUser} from './lib/db';
 import {quote} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
-import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret} from './lib/bot';
+import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.2';
+const VERSION='1.1.3';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
+const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
+const html=(body:string,status=200)=>new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chameleon Detailing Bot Fix</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#071008;color:#f5fff1;margin:0;padding:24px}main{max-width:760px;margin:0 auto}h1{color:#98ff00}pre{white-space:pre-wrap;word-break:break-word;background:#0e1a10;border:1px solid #28452d;border-radius:16px;padding:16px}.ok{color:#98ff00}.bad{color:#ff9e9e}a{color:#98ff00}code{background:#132016;padding:2px 6px;border-radius:6px}</style></head><body><main>${body}</main></body></html>`,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 let webhookCheckedAt=0;
 
 async function auth(env:Env,initData:string){
@@ -41,6 +43,20 @@ export default {
     ctx.waitUntil(selfHealWebhook(env,url.origin));
    }
    if(url.pathname==='/__version')return json({app:'ChameleonDetailing',version:VERSION,database:'chameleondetailing',worker:true});
+   if(url.pathname==='/telegram/health'&&request.method==='GET'){
+    const health=await telegramBotHealth(env);
+    const cls=health.ok?'ok':'bad';
+    return html(`<h1>Telegram bot health</h1><p class="${cls}">${health.ok?'Bot API reachable':'Bot API problem'}</p><pre>${escapeHtml(JSON.stringify(health,null,2))}</pre><p>Fix URL: <code>/telegram/fix?key=YOUR_TELEGRAM_SETUP_KEY</code></p>`,health.ok?200:503);
+   }
+   if(url.pathname==='/telegram/fix'&&request.method==='GET'){
+    const supplied=url.searchParams.get('key')||'';
+    const expected=String(env.TELEGRAM_SETUP_KEY||'');
+    if(!expected)return html('<h1>Setup key missing</h1><p>Add Cloudflare variable <code>TELEGRAM_SETUP_KEY</code>, redeploy, then open this link again.</p>',503);
+    if(!supplied||supplied!==expected)return html('<h1>Unauthorized</h1><p>Open <code>/telegram/fix?key=YOUR_TELEGRAM_SETUP_KEY</code>.</p>',401);
+    const result=await repairTelegramBot(env,url.origin);
+    const cls=result.ok?'ok':'bad';
+    return html(`<h1>Chameleon Detailing — Bot Fix</h1><p class="${cls}">${result.ok?'✅ Webhook repaired successfully':'❌ Webhook is still not correct'}</p><pre>${escapeHtml(JSON.stringify(result,null,2))}</pre><p><a href="${escapeHtml(result.testBotUrl)}">Open @ChameleonDetailing_bot and test /start</a></p><p>After it works, rotate or remove <code>TELEGRAM_SETUP_KEY</code>.</p>`,result.ok?200:500);
+   }
    if(url.pathname==='/api/system/status'){
     ctx.waitUntil(selfHealWebhook(env,url.origin));
     const maintenance=(await getSetting(env,'maintenance.enabled','0'))==='1';
