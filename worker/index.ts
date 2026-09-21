@@ -5,7 +5,7 @@ import {quote} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.9';
+const VERSION='1.1.8';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -136,19 +136,6 @@ export default {
    if(url.pathname==='/api/services'){
     const locale=url.searchParams.get('locale')||'en';
     return json({services:await getServices(env,locale)});
-   }
-   if(url.pathname==='/api/referrals/create'&&request.method==='POST'){
-    const b=await read(request),u=await auth(env,b.initData||'');
-    if(u.demo)return json({ok:true,code:'DEMO',url:`https://t.me/${String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'')}?start=ref_DEMO`});
-    if(!env.DB)return json({error:'Referral storage is not configured.'},503);
-    await ensureDb(env);
-    const enabled=(await getSetting(env,'referral_enabled','1'))==='1';
-    if(!enabled)return json({error:'Referral program is currently disabled.'},409);
-    const code='R'+crypto.randomUUID().replace(/-/g,'').slice(0,10).toUpperCase();
-    await env.DB!.prepare('INSERT INTO referrals(referrer_user_id,code) VALUES(?,?)').bind(u.id,code).run();
-    await event(env,u.id,'referral_link_created',{code});
-    const bot=String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'');
-    return json({ok:true,code,url:`https://t.me/${bot}?start=ref_${code}`});
    }
    if(url.pathname==='/api/calculator/quote'&&request.method==='POST'){
     const b=await read(request),u=await auth(env,b.initData||'');const state=await sessionState(env,u);
