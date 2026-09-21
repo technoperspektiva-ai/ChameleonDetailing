@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS feature_flags(key TEXT PRIMARY KEY,enabled INTEGER NO
 CREATE TABLE IF NOT EXISTS social_links(id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL UNIQUE,url TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS schedule_exceptions(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL UNIQUE,is_closed INTEGER NOT NULL DEFAULT 1,open_time TEXT,close_time TEXT,note TEXT,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS business_weekly_schedule(day_of_week INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,open_time TEXT NOT NULL DEFAULT '09:00',close_time TEXT NOT NULL DEFAULT '18:00',updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS bot_state(user_id INTEGER PRIMARY KEY,state TEXT,payload_json TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_user_id INTEGER,action TEXT NOT NULL,entity_type TEXT,entity_id TEXT,old_data_json TEXT,new_data_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS staff_invites_v2(token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
@@ -57,6 +58,7 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1");
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_by INTEGER");
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN client_deleted_at TEXT");
  await seed(env);
  ready=true;
  return true;
@@ -81,6 +83,13 @@ async function seed(env:Env){
  await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone','')").run().catch(()=>{});
  const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.description','contact.description'];
  for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
+ const weeklyCount=await env.DB.prepare('SELECT COUNT(*) n FROM business_weekly_schedule').first<any>();
+ if(!Number(weeklyCount?.n||0)){
+  const oldDays=String((await env.DB.prepare("SELECT value FROM settings WHERE key='working_days'").first<any>())?.value||'1,2,3,4,5').split(',').map((x:string)=>Number(x.trim())).filter((x:number)=>x>=1&&x<=7);
+  const oldHours=String((await env.DB.prepare("SELECT value FROM settings WHERE key='working_hours'").first<any>())?.value||'09:00-18:00');
+  const [openTime,closeTime]=oldHours.split('-');
+  for(let d=1;d<=7;d++)await env.DB.prepare('INSERT INTO business_weekly_schedule(day_of_week,enabled,open_time,close_time) VALUES(?,?,?,?)').bind(d,oldDays.includes(d)?1:0,openTime||'09:00',closeTime||'18:00').run();
+ }
  const referralCopy={
   uk:{'referral.title':'Запроси друга в Chameleon','referral.subtitle':'Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.','referral.share_text':'Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'},
   pl:{'referral.title':'Zaproś znajomego do Chameleon','referral.subtitle':'Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.','referral.share_text':'Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'},

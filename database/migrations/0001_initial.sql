@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS service_requests (
   service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,
   base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,
   emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,confirmed_by INTEGER,started_at TEXT,started_by INTEGER,
-  rejected_at TEXT,rejected_by INTEGER,rejection_reason TEXT,completed_at TEXT,completed_by INTEGER,payment_status TEXT NOT NULL DEFAULT 'PENDING',first_paid_job_for_user INTEGER NOT NULL DEFAULT 0,is_repeat_customer INTEGER NOT NULL DEFAULT 0,referral_id INTEGER,metadata_json TEXT
+  rejected_at TEXT,rejected_by INTEGER,rejection_reason TEXT,completed_at TEXT,completed_by INTEGER,payment_status TEXT NOT NULL DEFAULT 'PENDING',client_deleted_at TEXT,first_paid_job_for_user INTEGER NOT NULL DEFAULT 0,is_repeat_customer INTEGER NOT NULL DEFAULT 0,referral_id INTEGER,metadata_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_requests_user_created ON service_requests(user_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON service_requests(status);
@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS content_blocks (key TEXT NOT NULL,locale TEXT NOT NUL
 CREATE TABLE IF NOT EXISTS feature_flags (key TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,config_json TEXT);
 CREATE TABLE IF NOT EXISTS social_links (id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL UNIQUE,url TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_by INTEGER,updated_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS schedule_exceptions (id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL UNIQUE,is_closed INTEGER NOT NULL DEFAULT 1,open_time TEXT,close_time TEXT,note TEXT,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS business_weekly_schedule(day_of_week INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,open_time TEXT NOT NULL DEFAULT '09:00',close_time TEXT NOT NULL DEFAULT '18:00',updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS fx_rates (base_currency TEXT PRIMARY KEY,usd_rate REAL,uah_rate REAL,pln_rate REAL,provider TEXT,fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS bot_state (user_id INTEGER PRIMARY KEY,state TEXT,payload_json TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -163,3 +164,6 @@ INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES
 ('referral.title','en','Invite a friend to Chameleon'),
 ('referral.subtitle','en','Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.'),
 ('referral.share_text','en','I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.');
+
+INSERT OR IGNORE INTO business_weekly_schedule(day_of_week,enabled,open_time,close_time) VALUES
+ (1,1,'09:00','18:00'),(2,1,'09:00','18:00'),(3,1,'09:00','18:00'),(4,1,'09:00','18:00'),(5,1,'09:00','18:00'),(6,0,'10:00','16:00'),(7,0,'10:00','16:00');

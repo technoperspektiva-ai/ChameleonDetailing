@@ -5,7 +5,7 @@ import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.12';
+const VERSION='1.1.13';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -193,7 +193,16 @@ export default {
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }
    if(url.pathname==='/api/orders'){
-    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();return json({orders:r.results});
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();return json({orders:r.results});
+   }
+
+   const deleteOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
+   if(deleteOrderMatch&&request.method==='DELETE'){
+    const b=await read(request),u=await auth(env,b.initData||'');if(u.demo)return json({ok:true});await ensureDb(env);const id=Number(deleteOrderMatch[1]);
+    const row=await env.DB!.prepare('SELECT id,status FROM service_requests WHERE id=? AND user_id=? AND client_deleted_at IS NULL').bind(id,u.id).first<any>();if(!row)return json({error:'Request not found'},404);
+    const status=String(row.status||'REQUESTED').toUpperCase();const removable=['REQUESTED','PENDING_CONFIRMATION','REJECTED','CANCELLED','DEFERRED'];if(!removable.includes(status))return json({error:'This request can no longer be removed because it is already in work.'},409);
+    const nextStatus=['REQUESTED','PENDING_CONFIRMATION','DEFERRED'].includes(status)?'CANCELLED':status;
+    await env.DB!.prepare('UPDATE service_requests SET status=?,client_deleted_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?').bind(nextStatus,id,u.id).run();await event(env,u.id,'service_request_client_deleted',{id,previousStatus:status,status:nextStatus});return json({ok:true,id,status:nextStatus});
    }
    if(url.pathname==='/api/socials'){
     if(!env.DB)return json({socials:[]});await ensureDb(env);const r=await env.DB.prepare('SELECT type,url FROM social_links WHERE enabled=1 ORDER BY sort_order,id').all<any>();return json({socials:r.results});

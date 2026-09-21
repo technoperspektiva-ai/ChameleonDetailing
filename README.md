@@ -1,4 +1,10 @@
 # ChameleonDetailing
+## v1.1.13 — clearer schedule, client request status/delete, vehicle icons
+
+- Working schedule in Bot Panel is now day-by-day: each weekday has an explicit ON/OFF toggle and its own hours.
+- Clients see human-readable request confirmation/work statuses and may remove eligible requests from their own list; unconfirmed requests are cancelled when removed.
+- Vehicle type cards now use the supplied Sedan / Hatchback / SUV / Large SUV / Van artwork.
+
 ## v1.1.12 — requests, Excel reports and full VIP pricing
 
 This build adds the missing architecture blocks:
