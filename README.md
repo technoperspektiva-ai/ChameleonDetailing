@@ -1,5 +1,5 @@
 
-## VIP visual refresh + Owner Bot Panel + D1 binding (v1.1.7)
+## Role-aware Owner/Admin/Manager Bot Panel + full editing flows (v1.1.8)
 
 ### D1 is now connected in Wrangler
 
@@ -127,3 +127,11 @@ Set `TELEGRAM_SETUP_KEY` in Cloudflare, then open:
 `https://<worker-domain>/telegram/fix?key=<TELEGRAM_SETUP_KEY>`
 
 This browser page resets and re-registers the Telegram webhook against the exact Worker origin and prints Telegram diagnostics.
+
+
+### v1.1.8 management panel
+- Owner: full role-aware Telegram Bot Panel with editable users, VIP, whitelist, blacklist, staff, services, pricing, calculator rules, content, languages, referrals, analytics, audit and system settings.
+- Admin: same operational/product editors except Admin creation/removal and Owner-only maintenance/security controls.
+- Manager: users, add client, VIP, whitelist/blacklist, client notes, calculator history and basic analytics.
+- Editing flows use bot state, confirmations/step prompts, backend permission checks and audit entries.
+- D1 bootstrap now creates/repairs management tables needed by these flows.

@@ -1,30 +1,64 @@
 import type {Env,TelegramUser} from './types';
 import {fallbackServicesFor,normalizeServiceLocale,serviceCatalog} from './services';
+
 let ready=false;
-export async function ensureDb(env:Env){if(!env.DB)return false;if(ready)return true;await env.DB.exec(`
+
+async function safeAlter(env:Env,sql:string){
+ if(!env.DB)return;
+ try{await env.DB.exec(sql)}catch{}
+}
+
+export async function ensureDb(env:Env){
+ if(!env.DB)return false;
+ if(ready)return true;
+ await env.DB.exec(`
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT);
+CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
+CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS blacklist(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,public_reason TEXT NOT NULL,internal_note TEXT,blocked_by INTEGER,blocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,is_active INTEGER NOT NULL DEFAULT 1,unblocked_by INTEGER,unblocked_at TEXT);
-CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,category TEXT NOT NULL DEFAULT 'DETAILING',duration_min INTEGER NOT NULL DEFAULT 60,archived INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,category TEXT NOT NULL DEFAULT 'DETAILING',duration_min INTEGER NOT NULL DEFAULT 60,archived INTEGER NOT NULL DEFAULT 0,image_url TEXT,icon_key TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_translations(service_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,PRIMARY KEY(service_id,locale));
-CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_price REAL NOT NULL,base_currency TEXT NOT NULL DEFAULT 'PLN',currency_mode TEXT NOT NULL DEFAULT 'LIVE',usd_override REAL,uah_override REAL,pln_override REAL);
+CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_price REAL NOT NULL,base_currency TEXT NOT NULL DEFAULT 'PLN',currency_mode TEXT NOT NULL DEFAULT 'LIVE',usd_override REAL,uah_override REAL,pln_override REAL,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS vehicle_types(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS condition_levels(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
+CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL,price REAL NOT NULL DEFAULT 0,pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS calculator_sessions(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,service_id INTEGER,vehicle_type_id INTEGER,condition_level_id INTEGER,base_price_snapshot REAL,vehicle_multiplier_snapshot REAL,condition_multiplier_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,currency TEXT NOT NULL,pricing_version TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,calculation_id INTEGER,assigned_manager_id INTEGER,status TEXT NOT NULL DEFAULT 'REQUESTED',is_test INTEGER NOT NULL DEFAULT 0,service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,completed_at TEXT,payment_status TEXT NOT NULL DEFAULT 'PENDING');
+CREATE TABLE IF NOT EXISTS referrals(id INTEGER PRIMARY KEY AUTOINCREMENT,referrer_user_id INTEGER,referred_user_id INTEGER,code TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,miniapp_opened_at TEXT,calculator_used_at TEXT,request_created_at TEXT,first_paid_job_at TEXT,became_vip_at TEXT);
 CREATE TABLE IF NOT EXISTS analytics_events(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,event_type TEXT NOT NULL,metadata_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS content_blocks(key TEXT NOT NULL,locale TEXT NOT NULL,value TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(key,locale));
+CREATE TABLE IF NOT EXISTS feature_flags(key TEXT PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,config_json TEXT);
 CREATE TABLE IF NOT EXISTS social_links(id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL UNIQUE,url TEXT NOT NULL,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS schedule_exceptions(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL UNIQUE,is_closed INTEGER NOT NULL DEFAULT 1,open_time TEXT,close_time TEXT,note TEXT,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS bot_state(user_id INTEGER PRIMARY KEY,state TEXT,payload_json TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_user_id INTEGER,action TEXT NOT NULL,entity_type TEXT,entity_id TEXT,old_data_json TEXT,new_data_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,added_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS staff_invites(token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
+CREATE TABLE IF NOT EXISTS staff_invites_v2(token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
-`);await seed(env);ready=true;return true}
+CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,created_at);
+`);
+ // Backward-compatible upgrades for D1 databases created by older builds.
+ await safeAlter(env,"ALTER TABLE whitelist ADD COLUMN created_by INTEGER");
+ await safeAlter(env,"ALTER TABLE services ADD COLUMN image_url TEXT");
+ await safeAlter(env,"ALTER TABLE services ADD COLUMN icon_key TEXT");
+ await safeAlter(env,"ALTER TABLE services ADD COLUMN created_at TEXT");
+ await safeAlter(env,"ALTER TABLE services ADD COLUMN updated_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN currency_mode TEXT NOT NULL DEFAULT 'LIVE'");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN usd_override REAL");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN uah_override REAL");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN pln_override REAL");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN enabled INTEGER NOT NULL DEFAULT 1");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_by INTEGER");
+ await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_at TEXT");
+ await seed(env);
+ ready=true;
+ return true;
+}
+
 async function seed(env:Env){
  if(!env.DB)return;
- // Services are upserted on every cold start so existing D1 databases created by older
- // builds also receive corrected UA/PL/EN translations without a manual reset.
  for(const service of serviceCatalog){
   await env.DB.prepare(`INSERT INTO services(slug,sort_order,category,duration_min,enabled,archived) VALUES(?,?,?,?,1,0) ON CONFLICT(slug) DO UPDATE SET sort_order=excluded.sort_order,category=excluded.category,duration_min=excluded.duration_min`).bind(service.slug,service.id*10,service.category,service.durationMin).run();
   const row=await env.DB.prepare('SELECT id FROM services WHERE slug=?').bind(service.slug).first<{id:number}>();
@@ -35,9 +69,24 @@ async function seed(env:Env){
   }
   await env.DB.prepare(`INSERT INTO service_prices(service_id,base_price,base_currency) VALUES(?,?,?) ON CONFLICT(service_id) DO NOTHING`).bind(row.id,service.basePrice,service.currency).run();
  }
- await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN')").run().catch(()=>{});
+ const vehicles=[['car',1,10],['suv',1.15,20],['truck',1.3,30],['van',1.25,40]];
+ for(const [slug,mult,sort] of vehicles)await env.DB.prepare(`INSERT INTO vehicle_types(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
+ const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
+ for(const [slug,mult,sort] of conditions)await env.DB.prepare(`INSERT INTO condition_levels(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
+ await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone','')").run().catch(()=>{});
+ const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.description','contact.description'];
+ for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
 }
-export async function upsertUser(env:Env,u:TelegramUser,owner=false){const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':'en';if(!env.DB)return {id:0,telegram_user_id:u.id,first_name:u.first_name,username:u.username,language:lang,preferred_currency:env.DEFAULT_CURRENCY,role:owner?'OWNER':'CLIENT',client_tier:'STANDARD',phone_number:null};await ensureDb(env);await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role) VALUES(?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT').run();const row=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?`).bind(u.id).first<any>();await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) VALUES(?)').bind(row.id).run();return row}
+
+export async function upsertUser(env:Env,u:TelegramUser,owner=false){
+ const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':'en';
+ if(!env.DB)return {id:0,telegram_user_id:u.id,first_name:u.first_name,username:u.username,language:lang,preferred_currency:env.DEFAULT_CURRENCY,role:owner?'OWNER':'CLIENT',client_tier:'STANDARD',phone_number:null};
+ await ensureDb(env);
+ await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role) VALUES(?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT').run();
+ const row=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?`).bind(u.id).first<any>();
+ await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) VALUES(?)').bind(row.id).run();
+ return row;
+}
 export async function getServices(env:Env,locale='en'){
  const normalized=normalizeServiceLocale(locale);
  if(!env.DB)return fallbackServicesFor(normalized);

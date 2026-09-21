@@ -80,6 +80,7 @@ CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY,value TEXT NOT NULL,up
 CREATE TABLE IF NOT EXISTS fx_rates (base_currency TEXT PRIMARY KEY,usd_rate REAL,uah_rate REAL,pln_rate REAL,provider TEXT,fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS bot_state (user_id INTEGER PRIMARY KEY,state TEXT,payload_json TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS staff_invites (id INTEGER PRIMARY KEY AUTOINCREMENT,username TEXT NOT NULL,target_role TEXT NOT NULL,code TEXT NOT NULL UNIQUE,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,accepted_by_user_id INTEGER,accepted_at TEXT,expires_at TEXT,status TEXT NOT NULL DEFAULT 'PENDING');
+CREATE TABLE IF NOT EXISTS staff_invites_v2 (token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
 
 INSERT OR IGNORE INTO settings(key,value) VALUES
  ('maintenance.enabled','0'),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN');
