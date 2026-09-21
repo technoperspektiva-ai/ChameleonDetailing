@@ -62,7 +62,7 @@
   "profile.language": "Мова",
   "profile.currency": "Валюта",
   "profile.chat": "Відкрити чат Telegram",
-  "profile.chatHint": "Відкриває @ChameleonDetailing_bot без автоматичного webhook.",
+  "profile.chatHint": "Відкриває @ChameleonDetailing_bot.",
   "profile.role": "Роль",
   "holiday.title": "Час відпочити",
   "holiday.text": "Сьогодні сервіс не працює. Можна залишити заявку на найближчий робочий день.",
@@ -80,5 +80,16 @@
   "loading.ready": "Готово",
   "splash.slogan": "Все найкраще тут",
   "common.back": "Назад",
-  "common.close": "Закрити"
+  "common.close": "Закрити",
+  "role.OWNER": "Власник",
+  "role.ADMIN": "Адміністратор",
+  "role.MANAGER": "Менеджер",
+  "role.CLIENT": "Клієнт",
+  "errors.botToken": "BOT_TOKEN не налаштований у Cloudflare.",
+  "errors.telegramSession": "Не вдалося перевірити Telegram-сесію. Закрийте Mini App і відкрийте його знову через @ChameleonDetailing_bot.",
+  "errors.maintenance": "Сервіс тимчасово на технічному обслуговуванні.",
+  "errors.accessLimited": "Доступ обмежено.",
+  "errors.outsideHours": "Стандартні заявки недоступні поза робочим часом.",
+  "errors.emergencyUnavailable": "Екстрений режим зараз недоступний.",
+  "errors.rateLimit": "Попередню заявку вже надіслано. Нову можна відправити через 60 хвилин."
 }

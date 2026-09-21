@@ -1,45 +1,43 @@
-# Telegram bot setup
+# Telegram bot
 
-The Cloudflare Worker uses a Telegram webhook. A Cloudflare Worker cannot reliably operate a user-facing bot with permanent long polling, so the webhook endpoint must stay enabled.
+The bot is an active product surface, not only a Mini App launcher.
 
-## Required Worker secrets / variables
+## Runtime flow
 
-- `BOT_TOKEN` — BotFather token (secret)
-- `APP_URL` — deployed Worker URL, e.g. `https://chameleondetailing.<your-subdomain>.workers.dev`
-- `SESSION_SECRET` — long random secret (secret)
-- `TELEGRAM_WEBHOOK_SECRET` — optional but recommended random secret (secret)
+`Telegram update -> /api/telegram/webhook -> Cloudflare Worker -> bot handler -> Telegram Bot API`
 
-## Webhook endpoint
+Supported now:
+- `/start`
+- `/help`
+- localized UA / PL / EN welcome/help text
+- Mini App button
+- Calculator deep-link button
+- Requests deep-link button
+- callbacks
+- Telegram contact save flow
 
-`POST /api/telegram/webhook`
+## Self-healing webhook
 
-Supported baseline flows:
+Version 1.1.2 removes the fragile manual-only webhook setup.
 
-- `/start` → welcome + Mini App button
-- `/help` → help + Mini App button
-- other text → main actions
-- callback button handling
-- Telegram contact message storage foundation
+The Worker reconciles the webhook:
+1. when the Mini App HTML is opened;
+2. when `/api/auth/telegram` runs;
+3. when `/api/system/status` runs;
+4. every 30 minutes via Cloudflare Cron Trigger.
 
-## Register webhook
+The live Worker request origin wins over `APP_URL`, preventing a stale `APP_URL` from registering the bot to an old workers.dev address.
 
-From a local shell with the variables available:
+## Health endpoint
 
-```bash
-BOT_TOKEN='...' APP_URL='https://chameleondetailing.<subdomain>.workers.dev' TELEGRAM_WEBHOOK_SECRET='...' npm run telegram:webhook:set
-```
+`GET /api/telegram/health`
 
-Or call the protected bootstrap endpoint after deploy:
+This asks Telegram `getMe` and `getWebhookInfo`. It does not expose the bot token.
 
-```bash
-curl -X POST 'https://chameleondetailing.<subdomain>.workers.dev/api/telegram/bootstrap' \
-  -H 'Authorization: Bearer <SESSION_SECRET>'
-```
+If `webhook.last_error_message` exists, use it as the primary diagnostic signal.
 
-Check status:
+## Required secret
 
-```bash
-BOT_TOKEN='...' npm run telegram:webhook:info
-```
+`BOT_TOKEN` is required both for bot operation and Telegram Mini App `initData` verification.
 
-Do not run `telegram:webhook:delete` unless you intentionally want the bot to stop receiving messages.
+`TELEGRAM_WEBHOOK_SECRET` is optional. If used, it must contain only `A-Z`, `a-z`, `0-9`, `_`, `-` and be 1–256 characters.

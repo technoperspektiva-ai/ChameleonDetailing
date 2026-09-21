@@ -62,7 +62,7 @@
   "profile.language": "Język",
   "profile.currency": "Waluta",
   "profile.chat": "Otwórz czat Telegram",
-  "profile.chatHint": "Otwiera @ChameleonDetailing_bot bez automatycznego webhooka.",
+  "profile.chatHint": "Otwiera @ChameleonDetailing_bot.",
   "profile.role": "Rola",
   "holiday.title": "Czas na odpoczynek",
   "holiday.text": "Dziś studio jest nieczynne. Możesz zostawić zlecenie na najbliższy dzień roboczy.",
@@ -80,5 +80,16 @@
   "loading.ready": "Gotowe",
   "splash.slogan": "Wszystko, co najlepsze, jest tutaj",
   "common.back": "Wstecz",
-  "common.close": "Zamknij"
+  "common.close": "Zamknij",
+  "role.OWNER": "Właściciel",
+  "role.ADMIN": "Administrator",
+  "role.MANAGER": "Menedżer",
+  "role.CLIENT": "Klient",
+  "errors.botToken": "BOT_TOKEN nie jest skonfigurowany w Cloudflare.",
+  "errors.telegramSession": "Nie udało się zweryfikować sesji Telegram. Zamknij Mini App i otwórz go ponownie przez @ChameleonDetailing_bot.",
+  "errors.maintenance": "Serwis jest chwilowo w trybie konserwacji.",
+  "errors.accessLimited": "Dostęp jest ograniczony.",
+  "errors.outsideHours": "Standardowe zlecenia są niedostępne poza godzinami pracy.",
+  "errors.emergencyUnavailable": "Tryb awaryjny jest teraz niedostępny.",
+  "errors.rateLimit": "Poprzednie zlecenie zostało już wysłane. Nowe można wysłać po 60 minutach."
 }

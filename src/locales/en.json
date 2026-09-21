@@ -62,7 +62,7 @@
   "profile.language": "Language",
   "profile.currency": "Currency",
   "profile.chat": "Open Telegram chat",
-  "profile.chatHint": "Opens @ChameleonDetailing_bot without an automated webhook.",
+  "profile.chatHint": "Opens @ChameleonDetailing_bot.",
   "profile.role": "Role",
   "holiday.title": "Holiday — time to rest",
   "holiday.text": "The studio is closed today. You can leave a request for the next working day.",
@@ -80,5 +80,16 @@
   "loading.ready": "Ready",
   "splash.slogan": "The best is here",
   "common.back": "Back",
-  "common.close": "Close"
+  "common.close": "Close",
+  "role.OWNER": "Owner",
+  "role.ADMIN": "Administrator",
+  "role.MANAGER": "Manager",
+  "role.CLIENT": "Client",
+  "errors.botToken": "BOT_TOKEN is not configured in Cloudflare.",
+  "errors.telegramSession": "Telegram session could not be verified. Close the Mini App and open it again from @ChameleonDetailing_bot.",
+  "errors.maintenance": "Service is under maintenance.",
+  "errors.accessLimited": "Access is limited.",
+  "errors.outsideHours": "Standard requests are unavailable outside working hours.",
+  "errors.emergencyUnavailable": "Emergency mode is not available.",
+  "errors.rateLimit": "Your previous request was already sent. A new request can be sent after 60 minutes."
 }

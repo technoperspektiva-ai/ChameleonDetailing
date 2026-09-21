@@ -1,27 +1,18 @@
-# Implemented — v1.1.0 / Architecture v1.4 update
+# Implemented in v1.1.2
 
-Implemented in this deploy package:
-
-- React/Vite Mini App + Cloudflare Worker
-- Worker name `chameleondetailing`
-- D1 target `chameleondetailing`, binding `DB`
-- Telegram Mini App initData validation
-- Owner ID `375938798`
-- Services, quote calculation, orders/request foundation
-- maintenance / blacklist / schedule / emergency states
-- UA / PL / EN i18n with canonical locale codes `uk`, `pl`, `en`
-- UI language labels `UA`, `PL`, `EN`
-- build-time translation completeness validation
-- responsive typography and mobile-safe layouts (320–430+)
-- safe-area aware header/navigation/modals
-- 44px+ interactive targets
-- responsive hero with isolated copy / mascot areas
-- dynamic card heights and overflow-safe localized text
-- `?debugLocale=long` overflow stress mode
-- reduced-motion support
-- no Telegram webhook receiver in the Worker
-- one-shot Telegram `deleteWebhook` utility
-
-Not faked in this package: external payment provider, external live FX provider, production delivery provider, or any provider-specific webhook.
-
-- Telegram bot webhook restored: `/api/telegram/webhook`; `/start`, `/help`, Mini App buttons and callbacks are active.
+- architecture v1.4 base
+- React/Vite Telegram Mini App
+- Cloudflare Worker backend
+- Telegram initData authentication
+- D1 users / profiles / services / requests foundation
+- Owner role protection
+- UA / PL / EN UI dictionaries
+- UA / PL / EN service title and description translations
+- automatic repair of old incorrect service translations in D1
+- localized bot `/start` and `/help`
+- active Telegram webhook Worker endpoint
+- automatic webhook reconciliation on Mini App open/auth/status
+- 30-minute webhook recovery cron
+- Telegram bot health endpoint using `getMe` + `getWebhookInfo`
+- startup splash / calculator processing overlay
+- maintenance / blacklist / schedule foundations

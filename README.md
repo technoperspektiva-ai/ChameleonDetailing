@@ -1,74 +1,104 @@
 # ChameleonDetailing
 
-Version **1.1.1** — architecture v1.4 UI/i18n update and **no-webhook Telegram mode**.
+Production-oriented Telegram Mini App + Cloudflare Worker for **@ChameleonDetailing_bot**.
 
-Production Telegram Mini App foundation for **@ChameleonDetailing_bot** on Cloudflare Workers, React/Vite and D1.
+Version **1.1.2** — architecture v1.4, Telegram bot self-healing webhook, and corrected UA/PL/EN service localization.
+
+## Names
 
 - GitHub repository: `ChameleonDetailing`
 - Cloudflare Worker: `chameleondetailing`
 - D1 database: `chameleondetailing`
-- D1 binding: `DB`
-- Owner Telegram ID: `375938798`
-- Locales: `uk`, `pl`, `en`; UI labels: `UA`, `PL`, `EN`
-- Fallback locale: English
-- Currencies: PLN / USD / UAH
-- Telegram webhook: **disabled by product design**
+- Telegram bot: `@ChameleonDetailing_bot`
 
-## v1.4 changes
+## Required Cloudflare secrets / variables
 
-- responsive hero with independent copy and mascot zones;
-- safe-area support and QA-safe layouts from 320px through 430px+;
-- responsive typography tokens and 44px+ touch targets;
-- full customer UI localization through one i18n layer;
-- UA/PL/EN JSON dictionaries with build-time completeness validation;
-- no `UK` language badge — Ukrainian is always `UA` in the UI;
-- no mixed-language holiday / navigation / calculator state;
-- `?debugLocale=long` overflow stress mode;
-- improved text wrapping, dynamic card heights and modal scrolling;
-- webhook receiver removed from Worker;
-- webhook setup script removed;
-- one-shot `telegram:webhook:delete` command added.
+Secrets:
+- `BOT_TOKEN` — token from BotFather for `@ChameleonDetailing_bot`
+- `SESSION_SECRET` — long random string
+- `TELEGRAM_WEBHOOK_SECRET` — optional. Use only letters, digits, `_` and `-` (1–256 chars). Invalid values are ignored safely.
 
-## Build
+Optional variable:
+- `APP_URL` — canonical Mini App URL. The live Worker request origin takes priority, so a stale `APP_URL` no longer breaks the bot after deploy.
+
+D1 binding:
+- binding: `DB`
+- database: `chameleondetailing`
+
+## Cloudflare deploy
+
+Recommended deploy command:
 
 ```bash
-npm install
-npm run build
+npx wrangler deploy
 ```
 
-The build fails if UA/PL/EN translation keys are incomplete.
+`wrangler.jsonc` runs `npm run build` before deployment.
+
+The Worker is configured with `assets.run_worker_first=true`, therefore opening the Mini App also verifies/re-registers the Telegram webhook against the currently deployed Worker URL.
+
+A cron trigger reconciles the webhook every 30 minutes as a second recovery mechanism.
+
+## Telegram bot health
+
+After deploy open:
+
+```text
+https://<your-worker-domain>/api/telegram/health
+```
+
+A healthy result contains:
+
+```json
+{
+  "ok": true,
+  "botConfigured": true,
+  "bot": "@ChameleonDetailing_bot",
+  "webhook": {
+    "url": "https://<your-worker-domain>/api/telegram/webhook"
+  }
+}
+```
+
+Opening the Mini App once after deploy is enough to trigger immediate webhook reconciliation. You can then send `/start` to the bot.
+
+Manual bootstrap remains available for diagnostics:
+
+```bash
+curl -X POST \
+  -H "Authorization: Bearer $SESSION_SECRET" \
+  https://<your-worker-domain>/api/telegram/bootstrap
+```
+
+## Localization
+
+UI dictionaries are in:
+- `src/locales/uk.json`
+- `src/locales/pl.json`
+- `src/locales/en.json`
+
+Service titles/descriptions are also localized separately in `worker/lib/services.ts`. Older D1 databases that were previously seeded with English text for every locale are repaired automatically on the next Worker cold start / DB bootstrap.
+
+The build runs a locale-key consistency check before TypeScript/Vite compilation.
 
 ## D1
+
+Create the database:
 
 ```bash
 npx wrangler d1 create chameleondetailing
 ```
 
-Then bind the real database UUID as `DB`.
-
-## Required production secrets / vars
-
-- `BOT_TOKEN` — still required to validate Telegram Mini App `initData`;
-- `SESSION_SECRET` — secret;
-- `APP_URL` — deployed Mini App URL.
-
-`BOT_TOKEN` does **not** mean that a webhook is enabled.
-
-## Disable an already configured Telegram webhook
-
-The repository no longer registers a webhook. If Telegram already has an old webhook saved, delete it once:
+Add the returned D1 database id to the `DB` binding, then apply migrations:
 
 ```bash
-BOT_TOKEN='YOUR_TOKEN' npm run telegram:webhook:delete
+npm run db:migrate:remote
 ```
 
-This calls Telegram `deleteWebhook` with `drop_pending_updates=false`.
+The runtime also creates the minimum core schema defensively and UPSERTs canonical localized starter services.
 
-## Deployment sanity check
+## Diagnostics
 
-Open `/__version` after deployment. It must report version `1.1.1` and `worker: true`.
-
-
-## Telegram bot
-
-The bot webhook is enabled again. See `docs/TELEGRAM_BOT.md`.
+- `/__version` — deployed version
+- `/api/system/status` — Worker/DB/bot configuration flags
+- `/api/telegram/health` — Telegram bot + current webhook status

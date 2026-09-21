@@ -7,10 +7,7 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": [
-      "/api/*",
-      "/__version"
-    ]
+    "run_worker_first": true
   },
   "vars": {
     "APP_NAME": "ChameleonDetailing",
@@ -19,6 +16,9 @@
     "DEFAULT_LOCALE": "en",
     "DEFAULT_CURRENCY": "PLN",
     "BUSINESS_TIMEZONE": "Europe/Warsaw"
+  },
+  "triggers": {
+    "crons": ["*/30 * * * *"]
   },
   "observability": {
     "enabled": true
