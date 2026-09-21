@@ -131,5 +131,6 @@
   "orders.hint.paid": "Zlecenie zostało zakończone i opłacone.",
   "orders.hint.rejected": "Zespół nie mógł przyjąć tego zlecenia.",
   "orders.hint.cancelled": "Zlecenie zostało anulowane.",
-  "orders.hint.deferred": "Zlecenie zaplanowano na najbliższy dzień roboczy."
+  "orders.hint.deferred": "Zlecenie zaplanowano na najbliższy dzień roboczy.",
+  "common.total": "Razem"
 }

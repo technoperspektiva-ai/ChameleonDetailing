@@ -131,5 +131,6 @@
   "orders.hint.paid": "The request is completed and paid.",
   "orders.hint.rejected": "The team could not accept this request.",
   "orders.hint.cancelled": "This request has been cancelled.",
-  "orders.hint.deferred": "The request is queued for the nearest working day."
+  "orders.hint.deferred": "The request is queued for the nearest working day.",
+  "common.total": "Total"
 }

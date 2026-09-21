@@ -47,7 +47,13 @@ async function sessionState(env:Env,u:any){
  const maintenance=(await getSetting(env,'maintenance.enabled','0'))==='1';
  const blocked=u.demo?null:await getActiveBlock(env,u.id);
  const schedule=await scheduleState(env);
- return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule};
+ const theme={
+  fontH1:await getSetting(env,'theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),
+  fontH2:await getSetting(env,'theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),
+  fontBody:await getSetting(env,'theme.font_body','clamp(.94rem,3.8vw,1rem)'),
+  fontSmall:await getSetting(env,'theme.font_small','clamp(.78rem,3.2vw,.875rem)')
+ };
+ return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule,theme};
 }
 async function selfHealWebhook(env:Env,origin?:string,force=false){
  if(!env.BOT_TOKEN)return;
