@@ -96,5 +96,20 @@
   "errors.emergencyUnavailable": "Emergency mode is not available.",
   "errors.rateLimit": "Your previous request was already sent. A new request can be sent after 60 minutes.",
   "home.referralPreparing": "Preparing your invite…",
-  "home.referralShare": "I found Chameleon Detailing — open the bot and check it out."
+  "home.referralShare": "I found Chameleon Detailing — open the bot and check it out.",
+  "orders.title": "My requests",
+  "orders.subtitle": "Track the requests you have sent to Chameleon Detailing.",
+  "orders.empty": "You have not sent any requests yet.",
+  "orders.status": "Status",
+  "orders.type": "Type",
+  "orders.created": "Created",
+  "orders.scheduled": "Scheduled",
+  "orders.refresh": "Refresh",
+  "orders.open": "Open requests",
+  "orders.requestId": "Request",
+  "orders.payment": "Payment",
+  "profile.requests": "My requests",
+  "profile.requestsHint": "View your submitted detailing requests.",
+  "vip.activePrice": "Your VIP price",
+  "vip.standardPrice": "Standard price"
 }

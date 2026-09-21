@@ -96,5 +96,20 @@
   "errors.emergencyUnavailable": "Екстрений режим зараз недоступний.",
   "errors.rateLimit": "Попередню заявку вже надіслано. Нову можна відправити через 60 хвилин.",
   "home.referralPreparing": "Готуємо ваше запрошення…",
-  "home.referralShare": "Рекомендую Chameleon Detailing — відкрий бота та подивись."
+  "home.referralShare": "Рекомендую Chameleon Detailing — відкрий бота та подивись.",
+  "orders.title": "Мої заявки",
+  "orders.subtitle": "Переглядайте заявки, які ви надіслали в Chameleon Detailing.",
+  "orders.empty": "Ви ще не створювали заявок.",
+  "orders.status": "Статус",
+  "orders.type": "Тип",
+  "orders.created": "Створено",
+  "orders.scheduled": "Заплановано",
+  "orders.refresh": "Оновити",
+  "orders.open": "Відкрити заявки",
+  "orders.requestId": "Заявка",
+  "orders.payment": "Оплата",
+  "profile.requests": "Мої заявки",
+  "profile.requestsHint": "Переглянути створені заявки на детейлінг.",
+  "vip.activePrice": "Ваша VIP-ціна",
+  "vip.standardPrice": "Стандартна ціна"
 }

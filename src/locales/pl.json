@@ -96,5 +96,20 @@
   "errors.emergencyUnavailable": "Tryb awaryjny jest teraz niedostępny.",
   "errors.rateLimit": "Poprzednie zlecenie zostało już wysłane. Nowe można wysłać po 60 minutach.",
   "home.referralPreparing": "Przygotowujemy zaproszenie…",
-  "home.referralShare": "Polecam Chameleon Detailing — otwórz bota i sprawdź."
+  "home.referralShare": "Polecam Chameleon Detailing — otwórz bota i sprawdź.",
+  "orders.title": "Moje zlecenia",
+  "orders.subtitle": "Śledź zlecenia wysłane do Chameleon Detailing.",
+  "orders.empty": "Nie wysłałeś jeszcze żadnych zleceń.",
+  "orders.status": "Status",
+  "orders.type": "Typ",
+  "orders.created": "Utworzono",
+  "orders.scheduled": "Zaplanowano",
+  "orders.refresh": "Odśwież",
+  "orders.open": "Otwórz zlecenia",
+  "orders.requestId": "Zlecenie",
+  "orders.payment": "Płatność",
+  "profile.requests": "Moje zlecenia",
+  "profile.requestsHint": "Zobacz wysłane zlecenia detailingu.",
+  "vip.activePrice": "Twoja cena VIP",
+  "vip.standardPrice": "Cena standardowa"
 }

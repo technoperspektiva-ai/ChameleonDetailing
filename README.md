@@ -1,5 +1,18 @@
+# ChameleonDetailing
+## v1.1.12 — requests, Excel reports and full VIP pricing
 
-## ChameleonDetailing v1.1.11 — management panel language selector
+This build adds the missing architecture blocks:
+
+- **Client requests** in Mini App (`Profile → My requests`) and `?startapp=orders` support.
+- **Staff requests** in Owner/Admin/Manager Bot Panel with status workflow: REQUESTED → CONFIRMED → IN_PROGRESS → COMPLETED/CANCELLED.
+- **Real `.xlsx` reports** generated in memory and sent directly to Telegram. Owner/Admin receive full reports; Manager receives operational Orders export.
+- **Reports menu / `/reports`** with period selection (7/30/90 days / all) for time-based reports.
+- **VIP pricing engine** supports percentage discount, a separate fixed price list, or multiplier for `VIP` and `VIP_PLUS`, per service.
+- **VIP pricing editor** in Bot Panel: `Pricing → service → VIP pricing` (also available from service editor/VIP section).
+- VIP clients see their effective VIP base price in service cards, and the calculator uses the same backend rule.
+
+Excel output includes formatted headers, frozen header rows, filters and business-oriented sheets. Generated files are not persisted: generate → Telegram `sendDocument` → discard.
+
 
 ### D1 is now connected in Wrangler
 

@@ -1,11 +1,11 @@
 import type {Env} from './lib/types';
 import {validateInitData} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
-import {quote} from './lib/pricing';
+import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.11';
+const VERSION='1.1.12';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -134,9 +134,10 @@ export default {
     return json({user:{telegramId:u.telegram_user_id,firstName:u.first_name,username:u.username,locale:u.language||'en',currency:u.preferred_currency,tier:u.client_tier,role:u.role,phoneShared:!!u.phone_number},...state,demo:u.demo});
    }
    if(url.pathname==='/api/services'){
-    const locale=url.searchParams.get('locale')||'en';
-    const currency=url.searchParams.get('currency');
-    return json({services:await getServices(env,locale,currency)});
+    const locale=url.searchParams.get('locale')||'en';const currency=url.searchParams.get('currency');const initData=url.searchParams.get('initData')||'';
+    const list=await getServices(env,locale,currency);let tier='STANDARD';try{if(initData){const u=await auth(env,initData);tier=u.client_tier||'STANDARD'}}catch{}
+    if(tier!=='STANDARD')for(const item of list){const baseCurrency=String(item.currency||currency||'PLN');const eff=await vipBasePrice(env,Number(item.id),Number(item.basePrice||0),baseCurrency,tier);(item as any).standardBasePrice=item.basePrice;(item as any).basePrice=Math.round(eff.price*100)/100;(item as any).vipPricingMode=eff.mode;(item as any).clientTier=tier}
+    return json({services:list,tier});
    }
    if(url.pathname==='/api/content'&&request.method==='GET'){
     const locale=(url.searchParams.get('locale')||'en').toLowerCase().startsWith('uk')?'uk':(url.searchParams.get('locale')||'en').toLowerCase().startsWith('pl')?'pl':'en';
