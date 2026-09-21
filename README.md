@@ -5,7 +5,7 @@ Version **1.0.2** — first-deploy fix with explicit Cloudflare Git deployment v
 Production-oriented Telegram Mini App + Telegram Bot foundation for **@ChameleonDetailing_bot** on Cloudflare Workers, Vite/React and D1.
 
 - GitHub repository: `ChameleonDetailing`
-- Cloudflare Worker: `chameleondetailing`
+- Cloudflare Worker: `ChameleonDetailing`
 - D1 database: `chameleondetailing` (**lowercase required**)
 - D1 binding: `DB`
 - Owner Telegram ID: `375938798`
@@ -32,4 +32,4 @@ The Worker is intentionally deployable before D1 is bound; persistent CRM/orders
 
 
 ## Deployment sanity check
-After Cloudflare deployment open `/__version`. It must return `ChameleonDetailing` and version `1.0.3`. Plain `Hello world` means the wrong/default Worker was deployed.
+After Cloudflare deployment open `/__version`. It must return `ChameleonDetailing` and version `1.0.2`. Plain `Hello world` means the wrong/default Worker was deployed.

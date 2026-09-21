@@ -63,3 +63,21 @@ Non-secret defaults are already in `wrangler.jsonc`.
 ## 6. Telegram webhook
 
 After `APP_URL`, `BOT_TOKEN` and optional webhook secret are configured, run the provided webhook setup script or set BotFather Web App URL to the deployed Mini App URL.
+
+## Cloudflare Workers Builds — important
+
+This repository is self-building during `wrangler deploy`. The `wrangler.jsonc` contains:
+
+```json
+"build": {
+  "command": "npm run build"
+}
+```
+
+Therefore the Cloudflare **Deploy command may stay exactly**:
+
+```bash
+npx wrangler deploy
+```
+
+Wrangler will first run the React/Vite build, create `dist/`, verify it, then upload the Worker and static assets. This prevents `assets.directory ./dist does not exist` when the dashboard Build command is empty.

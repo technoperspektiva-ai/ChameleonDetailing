@@ -7,7 +7,10 @@
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*", "/__version"]
+    "run_worker_first": [
+      "/api/*",
+      "/__version"
+    ]
   },
   "vars": {
     "APP_NAME": "ChameleonDetailing",
@@ -17,5 +20,10 @@
     "DEFAULT_CURRENCY": "PLN",
     "BUSINESS_TIMEZONE": "Europe/Warsaw"
   },
-  "observability": { "enabled": true }
+  "observability": {
+    "enabled": true
+  },
+  "build": {
+    "command": "npm run build"
+  }
 }
