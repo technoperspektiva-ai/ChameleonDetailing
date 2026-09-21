@@ -1,11 +1,11 @@
 {
-  "name": "chameleon-detailing",
+  "name": "chameleondetailing",
   "private": true,
-  "version": "1.0.1",
+  "version": "1.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && npm run verify:dist",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
     "cf:typegen": "wrangler types",
@@ -13,7 +13,9 @@
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "telegram:webhook": "node scripts/set-telegram-webhook.mjs",
     "db:create": "wrangler d1 create chameleondetailing",
-    "check": "tsc -b && vite build"
+    "check": "tsc -b && vite build",
+    "deploy:cloudflare": "npm run build && wrangler deploy",
+    "verify:dist": "node scripts/verify-dist.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

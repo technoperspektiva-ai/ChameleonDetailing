@@ -1,19 +1,65 @@
 # First deployment — ChameleonDetailing
 
-The Worker/project is `ChameleonDetailing`. GitHub repository may stay `ChameleonDetailing`.
-The D1 database name is **strictly lowercase**: `chameleondetailing`.
+Canonical deployment mapping:
 
-## Safest first deploy
-1. Push the contents of this folder to the GitHub repository `ChameleonDetailing`.
-2. In Cloudflare Workers & Pages create/connect Worker `ChameleonDetailing` from that repository.
-3. Build command: `npm run build` (or `npm run deploy` only when deploying with Wrangler from CI).
-4. The first deploy intentionally does not hard-code a D1 `database_id`; this prevents a nonexistent/placeholder ID from breaking deployment. The app boots in safe fallback mode until DB is bound.
-5. Create D1 with the exact name `chameleondetailing`.
-6. Add D1 binding `DB` in Cloudflare Dashboard, or copy the block from `docs/D1_BINDING.example.jsonc` and paste the real database ID into `wrangler.jsonc`.
-7. Apply `database/migrations/0001_initial.sql` from D1 Console or run `npm run db:migrate:remote` after the binding is present.
-8. Add secrets/variables: `BOT_TOKEN`, `SESSION_SECRET`, `APP_URL`, optionally `TELEGRAM_WEBHOOK_SECRET`.
-9. Set `APP_URL` to the final HTTPS Worker URL.
-10. Run `npm run telegram:webhook` locally with `BOT_TOKEN`, `APP_URL`, and optionally `TELEGRAM_WEBHOOK_SECRET` exported.
+- GitHub: `ChameleonDetailing`
+- Cloudflare Worker: `chameleondetailing`
+- D1: `chameleondetailing`
+- D1 binding: `DB`
+- Telegram: `@ChameleonDetailing_bot`
 
-## Important
-Do not paste a fake D1 UUID into `wrangler.jsonc`: Cloudflare will reject the deployment. The schema is idempotent and the Worker can start without D1, but CRM/orders need the `DB` binding to persist data.
+## 1. GitHub
+
+Upload **the contents of this archive** to the root of repository `ChameleonDetailing`. `package.json`, `wrangler.jsonc`, `src/`, `worker/` and `index.html` must all be at repository root. Do not upload the enclosing folder as an extra nested directory.
+
+## 2. Cloudflare
+
+Create/select Worker `chameleondetailing` and connect repository `ChameleonDetailing`.
+
+Build command:
+
+```bash
+npm run build
+```
+
+Deploy command:
+
+```bash
+npx wrangler deploy
+```
+
+Root directory: `/`
+
+## 3. First verification — before Telegram
+
+Open:
+
+```text
+https://chameleondetailing.<your-workers-subdomain>.workers.dev/__version
+```
+
+It must return `version: 1.0.3`. Then open `/`; the Mini App UI must load.
+
+If `/` says `Hello world`, stop configuring Telegram: that URL is serving another/default Worker or an old deployment. Fix the Worker/repository binding first.
+
+## 4. D1
+
+Create lowercase D1 `chameleondetailing`. Keep binding name uppercase `DB`. Add its real UUID to `wrangler.jsonc` only after Cloudflare creates it.
+
+## 5. Secrets / variables
+
+Required for Telegram production:
+
+- `BOT_TOKEN` — secret
+- `SESSION_SECRET` — secret
+- `APP_URL` — deployed `https://...workers.dev` or custom domain
+
+Optional/recommended:
+
+- `TELEGRAM_WEBHOOK_SECRET` — secret
+
+Non-secret defaults are already in `wrangler.jsonc`.
+
+## 6. Telegram webhook
+
+After `APP_URL`, `BOT_TOKEN` and optional webhook secret are configured, run the provided webhook setup script or set BotFather Web App URL to the deployed Mini App URL.
