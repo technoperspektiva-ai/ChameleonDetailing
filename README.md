@@ -1,3 +1,8 @@
+
+## Owner Bot Panel (v1.1.5)
+
+The locked owner is Telegram numeric ID `375938798`. Management intentionally lives in the Telegram bot, not in the Mini App. Send `/panel` or `/owner` from the owner account to open the role-aware control panel. The panel includes Dashboard, Users, VIP, Whitelist, Managers, Admins, Services, Pricing, Calculator Rules, Content, Languages, Referrals, Analytics, Audit Log and Settings. Owner staff onboarding supports `@username`; known users are promoted immediately and unknown users receive a secure deep-link invite.
+
 # ChameleonDetailing
 
 Production-oriented Telegram Mini App + Cloudflare Worker for **@ChameleonDetailing_bot**.

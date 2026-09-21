@@ -1,16 +1,40 @@
 import type {Env} from './lib/types';
 import {validateInitData} from './lib/telegram';
-import {ensureDb,event,getActiveBlock,getServices,getSetting,upsertUser} from './lib/db';
+import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
 import {quote} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.3';
+const VERSION='1.1.5';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
 const html=(body:string,status=200)=>new Response(`<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Chameleon Detailing Bot Fix</title><style>body{font-family:system-ui,-apple-system,sans-serif;background:#071008;color:#f5fff1;margin:0;padding:24px}main{max-width:760px;margin:0 auto}h1{color:#98ff00}pre{white-space:pre-wrap;word-break:break-word;background:#0e1a10;border:1px solid #28452d;border-radius:16px;padding:16px}.ok{color:#98ff00}.bad{color:#ff9e9e}a{color:#98ff00}code{background:#132016;padding:2px 6px;border-radius:6px}</style></head><body><main>${body}</main></body></html>`,{status,headers:{'content-type':'text/html; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff','referrer-policy':'no-referrer'}});
 let webhookCheckedAt=0;
+
+async function saveBotDebug(env:Env,payload:Record<string,unknown>){
+ const snapshot={...payload,at:new Date().toISOString()};
+ if(env.DB){
+  try{await setSetting(env,'telegram.debug.last',JSON.stringify(snapshot))}catch(error){console.error('Failed to persist Telegram debug snapshot',error)}
+ }
+ return snapshot;
+}
+async function getBotDebug(env:Env){
+ if(!env.DB)return {persisted:false,message:'D1 is not configured, so persistent bot diagnostics are unavailable.'};
+ try{const raw=await getSetting(env,'telegram.debug.last','');return raw?{persisted:true,last:JSON.parse(raw)}:{persisted:true,last:null}}catch(error){return {persisted:false,error:error instanceof Error?error.message:String(error)}}
+}
+async function processTelegramUpdate(env:Env,origin:string,update:any){
+ const base={updateId:update?.update_id??null,chatId:update?.message?.chat?.id??update?.callback_query?.message?.chat?.id??null,userId:update?.message?.from?.id??update?.callback_query?.from?.id??null,text:update?.message?.text??null};
+ await saveBotDebug(env,{stage:'received',...base});
+ try{
+  await handleBotUpdate(env,origin,update);
+  await saveBotDebug(env,{stage:'processed',ok:true,...base});
+ }catch(error){
+  const message=error instanceof Error?error.message:String(error);
+  console.error('Telegram update processing failed',error);
+  await saveBotDebug(env,{stage:'failed',ok:false,error:message,...base});
+ }
+}
 
 async function auth(env:Env,initData:string){
  if(!initData)return {id:0,telegram_user_id:0,first_name:'Guest',username:'preview',language:'en',preferred_currency:env.DEFAULT_CURRENCY,role:'CLIENT',client_tier:'STANDARD',demo:true};
@@ -57,6 +81,22 @@ export default {
     const cls=result.ok?'ok':'bad';
     return html(`<h1>Chameleon Detailing — Bot Fix</h1><p class="${cls}">${result.ok?'✅ Webhook repaired successfully':'❌ Webhook is still not correct'}</p><pre>${escapeHtml(JSON.stringify(result,null,2))}</pre><p><a href="${escapeHtml(result.testBotUrl)}">Open @ChameleonDetailing_bot and test /start</a></p><p>After it works, rotate or remove <code>TELEGRAM_SETUP_KEY</code>.</p>`,result.ok?200:500);
    }
+   if(url.pathname==='/telegram/debug'&&request.method==='GET'){
+    const supplied=url.searchParams.get('key')||'';
+    const expected=String(env.TELEGRAM_SETUP_KEY||'');
+    if(!expected)return html('<h1>Setup key missing</h1><p>Add <code>TELEGRAM_SETUP_KEY</code> in Cloudflare first.</p>',503);
+    if(!supplied||supplied!==expected)return html('<h1>Unauthorized</h1><p>Open <code>/telegram/debug?key=YOUR_TELEGRAM_SETUP_KEY</code>.</p>',401);
+    const health=await telegramBotHealth(env);
+    const debug=await getBotDebug(env);
+    const payload={health,debug,expectedWebhook:url.origin+'/api/telegram/webhook'};
+    return html(`<h1>Telegram bot debug</h1><pre>${escapeHtml(JSON.stringify(payload,null,2))}</pre><p>Send <code>/start</code> to the bot, wait 2–3 seconds, then refresh this page.</p>`,200);
+   }
+   if(url.pathname==='/api/telegram/debug'&&request.method==='GET'){
+    const supplied=url.searchParams.get('key')||'';
+    const expected=String(env.TELEGRAM_SETUP_KEY||'');
+    if(!expected||supplied!==expected)return json({error:'Unauthorized'},401);
+    return json({health:await telegramBotHealth(env),debug:await getBotDebug(env),expectedWebhook:url.origin+'/api/telegram/webhook'});
+   }
    if(url.pathname==='/api/system/status'){
     ctx.waitUntil(selfHealWebhook(env,url.origin));
     const maintenance=(await getSetting(env,'maintenance.enabled','0'))==='1';
@@ -68,10 +108,15 @@ export default {
    }
    if(url.pathname==='/api/telegram/webhook'&&request.method==='POST'){
     const expectedSecret=telegramWebhookSecret(env);
-    if(expectedSecret&&request.headers.get('x-telegram-bot-api-secret-token')!==expectedSecret)return json({error:'Unauthorized'},401);
+    if(expectedSecret&&request.headers.get('x-telegram-bot-api-secret-token')!==expectedSecret){
+     await saveBotDebug(env,{stage:'rejected',ok:false,error:'Webhook secret mismatch'});
+     return json({error:'Unauthorized'},401);
+    }
     const update=await read(request);
-    await handleBotUpdate(env,url.origin,update);
-    return json({ok:true});
+    // Acknowledge Telegram immediately. D1 / Bot API failures are handled asynchronously,
+    // so Telegram never marks the webhook as unhealthy because business logic was slow.
+    ctx.waitUntil(processTelegramUpdate(env,url.origin,update));
+    return json({ok:true,accepted:true,updateId:update?.update_id??null});
    }
    if(url.pathname==='/api/telegram/bootstrap'&&request.method==='POST'){
     const authz=request.headers.get('authorization')||'';

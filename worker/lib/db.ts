@@ -16,6 +16,10 @@ CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,upd
 CREATE TABLE IF NOT EXISTS schedule_exceptions(id INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT NOT NULL UNIQUE,is_closed INTEGER NOT NULL DEFAULT 1,open_time TEXT,close_time TEXT,note TEXT,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS bot_state(user_id INTEGER PRIMARY KEY,state TEXT,payload_json TEXT,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS audit_log(id INTEGER PRIMARY KEY AUTOINCREMENT,actor_user_id INTEGER,action TEXT NOT NULL,entity_type TEXT,entity_id TEXT,old_data_json TEXT,new_data_json TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,added_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS staff_invites(token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
+CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 `);await seed(env);ready=true;return true}
 async function seed(env:Env){
  if(!env.DB)return;
