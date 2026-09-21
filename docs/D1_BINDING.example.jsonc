@@ -1,0 +1,10 @@
+// Add this top-level block to wrangler.jsonc ONLY after Cloudflare has created the database.
+// The database name must stay lowercase: chameleondetailing
+"d1_databases": [
+  {
+    "binding": "DB",
+    "database_name": "chameleondetailing",
+    "database_id": "PASTE_CLOUDFLARE_D1_DATABASE_ID_HERE",
+    "migrations_dir": "database/migrations"
+  }
+]
