@@ -6,7 +6,7 @@ export async function validateInitData(initData:string,token:string):Promise<{us
  if(!initData||!token)return null;
  const p=new URLSearchParams(initData),provided=p.get('hash'); if(!provided)return null;
  p.delete('hash'); p.delete('signature');
- const check=[...p.entries()].sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');
+ const pairs:Array<[string,string]>=[]; p.forEach((v,k)=>pairs.push([k,v])); const check=pairs.sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');
  const webKey=await crypto.subtle.importKey('raw',enc.encode('WebAppData'),{name:'HMAC',hash:'SHA-256'},false,['sign']);
  const secret=await hmac(webKey,token);
  const dataKey=await crypto.subtle.importKey('raw',secret,{name:'HMAC',hash:'SHA-256'},false,['sign']);
