@@ -1,5 +1,5 @@
 
-## Role-aware Owner/Admin/Manager Bot Panel + full editing flows (v1.1.8)
+## ChameleonDetailing v1.1.11 — management panel language selector
 
 ### D1 is now connected in Wrangler
 
@@ -127,6 +127,23 @@ Set `TELEGRAM_SETUP_KEY` in Cloudflare, then open:
 `https://<worker-domain>/telegram/fix?key=<TELEGRAM_SETUP_KEY>`
 
 This browser page resets and re-registers the Telegram webhook against the exact Worker origin and prints Telegram diagnostics.
+
+
+
+### v1.1.11 management panel language
+- Owner / Admin / Manager panels now have a personal **Panel language** selector.
+- Supported management UI languages: **UA / PL / EN**.
+- The choice is saved per staff account in D1 (`users.management_language`) and survives bot restarts/deploys.
+- Main panel navigation, dashboard, users, VIP, lists, services, pricing, calculator rules, content, product-language settings, referrals, analytics, audit and settings use the selected management language.
+- Existing databases are upgraded automatically with a backward-compatible `management_language` column.
+
+### v1.1.9 referral & VIP fixes
+
+- VIP tier label is now constrained inside the premium card on narrow iPhone widths.
+- Home referral card is now an actual action button.
+- Backend creates a unique referral deep-link and records `referral_link_created`.
+- Telegram `/start ref_<code>` claims the invite and records `referral_open`.
+- Telegram share sheet opens directly from the Mini App.
 
 
 ### v1.1.8 management panel

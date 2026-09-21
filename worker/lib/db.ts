@@ -1,5 +1,6 @@
 import type {Env,TelegramUser} from './types';
 import {fallbackServicesFor,normalizeServiceLocale,serviceCatalog} from './services';
+import {convertCurrency,normalizeCurrency} from './currency';
 
 let ready=false;
 
@@ -12,7 +13,7 @@ export async function ensureDb(env:Env){
  if(!env.DB)return false;
  if(ready)return true;
  await env.DB.exec(`
-CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -40,6 +41,7 @@ CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,created_at);
 `);
  // Backward-compatible upgrades for D1 databases created by older builds.
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN management_language TEXT");
  await safeAlter(env,"ALTER TABLE whitelist ADD COLUMN created_by INTEGER");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN image_url TEXT");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN icon_key TEXT");
@@ -76,6 +78,12 @@ async function seed(env:Env){
  await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone','')").run().catch(()=>{});
  const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.description','contact.description'];
  for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
+ const referralCopy={
+  uk:{'referral.title':'Запроси друга в Chameleon','referral.subtitle':'Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.','referral.share_text':'Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'},
+  pl:{'referral.title':'Zaproś znajomego do Chameleon','referral.subtitle':'Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.','referral.share_text':'Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'},
+  en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'}
+ } as const;
+ for(const locale of ['uk','pl','en'] as const)for(const [key,value] of Object.entries(referralCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
 }
 
 export async function upsertUser(env:Env,u:TelegramUser,owner=false){
@@ -87,12 +95,14 @@ export async function upsertUser(env:Env,u:TelegramUser,owner=false){
  await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) VALUES(?)').bind(row.id).run();
  return row;
 }
-export async function getServices(env:Env,locale='en'){
- const normalized=normalizeServiceLocale(locale);
- if(!env.DB)return fallbackServicesFor(normalized);
+export async function getServices(env:Env,locale='en',targetCurrency?:string|null){
+ const normalized=normalizeServiceLocale(locale),target=targetCurrency?normalizeCurrency(targetCurrency):null;
+ const convertItem=(item:any)=>{if(!target)return item;const baseCurrency=normalizeCurrency(item.currency);const override=target==='USD'?item.usdOverride:target==='UAH'?item.uahOverride:target==='PLN'?item.plnOverride:null;const price=override!=null&&Number(override)>0?Number(override):convertCurrency(Number(item.basePrice||0),baseCurrency,target);return {...item,basePrice:price,currency:target}};
+ if(!env.DB)return fallbackServicesFor(normalized).map(convertItem);
  await ensureDb(env);
- const r=await env.DB.prepare(`SELECT s.id,s.slug,COALESCE(t.title,s.slug) title,COALESCE(t.description,'') description,p.base_price basePrice,p.base_currency currency,s.duration_min durationMin,s.category FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? JOIN service_prices p ON p.service_id=s.id WHERE s.enabled=1 AND s.archived=0 ORDER BY s.sort_order,s.id`).bind(normalized).all<any>();
- return r.results.length?r.results:fallbackServicesFor(normalized);
+ const r=await env.DB.prepare(`SELECT s.id,s.slug,COALESCE(t.title,s.slug) title,COALESCE(t.description,'') description,p.base_price basePrice,p.base_currency currency,p.usd_override usdOverride,p.uah_override uahOverride,p.pln_override plnOverride,s.duration_min durationMin,s.category FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? JOIN service_prices p ON p.service_id=s.id WHERE s.enabled=1 AND s.archived=0 ORDER BY s.sort_order,s.id`).bind(normalized).all<any>();
+ const items=r.results.length?r.results:fallbackServicesFor(normalized);
+ return items.map(convertItem).map(({usdOverride,uahOverride,plnOverride,...item}:any)=>item);
 }
 export async function event(env:Env,userId:number|undefined,type:string,meta:any={}){if(!env.DB)return;await ensureDb(env);await env.DB.prepare('INSERT INTO analytics_events(user_id,event_type,metadata_json) VALUES(?,?,?)').bind(userId||null,type,JSON.stringify(meta)).run()}
 export async function getSetting(env:Env,key:string,fallback:string):Promise<string>{if(!env.DB)return fallback;await ensureDb(env);const r=await env.DB.prepare('SELECT value FROM settings WHERE key=?').bind(key).first<{value?:unknown}>();return String(r?.value??fallback)}

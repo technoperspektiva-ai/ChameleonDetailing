@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   telegram_user_id INTEGER NOT NULL UNIQUE,
   username TEXT, first_name TEXT, last_name TEXT,
   language TEXT NOT NULL DEFAULT 'en',
+  management_language TEXT,
   preferred_currency TEXT NOT NULL DEFAULT 'PLN',
   role TEXT NOT NULL DEFAULT 'CLIENT',
   status TEXT NOT NULL DEFAULT 'ACTIVE',
@@ -146,3 +147,16 @@ ON CONFLICT(service_id,locale) DO UPDATE SET title=excluded.title,description=ex
 INSERT INTO service_translations(service_id,locale,title,description)
 SELECT id,'en','Ceramic Coating','Long-term paint protection and gloss.' FROM services WHERE slug='ceramic-coating'
 ON CONFLICT(service_id,locale) DO UPDATE SET title=excluded.title,description=excluded.description;
+
+
+-- v1.1.11 referral panel copy defaults
+INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES
+('referral.title','uk','Запроси друга в Chameleon'),
+('referral.subtitle','uk','Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.'),
+('referral.share_text','uk','Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'),
+('referral.title','pl','Zaproś znajomego do Chameleon'),
+('referral.subtitle','pl','Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.'),
+('referral.share_text','pl','Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'),
+('referral.title','en','Invite a friend to Chameleon'),
+('referral.subtitle','en','Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.'),
+('referral.share_text','en','I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.');

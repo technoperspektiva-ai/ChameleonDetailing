@@ -5,7 +5,7 @@ import {quote} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.8';
+const VERSION='1.1.11';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -135,7 +135,38 @@ export default {
    }
    if(url.pathname==='/api/services'){
     const locale=url.searchParams.get('locale')||'en';
-    return json({services:await getServices(env,locale)});
+    const currency=url.searchParams.get('currency');
+    return json({services:await getServices(env,locale,currency)});
+   }
+   if(url.pathname==='/api/content'&&request.method==='GET'){
+    const locale=(url.searchParams.get('locale')||'en').toLowerCase().startsWith('uk')?'uk':(url.searchParams.get('locale')||'en').toLowerCase().startsWith('pl')?'pl':'en';
+    const defaults:any={
+     uk:{'referral.title':'Запроси друга в Chameleon','referral.subtitle':'Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.','referral.share_text':'Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'},
+     pl:{'referral.title':'Zaproś znajomego do Chameleon','referral.subtitle':'Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.','referral.share_text':'Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'},
+     en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'}
+    };
+    const content={...defaults[locale]};
+    if(env.DB){await ensureDb(env);const r=await env.DB.prepare("SELECT key,value FROM content_blocks WHERE locale=? AND value<>''").bind(locale).all<any>();for(const row of r.results||[])content[row.key]=row.value}
+    return json({content});
+   }
+   if(url.pathname==='/api/preferences/currency'&&request.method==='POST'){
+    const b=await read(request),u=await auth(env,b.initData||'');const currency=String(b.currency||'').toUpperCase();
+    if(!['PLN','USD','UAH'].includes(currency))return json({error:'Unsupported currency'},400);
+    if(env.DB&&!u.demo){await ensureDb(env);await env.DB.prepare('UPDATE users SET preferred_currency=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(currency,u.id).run();await event(env,u.id,'currency_changed',{currency})}
+    return json({ok:true,currency});
+   }
+   if(url.pathname==='/api/referrals/create'&&request.method==='POST'){
+    const b=await read(request),u=await auth(env,b.initData||'');
+    if(u.demo)return json({ok:true,code:'DEMO',url:`https://t.me/${String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'')}?start=ref_DEMO`});
+    if(!env.DB)return json({error:'Referral storage is not configured.'},503);
+    await ensureDb(env);
+    const enabled=(await getSetting(env,'referral_enabled','1'))==='1';
+    if(!enabled)return json({error:'Referral program is currently disabled.'},409);
+    const code='R'+crypto.randomUUID().replace(/-/g,'').slice(0,10).toUpperCase();
+    await env.DB!.prepare('INSERT INTO referrals(referrer_user_id,code) VALUES(?,?)').bind(u.id,code).run();
+    await event(env,u.id,'referral_link_created',{code});
+    const bot=String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'');
+    return json({ok:true,code,url:`https://t.me/${bot}?start=ref_${code}`});
    }
    if(url.pathname==='/api/calculator/quote'&&request.method==='POST'){
     const b=await read(request),u=await auth(env,b.initData||'');const state=await sessionState(env,u);
