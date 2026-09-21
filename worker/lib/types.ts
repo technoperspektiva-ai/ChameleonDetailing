@@ -8,6 +8,7 @@ export interface Env {
  DEFAULT_CURRENCY: string;
  BUSINESS_TIMEZONE: string;
  BOT_TOKEN?: string;
+ TELEGRAM_WEBHOOK_SECRET?: string;
  SESSION_SECRET?: string;
  APP_URL?: string;
  PAYMENT_PROVIDER?: string;

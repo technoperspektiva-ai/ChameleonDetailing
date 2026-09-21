@@ -10,7 +10,7 @@ const vehicles=[['sedan','vehicle.sedan'],['hatchback','vehicle.hatchback'],['su
 const conditions=[['light','condition.light'],['normal','condition.normal'],['dirty','condition.dirty'],['very-dirty','condition.veryDirty']] as const;
 const options=[['pet-hair','option.petHair',30],['ceramic-spray','option.ceramicSpray',40],['odor','option.odor',25]] as const;
 const wait=(ms:number)=>new Promise(r=>setTimeout(r,ms));
-const friendlyError=(_e:unknown,t:(key:TranslationKey)=>string)=>t('errors.generic');
+const friendlyError=(e:unknown,t:(key:TranslationKey)=>string)=>{const m=e instanceof Error?e.message:String(e||'');if(/BOT_TOKEN/i.test(m))return 'BOT_TOKEN is not configured in Cloudflare.';if(/Invalid or expired Telegram session/i.test(m))return 'Telegram session could not be verified. Close the Mini App and open it again from @ChameleonDetailing_bot.';return m&&m.length<180?m:t('errors.generic')};
 
 export function App(){
  const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[tab,setTab]=useState<Tab>('home');

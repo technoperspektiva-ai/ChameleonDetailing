@@ -1,6 +1,6 @@
 # ChameleonDetailing
 
-Version **1.1.0** — architecture v1.4 UI/i18n update and **no-webhook Telegram mode**.
+Version **1.1.1** — architecture v1.4 UI/i18n update and **no-webhook Telegram mode**.
 
 Production Telegram Mini App foundation for **@ChameleonDetailing_bot** on Cloudflare Workers, React/Vite and D1.
 
@@ -66,4 +66,9 @@ This calls Telegram `deleteWebhook` with `drop_pending_updates=false`.
 
 ## Deployment sanity check
 
-Open `/__version` after deployment. It must report version `1.1.0` and `worker: true`.
+Open `/__version` after deployment. It must report version `1.1.1` and `worker: true`.
+
+
+## Telegram bot
+
+The bot webhook is enabled again. See `docs/TELEGRAM_BOT.md`.

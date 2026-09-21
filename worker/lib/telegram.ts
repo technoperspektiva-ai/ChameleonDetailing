@@ -4,15 +4,17 @@ const hex=(buf:ArrayBuffer)=>[...new Uint8Array(buf)].map(b=>b.toString(16).padS
 async function hmac(key:CryptoKey,data:string){return crypto.subtle.sign('HMAC',key,enc.encode(data))}
 export async function validateInitData(initData:string,token:string):Promise<{user:TelegramUser;authDate:number}|null>{
  if(!initData||!token)return null;
- const p=new URLSearchParams(initData),provided=p.get('hash'); if(!provided)return null;
- p.delete('hash'); p.delete('signature');
- const pairs:Array<[string,string]>=[]; p.forEach((v,k)=>pairs.push([k,v])); const check=pairs.sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n');
+ const source=new URLSearchParams(initData),provided=source.get('hash'); if(!provided)return null;
+ const authDate=Number(source.get('auth_date')||0); if(!authDate||Math.abs(Date.now()/1000-authDate)>86400)return null;
+ const buildCheck=(dropSignature:boolean)=>{const p=new URLSearchParams(initData);p.delete('hash');if(dropSignature)p.delete('signature');const pairs:Array<[string,string]>=[];p.forEach((v,k)=>pairs.push([k,v]));return pairs.sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>`${k}=${v}`).join('\n')};
  const webKey=await crypto.subtle.importKey('raw',enc.encode('WebAppData'),{name:'HMAC',hash:'SHA-256'},false,['sign']);
  const secret=await hmac(webKey,token);
  const dataKey=await crypto.subtle.importKey('raw',secret,{name:'HMAC',hash:'SHA-256'},false,['sign']);
- const actual=hex(await hmac(dataKey,check)); if(actual!==provided.toLowerCase())return null;
- const authDate=Number(p.get('auth_date')||0); if(!authDate||Date.now()/1000-authDate>86400)return null;
- try{const user=JSON.parse(p.get('user')||'{}') as TelegramUser; if(!user.id)return null; return {user,authDate}}catch{return null}
+ const matches=async(check:string)=>{const actual=hex(await hmac(dataKey,check));const expected=provided.toLowerCase();if(actual.length!==expected.length)return false;let diff=0;for(let i=0;i<actual.length;i++)diff|=actual.charCodeAt(i)^expected.charCodeAt(i);return diff===0};
+ // Telegram clients/libraries differ around the newer `signature` field. Validate the token-HMAC form both ways;
+ // all identity/business fields remain covered, while `signature` itself is never trusted by this application.
+ if(!(await matches(buildCheck(false)))&&!(await matches(buildCheck(true))))return null;
+ try{const user=JSON.parse(source.get('user')||'{}') as TelegramUser; if(!user.id)return null; return {user,authDate}}catch{return null}
 }
 export async function tgApi(env:Env,method:string,body:Record<string,unknown>){
  if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN is not configured');

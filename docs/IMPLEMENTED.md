@@ -23,3 +23,5 @@ Implemented in this deploy package:
 - one-shot Telegram `deleteWebhook` utility
 
 Not faked in this package: external payment provider, external live FX provider, production delivery provider, or any provider-specific webhook.
+
+- Telegram bot webhook restored: `/api/telegram/webhook`; `/start`, `/help`, Mini App buttons and callbacks are active.

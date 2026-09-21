@@ -1,7 +1,7 @@
 {
   "name": "chameleondetailing",
   "private": true,
-  "version": "1.1.0",
+  "version": "1.1.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -16,7 +16,9 @@
     "deploy:cloudflare": "npm run build && wrangler deploy",
     "verify:dist": "node scripts/verify-dist.mjs",
     "check:i18n": "node scripts/verify-translations.mjs",
-    "telegram:webhook:delete": "node scripts/delete-telegram-webhook.mjs"
+    "telegram:webhook:delete": "node scripts/delete-telegram-webhook.mjs",
+    "telegram:webhook:set": "node scripts/set-telegram-webhook.mjs",
+    "telegram:webhook:info": "node scripts/get-telegram-webhook.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "latest",

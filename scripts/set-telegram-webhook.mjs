@@ -1,6 +1,12 @@
 const token=process.env.BOT_TOKEN;
 const app=(process.env.APP_URL||'').replace(/\/$/,'');
-if(!token||!app){console.error('Set BOT_TOKEN and APP_URL environment variables first.');process.exit(1)}
-const webhook=`${app}/api/telegram/webhook`;
-const r=await fetch(`https://api.telegram.org/bot${token}/setWebhook`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({url:webhook,allowed_updates:['message','callback_query']})});
-console.log(await r.json());
+const secret=process.env.TELEGRAM_WEBHOOK_SECRET||'';
+if(!token)throw new Error('BOT_TOKEN is required');
+if(!app)throw new Error('APP_URL is required, e.g. https://chameleondetailing.<subdomain>.workers.dev');
+const call=async(method,body)=>{const r=await fetch(`https://api.telegram.org/bot${token}/${method}`,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const j=await r.json();if(!j.ok)throw new Error(j.description||method+' failed');return j.result};
+const body={url:`${app}/api/telegram/webhook`,allowed_updates:['message','callback_query'],drop_pending_updates:false};
+if(secret)body.secret_token=secret;
+await call('setWebhook',body);
+await call('setChatMenuButton',{menu_button:{type:'web_app',text:'Open app',web_app:{url:app}}});
+console.log('Webhook active:',body.url);
+console.log(await call('getWebhookInfo',{}));
