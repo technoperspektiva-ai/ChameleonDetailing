@@ -17,6 +17,14 @@
     "DEFAULT_CURRENCY": "PLN",
     "BUSINESS_TIMEZONE": "Europe/Warsaw"
   },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chameleondetailing",
+      "database_id": "167770dd-95c2-484c-b157-1fc369cee19c",
+      "migrations_dir": "database/migrations"
+    }
+  ],
   "triggers": {
     "crons": ["*/30 * * * *"]
   },

@@ -1,5 +1,17 @@
 
-## Owner Bot Panel (v1.1.5)
+## Owner Bot Panel + D1 binding (v1.1.6)
+
+### D1 is now connected in Wrangler
+
+This release binds the existing Cloudflare D1 database directly in `wrangler.jsonc`:
+
+- binding: `DB`
+- database: `chameleondetailing`
+- database_id: `167770dd-95c2-484c-b157-1fc369cee19c`
+- migrations: `database/migrations`
+
+After deployment, `/api/system/status` should report `dbConfigured: true`, and `/panel` can use the Owner data features.
+
 
 The locked owner is Telegram numeric ID `375938798`. Management intentionally lives in the Telegram bot, not in the Mini App. Send `/panel` or `/owner` from the owner account to open the role-aware control panel. The panel includes Dashboard, Users, VIP, Whitelist, Managers, Admins, Services, Pricing, Calculator Rules, Content, Languages, Referrals, Analytics, Audit Log and Settings. Owner staff onboarding supports `@username`; known users are promoted immediately and unknown users receive a secure deep-link invite.
 
