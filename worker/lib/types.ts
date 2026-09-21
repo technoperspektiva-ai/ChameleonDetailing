@@ -11,7 +11,6 @@ export interface Env {
  SESSION_SECRET?: string;
  APP_URL?: string;
  PAYMENT_PROVIDER?: string;
- TELEGRAM_WEBHOOK_SECRET?: string;
 }
 export type TelegramUser={id:number;first_name:string;last_name?:string;username?:string;language_code?:string};
 export type AppRole='OWNER'|'ADMIN'|'MANAGER'|'CLIENT';

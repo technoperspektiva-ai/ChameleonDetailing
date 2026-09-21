@@ -1,18 +1,25 @@
-export type Locale='uk'|'en'|'pl';
+import en from './en.json';
+import uk from './uk.json';
+import pl from './pl.json';
+
+export type Locale='uk'|'pl'|'en';
 export const supportedLocales:Locale[]=['uk','pl','en'];
+export const localeLabels:Record<Locale,string>={uk:'UA',pl:'PL',en:'EN'};
+export const localeNames:Record<Locale,string>={uk:'Українська',pl:'Polski',en:'English'};
+export type TranslationKey=keyof typeof en;
+const dictionaries:Record<Locale,Record<string,string>>={en,uk,pl};
+
 export const normalizeLocale=(value?:string|null):Locale=>{
- const v=(value||'').toLowerCase();
- if(v.startsWith('uk')||v.startsWith('ua'))return 'uk';
- if(v.startsWith('pl'))return 'pl';
- return 'en';
+  const v=(value||'').toLowerCase();
+  if(v.startsWith('uk')||v.startsWith('ua'))return 'uk';
+  if(v.startsWith('pl'))return 'pl';
+  return 'en';
 };
-export const splashSlogan:Record<Locale,string>={
- uk:'Все найкраще тут',
- pl:'Wszystko, co najlepsze, jest tutaj',
- en:'The best is here'
+
+const isLongDebug=()=>typeof window!=='undefined'&&new URLSearchParams(window.location.search).get('debugLocale')==='long';
+export const createTranslator=(locale:Locale)=>(key:TranslationKey):string=>{
+  const value=dictionaries[locale]?.[key]??dictionaries.en[key]??'Something went wrong';
+  if(import.meta.env.DEV&&dictionaries[locale]?.[key]===undefined)console.warn(`[i18n] Missing ${locale}:${key}`);
+  return isLongDebug()?`${value} · ${value}`:value;
 };
-export const dict:any={
- uk:{home:'Головна',services:'Послуги',calculator:'Калькулятор',vip:'VIP',profile:'Профіль',hero:'Детейлінг, що адаптується до тебе',sub:'Преміальний догляд за авто прямо в Telegram',calculate:'Розрахувати вартість',popular:'Популярні послуги',from:'від',need:'Що потрібно сьогодні?',vehicle:'Оберіть автомобіль',condition:'Стан автомобіля',extras:'Додаткові опції',result:'Ваш розрахунок готовий',send:'Надіслати заявку',sent:'Запит передано команді',orders:'Мої замовлення',referral:'Порекомендувати другу',contact:'Контакти',currency:'Валюта',language:'Мова',vipTitle:'Chameleon VIP',vipText:'Пріоритетне обслуговування та персональні умови для обраних клієнтів.',edit:'Змінити параметри',retry:'Спробувати ще раз',processing:'Розраховуємо вартість',processing1:'Перевіряємо послугу',processing2:'Враховуємо стан авто',processing3:'Застосовуємо ваш тариф',ready:'Готово',maintenanceTitle:'Ми ненадовго наводимо порядок',maintenanceText:'Ваші дані та замовлення в безпеці. Спробуйте зайти трохи пізніше ✨',blockedTitle:'Доступ тимчасово обмежено',blockedText:'Якщо вважаєте, що це помилка — напишіть нам, і команда допоможе.',holidayTitle:'Holiday — time to rest',holidayText:'Сьогодні сервіс не працює. Можна залишити заявку на найближчий робочий день.',deferred:'На найближчий робочий день',emergency:'Екстрене замовлення',sharePhone:'Поділитися номером',phoneHint:'Номер передається лише після вашої явної згоди через Telegram.'},
- en:{home:'Home',services:'Services',calculator:'Calculator',vip:'VIP',profile:'Profile',hero:'Detailing that adapts to you',sub:'Premium car care right inside Telegram',calculate:'Calculate price',popular:'Popular services',from:'from',need:'What do you need today?',vehicle:'Choose your vehicle',condition:'Vehicle condition',extras:'Extras',result:'Your estimate is ready',send:'Send work request',sent:'Request sent to our team',orders:'My orders',referral:'Refer a friend',contact:'Contacts',currency:'Currency',language:'Language',vipTitle:'Chameleon VIP',vipText:'Priority service and personal terms for selected clients.',edit:'Change parameters',retry:'Try again',processing:'Calculating your price',processing1:'Checking service',processing2:'Considering vehicle condition',processing3:'Applying your rate',ready:'Ready',maintenanceTitle:'Quick improvement in progress',maintenanceText:'Your data and orders are safe. Please check back shortly ✨',blockedTitle:'Access is temporarily limited',blockedText:'If you think this is a mistake, contact us and the team will help.',holidayTitle:'Holiday — time to rest',holidayText:'The studio is closed today. You can leave a request for the next working day.',deferred:'Next working day',emergency:'Emergency request',sharePhone:'Share phone number',phoneHint:'Your number is sent only after your explicit consent in Telegram.'},
- pl:{home:'Start',services:'Usługi',calculator:'Kalkulator',vip:'VIP',profile:'Profil',hero:'Detailing, który dopasowuje się do Ciebie',sub:'Premium pielęgnacja auta prosto w Telegramie',calculate:'Oblicz cenę',popular:'Popularne usługi',from:'od',need:'Czego potrzebujesz?',vehicle:'Wybierz auto',condition:'Stan auta',extras:'Dodatki',result:'Twoja wycena jest gotowa',send:'Wyślij zlecenie',sent:'Zlecenie wysłane do zespołu',orders:'Moje zlecenia',referral:'Poleć znajomemu',contact:'Kontakt',currency:'Waluta',language:'Język',vipTitle:'Chameleon VIP',vipText:'Priorytetowa obsługa i indywidualne warunki dla wybranych klientów.',edit:'Zmień parametry',retry:'Spróbuj ponownie',processing:'Obliczamy cenę',processing1:'Sprawdzamy usługę',processing2:'Uwzględniamy stan auta',processing3:'Stosujemy Twój taryfikator',ready:'Gotowe',maintenanceTitle:'Krótka przerwa techniczna',maintenanceText:'Twoje dane i zlecenia są bezpieczne. Wróć za chwilę ✨',blockedTitle:'Dostęp jest tymczasowo ograniczony',blockedText:'Jeśli to pomyłka, skontaktuj się z nami — pomożemy.',holidayTitle:'Holiday — time to rest',holidayText:'Dziś studio jest nieczynne. Możesz zostawić zlecenie na najbliższy dzień roboczy.',deferred:'Najbliższy dzień roboczy',emergency:'Zlecenie awaryjne',sharePhone:'Udostępnij numer',phoneHint:'Numer zostanie przekazany dopiero po Twojej wyraźnej zgodzie w Telegramie.'}
-};
+export const splashSlogan:Record<Locale,string>={uk:uk['splash.slogan'],pl:pl['splash.slogan'],en:en['splash.slogan']};
