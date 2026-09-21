@@ -1,0 +1,10 @@
+ChameleonDetailing v1.1.9 UPDATE
+
+1. VIP card: STANDARD/VIP tier label can no longer overflow on narrow iPhones.
+2. Referral card is now a working action button.
+3. Mini App creates a unique Telegram referral deep-link through backend.
+4. Telegram share flow opens with localized share text.
+5. /start ref_<code> records the referred user and referral_open analytics event.
+6. Referral link creation records referral_link_created.
+
+Upload these files over the existing repository, preserving paths, then redeploy.

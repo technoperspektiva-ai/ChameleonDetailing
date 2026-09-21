@@ -94,5 +94,7 @@
   "errors.accessLimited": "Dostęp jest ograniczony.",
   "errors.outsideHours": "Standardowe zlecenia są niedostępne poza godzinami pracy.",
   "errors.emergencyUnavailable": "Tryb awaryjny jest teraz niedostępny.",
-  "errors.rateLimit": "Poprzednie zlecenie zostało już wysłane. Nowe można wysłać po 60 minutach."
+  "errors.rateLimit": "Poprzednie zlecenie zostało już wysłane. Nowe można wysłać po 60 minutach.",
+  "home.referralPreparing": "Przygotowujemy zaproszenie…",
+  "home.referralShare": "Polecam Chameleon Detailing — otwórz bota i sprawdź."
 }

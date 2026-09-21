@@ -12,3 +12,4 @@ export const haptic=(style='light')=>tg()?.HapticFeedback?.impactOccurred?.(styl
 export const notify=(type='success')=>tg()?.HapticFeedback?.notificationOccurred?.(type);
 export const telegramLanguage=()=>tg()?.initDataUnsafe?.user?.language_code||'';
 export const openBot=(start?:string)=>{const username='ChameleonDetailing_bot';const url=`https://t.me/${username}${start?`?start=${encodeURIComponent(start)}`:''}`;tg()?.openTelegramLink?.(url)??window.open(url,'_blank')};
+export const shareTelegramLink=(url:string,text='')=>{const share=`https://t.me/share/url?url=${encodeURIComponent(url)}${text?`&text=${encodeURIComponent(text)}`:''}`;const w=tg();if(w?.openTelegramLink)w.openTelegramLink(share);else window.open(share,'_blank','noopener,noreferrer')};

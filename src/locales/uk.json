@@ -94,5 +94,7 @@
   "errors.accessLimited": "Доступ обмежено.",
   "errors.outsideHours": "Стандартні заявки недоступні поза робочим часом.",
   "errors.emergencyUnavailable": "Екстрений режим зараз недоступний.",
-  "errors.rateLimit": "Попередню заявку вже надіслано. Нову можна відправити через 60 хвилин."
+  "errors.rateLimit": "Попередню заявку вже надіслано. Нову можна відправити через 60 хвилин.",
+  "home.referralPreparing": "Готуємо ваше запрошення…",
+  "home.referralShare": "Рекомендую Chameleon Detailing — відкрий бота та подивись."
 }

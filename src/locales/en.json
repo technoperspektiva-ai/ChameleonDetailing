@@ -94,5 +94,7 @@
   "errors.accessLimited": "Access is limited.",
   "errors.outsideHours": "Standard requests are unavailable outside working hours.",
   "errors.emergencyUnavailable": "Emergency mode is not available.",
-  "errors.rateLimit": "Your previous request was already sent. A new request can be sent after 60 minutes."
+  "errors.rateLimit": "Your previous request was already sent. A new request can be sent after 60 minutes.",
+  "home.referralPreparing": "Preparing your invite…",
+  "home.referralShare": "I found Chameleon Detailing — open the bot and check it out."
 }

@@ -11,5 +11,6 @@ export const api={
  request:(body:any)=>json<any>('/api/orders/request',{method:'POST',body:JSON.stringify({...body,initData:initData()})}),
  orders:()=>json<any>('/api/orders?initData='+encodeURIComponent(initData())),
  socials:()=>json<any>('/api/socials'),
- status:()=>json<any>('/api/system/status')
+ status:()=>json<any>('/api/system/status'),
+ referral:()=>json<{ok:boolean;code:string;url:string}>('/api/referrals/create',{method:'POST',body:JSON.stringify({initData:initData()})})
 };

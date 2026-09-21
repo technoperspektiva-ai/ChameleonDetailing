@@ -79,6 +79,17 @@ async function showUser(env:Env,msg:TgMessage,from:TgFrom,userId:number){const s
 async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
  if(!msg.from)return;const u=await registerUser(env,msg.from),locale=localeOf(msg.from),c=copy[locale];
  if(startPayload.startsWith('staff_'))await claimStaffInvite(env,msg.from,startPayload.slice(6));
+ if(startPayload.startsWith('ref_')&&env.DB){
+  const code=startPayload.slice(4).trim();
+  if(code){
+   await ensureDb(env);
+   const referral=await env.DB.prepare('SELECT id,referrer_user_id,referred_user_id FROM referrals WHERE code=? LIMIT 1').bind(code).first<any>();
+   if(referral&&!referral.referred_user_id&&Number(referral.referrer_user_id)!==Number(u.id)){
+    await env.DB.prepare('UPDATE referrals SET referred_user_id=? WHERE id=? AND referred_user_id IS NULL').bind(u.id,referral.id).run();
+    await event(env,u.id,'referral_open',{code,referrerUserId:referral.referrer_user_id});
+   }
+  }
+ }
  const {role}=await getRole(env,msg.from);const name=esc(msg.from.first_name||'friend');const roleText=role==='OWNER'?`\n\n${c.owner}`:'';
  await sendMessage(env,msg.chat.id,`🦎 <b>Chameleon Detailing</b>\n\n${c.hello}, <b>${name}</b>! ${c.body}${roleText}\n\n${c.tap}`,mainKeyboard(env,origin,locale,role));
  if(role!=='CLIENT')await sendMessage(env,msg.chat.id,`${roleLabel(role)} <b>CONTROL PANEL</b>\n\nRole-aware management panel is ready.`,panelKeyboard(role));
