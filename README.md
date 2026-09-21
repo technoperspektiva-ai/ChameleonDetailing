@@ -1,5 +1,5 @@
 
-## Owner Bot Panel + D1 binding (v1.1.6)
+## VIP visual refresh + Owner Bot Panel + D1 binding (v1.1.7)
 
 ### D1 is now connected in Wrangler
 
