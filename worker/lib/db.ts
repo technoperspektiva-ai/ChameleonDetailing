@@ -26,7 +26,7 @@ CREATE TABLE IF NOT EXISTS vehicle_types(id INTEGER PRIMARY KEY AUTOINCREMENT,sl
 CREATE TABLE IF NOT EXISTS condition_levels(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL,price REAL NOT NULL DEFAULT 0,pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS calculator_sessions(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,service_id INTEGER,vehicle_type_id INTEGER,condition_level_id INTEGER,base_price_snapshot REAL,vehicle_multiplier_snapshot REAL,condition_multiplier_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,currency TEXT NOT NULL,pricing_version TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS service_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,calculation_id INTEGER,assigned_manager_id INTEGER,status TEXT NOT NULL DEFAULT 'REQUESTED',is_test INTEGER NOT NULL DEFAULT 0,service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,completed_at TEXT,payment_status TEXT NOT NULL DEFAULT 'PENDING');
+CREATE TABLE IF NOT EXISTS service_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,calculation_id INTEGER,assigned_manager_id INTEGER,status TEXT NOT NULL DEFAULT 'REQUESTED',is_test INTEGER NOT NULL DEFAULT 0,service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,completed_at TEXT,payment_status TEXT NOT NULL DEFAULT 'PENDING',updated_at TEXT);
 CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT,service_request_id INTEGER,user_id INTEGER,amount REAL NOT NULL,currency TEXT NOT NULL,reporting_amount REAL,reporting_currency TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,method TEXT NOT NULL DEFAULT 'MANUAL',provider TEXT,provider_payment_id TEXT,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,paid_at TEXT,marked_by INTEGER,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS delivery_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,service_request_id INTEGER NOT NULL,user_id INTEGER NOT NULL,address_text TEXT,status TEXT NOT NULL DEFAULT 'OFFERED',price REAL,currency TEXT,base_price REAL,base_currency TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,requested_at TEXT,confirmed_at TEXT,confirmed_by INTEGER,delivered_at TEXT,delivered_by INTEGER,declined_at TEXT,cancelled_at TEXT,notes TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS referrals(id INTEGER PRIMARY KEY AUTOINCREMENT,referrer_user_id INTEGER,referred_user_id INTEGER,code TEXT NOT NULL UNIQUE,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,miniapp_opened_at TEXT,calculator_used_at TEXT,request_created_at TEXT,first_paid_job_at TEXT,became_vip_at TEXT);
@@ -46,6 +46,19 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
 `);
  // Backward-compatible upgrades for D1 databases created by older builds.
  await safeAlter(env,"ALTER TABLE users ADD COLUMN management_language TEXT");
+ // client_profiles was smaller in early production builds. Keep runtime upgrades
+ // exhaustive so reports, VIP and retention never depend on a manual D1 reset.
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN phone_number TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN phone_shared_at TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN preferred_contact_method TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN notes TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN vip_since TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN assigned_manager_id INTEGER");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN first_paid_job_at TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN last_paid_job_at TEXT");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN paid_jobs_count INTEGER NOT NULL DEFAULT 0");
+ await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN lifetime_value REAL NOT NULL DEFAULT 0");
  await safeAlter(env,"ALTER TABLE whitelist ADD COLUMN created_by INTEGER");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN image_url TEXT");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN icon_key TEXT");
@@ -59,6 +72,12 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_by INTEGER");
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_at TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN client_deleted_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN final_job_price REAL");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN price_adjustment_reason TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN confirmed_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN completed_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PENDING'");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN updated_at TEXT");
  await seed(env);
  ready=true;
  return true;
@@ -80,7 +99,7 @@ async function seed(env:Env){
  for(const [slug,mult,sort] of vehicles)await env.DB.prepare(`INSERT INTO vehicle_types(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
  const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
  for(const [slug,mult,sort] of conditions)await env.DB.prepare(`INSERT INTO condition_levels(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
- await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)')").run().catch(()=>{});
+ await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO')").run().catch(()=>{});
  const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.description','contact.description'];
  for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
  const weeklyCount=await env.DB.prepare('SELECT COUNT(*) n FROM business_weekly_schedule').first<any>();

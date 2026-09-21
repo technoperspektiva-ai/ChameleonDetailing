@@ -5,7 +5,7 @@ import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
 
-const VERSION='1.1.13';
+const VERSION='1.1.15';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -191,7 +191,7 @@ export default {
     if(!state.schedule.isOpen&&requestType==='STANDARD')return json({error:'Standard requests are unavailable outside working hours.'},409);
     if(requestType==='EMERGENCY'&&!state.schedule.emergencyEnabled)return json({error:'Emergency mode is not available.'},409);
     if(!['STANDARD','DEFERRED','EMERGENCY'].includes(requestType))return json({error:'Invalid request type'},400);
-    const last=await env.DB!.prepare("SELECT created_at FROM service_requests WHERE user_id=? AND is_test=0 ORDER BY id DESC LIMIT 1").bind(u.id).first<any>();
+    const last=await env.DB!.prepare("SELECT created_at FROM service_requests WHERE user_id=? AND is_test=0 AND client_deleted_at IS NULL AND COALESCE(status,'REQUESTED') NOT IN ('CANCELLED','REJECTED') ORDER BY id DESC LIMIT 1").bind(u.id).first<any>();
     if(last&&Date.now()-Date.parse(last.created_at)<3600000)return json({error:'Your previous request was already sent. A new request can be sent after 60 minutes.'},429);
     const em=requestType==='EMERGENCY'?state.schedule.emergencyMultiplier:1;const q=await quote(env,b,u.client_tier,em);
     const res=await env.DB!.prepare(`INSERT INTO service_requests(user_id,service_slug,vehicle_slug,condition_slug,options_json,request_type,is_deferred,scheduled_for,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,emergency_multiplier,emergency_surcharge) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,b.service,b.vehicle,b.condition,JSON.stringify(b.options||[]),requestType,requestType==='DEFERRED'?1:0,requestType==='DEFERRED'?state.schedule.nextWorkingAt:null,q.basePrice,q.optionsTotal,q.discount,q.finalPrice,q.currency,requestType==='EMERGENCY'?em:null,q.emergencySurcharge||0).run();

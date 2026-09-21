@@ -45,6 +45,10 @@ export function App(){
    const elapsed=Date.now()-started;if(elapsed<motion.splashMin)await wait(motion.splashMin-elapsed);await wait(160);setSplash(false);
   }catch(e:unknown){setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
  useEffect(()=>{if(!session)return;Promise.all([api.services(locale,currency),api.content(locale)]).then(([x,ct])=>{setServices(x.services);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session]);
+ // Staff can change opening hours from Telegram while the Mini App is already open.
+ // Refresh runtime business state automatically so the closed/open banner follows D1
+ // without forcing the client to kill and reopen Telegram.
+ useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  const goto=(x:Tab)=>{haptic();setTab(x);scrollTo({top:0,behavior:'smooth'})};
  if(splash)return <StartupSplash locale={locale} startup={startup} onRetry={()=>location.reload()} t={t}/>;
  if(!session)return <StateScreen title="Chameleon Detailing" text={startup.error||t('errors.startup')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
@@ -75,7 +79,7 @@ function CalculatorPage({t,services,currency,schedule}:any){
  useEffect(()=>{if(!service&&services[0])setService(services[0].slug)},[services,service]); useEffect(()=>()=>timers.current.forEach(clearTimeout),[]);
  const calculate=async()=>{setBusy(true);setError('');setProcessing(true);setStatus(t('calculator.processing1'));const started=Date.now();timers.current=[setTimeout(()=>setStatus(t('calculator.processing2')),260),setTimeout(()=>setStatus(t('calculator.processing3')),520)];try{const q=await api.quote({service,vehicle,condition,options:extra,currency});const left=motion.calculatorOverlayMin-(Date.now()-started);if(left>0)await wait(left);setStatus(t('calculator.ready'));await wait(160);setQuote(q);setProcessing(false);notify('success')}catch(e:unknown){setError(friendlyError(e,t));setProcessing(false);notify('error')}finally{setBusy(false)}};
  const next=()=>step<4?setStep(step+1):calculate();
- const send=async(requestType='STANDARD')=>{setBusy(true);setError('');try{await api.request({service,vehicle,condition,options:extra,currency,requestType});setSent(true);notify('success')}catch(e:unknown){setError(t('errors.request'));notify('error')}finally{setBusy(false)}};
+ const send=async(requestType='STANDARD')=>{setBusy(true);setError('');try{await api.request({service,vehicle,condition,options:extra,currency,requestType});setSent(true);notify('success')}catch(e:unknown){setError(friendlyError(e,t));notify('error')}finally{setBusy(false)}};
  const title=step===1?t('calculator.need'):step===2?t('calculator.vehicle'):step===3?t('calculator.condition'):t('calculator.extras');
  return <section><div className="calc-top"><div className="steps">{[1,2,3,4].map(n=><i className={n<=step?'on':''} key={n}>{n<step?<Check/>:n}</i>)}</div><h1>{title}</h1></div>
  {step===1&&<div className="choice-list">{services.map((s:any)=><Choice key={s.slug} on={()=>setService(s.slug)} active={service===s.slug} title={s.title} sub={s.description}/>)}</div>}
