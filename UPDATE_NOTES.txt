@@ -1,18 +1,12 @@
-ChameleonDetailing v1.1.49 UPDATE — Home Socials + Professional Specialists
+ChameleonDetailing v1.1.50 UPDATE — Localized /start menu command
 
-1. Added a premium Social Media section to the Mini App home page.
-2. Social networks use lime/neon line icons and the same rounded dark surfaces as the rest of Chameleon Detailing.
-3. Owner/Admin can configure Instagram, Facebook, TikTok, YouTube, Telegram, WhatsApp and Website URLs.
-4. Every social network can be enabled/disabled individually, and the entire Social Media home block can also be hidden.
-5. Added a Professional Specialists section to the Mini App home page.
-6. Each specialist card can contain: name, role/title, portfolio URL, optional external/social URL, a custom link label, and an optional photo URL.
-7. Owner/Admin can add, edit, enable/disable or delete specialists, plus show/hide the whole specialists section.
-8. Mini App refreshes social/specialist visibility while open, so staff changes appear without forcing the client to restart Telegram.
-9. Added /api/specialists and extended /api/socials to respect the home visibility settings.
-10. Existing order Payments, localized Excel reports and Google Sheets integrations remain unchanged.
-
-Admin paths:
-Settings -> Social Media
-Settings -> Specialists
+1. Added a persistent Telegram bot command for /start in each user's private bot chat.
+2. The /start command description is localized to the user's selected bot language:
+   - UA: Відкрити меню
+   - PL: Otwórz menu
+   - EN: Open menu
+3. The command menu is refreshed when the user opens /start.
+4. The command menu is refreshed immediately when the user changes the bot language.
+5. Existing Mini App social links, specialists, payments, reports and Google Sheets features remain unchanged.
 
 Redeploy the Cloudflare Worker after updating the repository.
