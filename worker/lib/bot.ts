@@ -94,6 +94,11 @@ const messageControlKeyboard=(locale:BotLocale,pinned=false)=>({inline_keyboard:
  {text:pinned?l3(locale,'📍 Відкріпити','📍 Odepnij','📍 Unpin'):l3(locale,'📌 Закріпити','📌 Przypnij','📌 Pin'),callback_data:`msgctl:${pinned?'unpin':'pin'}:${locale}`},
  {text:l3(locale,'✅ Прочитано','✅ Przeczytano','✅ Read'),callback_data:`msgctl:read:${locale}`}
 ]]});
+const messageControlMarkup=(msg:any,locale:BotLocale,pinned:boolean)=>{
+ const rows=Array.isArray(msg?.reply_markup?.inline_keyboard)?msg.reply_markup.inline_keyboard:[];
+ const keep=rows.filter((row:any[])=>!row.some((b:any)=>String(b?.callback_data||'').startsWith('msgctl:')));
+ return {inline_keyboard:[...keep,...messageControlKeyboard(locale,pinned).inline_keyboard]};
+};
 
 export const telegramWebhookSecret=(env:Env)=>{const v=String(env.TELEGRAM_WEBHOOK_SECRET||'').trim();return /^[A-Za-z0-9_-]{1,256}$/.test(v)?v:''};
 function appUrl(env:Env,origin?:string){const live=(origin||'').trim();if(/^https:\/\//i.test(live))return live.replace(/\/$/,'');return String(env.APP_URL||'').replace(/\/$/,'')}
@@ -1049,14 +1054,14 @@ ${esc(caption)}
    if(action==='pin'){
     try{
      await tgApi(env,'pinChatMessage',{chat_id:chatId,message_id:messageId,disable_notification:true});
-     await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlKeyboard(loc,true)}).catch(()=>{});
+     await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlMarkup(cb.message,loc,true)}).catch(()=>{});
     }catch(e:any){
      await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id,text:l3(loc,'Не вдалося закріпити повідомлення.','Nie udało się przypiąć wiadomości.','Could not pin this message.'),show_alert:false}).catch(()=>{});
     }
     return;
    }
    await tgApi(env,'unpinChatMessage',{chat_id:chatId,message_id:messageId}).catch(()=>{});
-   await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlKeyboard(loc,false)}).catch(()=>{});
+   await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlMarkup(cb.message,loc,false)}).catch(()=>{});
    return;
   }
   if(cb.data==='help'){await help(env,origin,{...cb.message,from:cb.from});return}
