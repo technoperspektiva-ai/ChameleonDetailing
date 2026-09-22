@@ -1,14 +1,16 @@
-ChameleonDetailing v1.1.51 UPDATE — Persistent Open Menu keyboard
+ChameleonDetailing v1.1.52 UPDATE — Clean chat notifications
 
-1. Added a persistent Telegram reply-keyboard button in the private bot chat.
-2. The button is localized by the user's selected bot language:
-   - UA: 🦎 Відкрити меню
-   - PL: 🦎 Otwórz menu
-   - EN: 🦎 Open menu
-3. Tapping the button opens the same main bot menu as /start.
-4. The keyboard is persistent and resized for a compact one-button layout.
-5. The keyboard refreshes after /start and immediately after changing bot language.
-6. The existing localized /start command description remains enabled.
-7. Existing Mini App, social links, specialists, payments, reports and Google Sheets features remain unchanged.
+1. Removed the visible “⌨️ Quick menu / Швидке меню” service message. The persistent localized Open menu keyboard is now refreshed through a transient invisible carrier that is deleted immediately.
+2. Client order-status notifications now include:
+   - 📌 Pin / 📍 Unpin
+   - ✅ Read
+   - existing “Open my requests” action is preserved.
+3. Excel report documents sent by the bot now include:
+   - 📌 Pin / 📍 Unpin
+   - ✅ Read
+4. Pinning uses Telegram pinned-message UI and does not replace or move the tracked main bot menu panel.
+5. “Read” unpins the message if needed and then deletes that notification/report message from the chat.
+6. Pin/unpin updates only the control row and preserves the other inline actions on the message.
+7. Button labels follow UA / PL / EN.
 
 Redeploy the Cloudflare Worker after updating the repository.
