@@ -1,12 +1,18 @@
-ChameleonDetailing v1.1.48 UPDATE — Localized Reports + Order Payments
+ChameleonDetailing v1.1.49 UPDATE — Home Socials + Professional Specialists
 
-1. Excel reports now follow each staff member's selected management language: Ukrainian, Polish or English.
-2. The selected language is read from users.management_language, with users.language as fallback.
-3. Workbook sheet names, column headers, dashboard labels and Telegram report captions are localized.
-4. Common report values are localized too: order/payment statuses, Cash/Card, first/repeat client and yes/no flags.
-5. The language choice is personal: Owner/Admin/Manager can receive the same report type in different languages.
-6. Order cards keep the v1.1.47 Payments flow: Payments → Paid → Cash/Card.
-7. PAID payment rows continue to feed Payments/Revenue Excel reports and Google Sheets snapshots.
-8. Google Sheets control panel already uses UA/PL/EN interface localization; Sheets tab schema remains stable for automation.
+1. Added a premium Social Media section to the Mini App home page.
+2. Social networks use lime/neon line icons and the same rounded dark surfaces as the rest of Chameleon Detailing.
+3. Owner/Admin can configure Instagram, Facebook, TikTok, YouTube, Telegram, WhatsApp and Website URLs.
+4. Every social network can be enabled/disabled individually, and the entire Social Media home block can also be hidden.
+5. Added a Professional Specialists section to the Mini App home page.
+6. Each specialist card can contain: name, role/title, portfolio URL, optional external/social URL, a custom link label, and an optional photo URL.
+7. Owner/Admin can add, edit, enable/disable or delete specialists, plus show/hide the whole specialists section.
+8. Mini App refreshes social/specialist visibility while open, so staff changes appear without forcing the client to restart Telegram.
+9. Added /api/specialists and extended /api/socials to respect the home visibility settings.
+10. Existing order Payments, localized Excel reports and Google Sheets integrations remain unchanged.
+
+Admin paths:
+Settings -> Social Media
+Settings -> Specialists
 
 Redeploy the Cloudflare Worker after updating the repository.
