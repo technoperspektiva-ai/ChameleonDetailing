@@ -44,7 +44,11 @@ const languageName=(locale:BotLocale)=>locale==='uk'?'Українська':loca
 
 export const telegramWebhookSecret=(env:Env)=>{const v=String(env.TELEGRAM_WEBHOOK_SECRET||'').trim();return /^[A-Za-z0-9_-]{1,256}$/.test(v)?v:''};
 function appUrl(env:Env,origin?:string){const live=(origin||'').trim();if(/^https:\/\//i.test(live))return live.replace(/\/$/,'');return String(env.APP_URL||'').replace(/\/$/,'')}
-function mainKeyboard(env:Env,origin:string,locale:BotLocale,role:Role='CLIENT'){const c=copy[locale],url=appUrl(env,origin);const rows:any[]=[[{text:c.open,web_app:{url}}],[{text:c.calculator,web_app:{url:url+'/?startapp=calculator'}},{text:c.orders,web_app:{url:url+'/?startapp=orders'}}]];if(role!=='CLIENT')rows.push([{text:role==='OWNER'?c.panel:'🛠 Management panel',callback_data:'staff:panel'}]);rows.push([{text:c.help,callback_data:'help'}]);return {inline_keyboard:rows}}
+function mainKeyboard(env:Env,origin:string,locale:BotLocale,role:Role='CLIENT'){const c=copy[locale],url=appUrl(env,origin);const rows:any[]=[[{text:c.open,web_app:{url}}]];if(role!=='CLIENT')rows.push([{text:role==='OWNER'?c.panel:l3(locale,'🛠 Панель керування','🛠 Panel zarządzania','🛠 Management panel'),callback_data:'staff:panel'}]);rows.push([{text:c.help,callback_data:'help'}]);return {inline_keyboard:rows}}
+async function botContent(env:Env,key:string,locale:BotLocale,fallback:string){if(!env.DB)return fallback;await ensureDb(env);const row=await env.DB.prepare('SELECT value FROM content_blocks WHERE key=? AND locale=?').bind(key,locale).first<any>();const value=String(row?.value||'').trim();return value||fallback}
+const botLocaleFromUser=(u:any,from?:TgFrom):BotLocale=>{const v=String(u?.language||'').toLowerCase();return v==='uk'||v==='pl'||v==='en'?v as BotLocale:localeOf(from)};
+async function helpKeyboard(env:Env,locale:BotLocale){const contact=String(await getSetting(env,'bot.owner_contact_url','')).trim()||`tg://user?id=${String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID)}`;return {inline_keyboard:[[{text:l3(locale,'✍️ Написати власнику Детейлінгу','✍️ Napisz do właściciela','✍️ Message the detailing owner'),url:contact}],[{text:l3(locale,'🌐 Змінити мову','🌐 Zmień język','🌐 Change language'),callback_data:'botlang:menu'}],[{text:l3(locale,'⬅️ Головне меню','⬅️ Menu główne','⬅️ Main menu'),callback_data:'client:menu'}]]}}
+
 
 const roleLabel=(role:Role)=>role==='OWNER'?'👑 OWNER':role==='ADMIN'?'🛡 ADMIN':role==='MANAGER'?'🧑‍💼 MANAGER':'👤 CLIENT';
 const l3=(locale:BotLocale,uk:string,pl:string,en:string)=>locale==='uk'?uk:locale==='pl'?pl:en;
@@ -100,7 +104,7 @@ async function showUser(env:Env,msg:TgMessage,from:TgFrom,userId:number){
 }
 
 async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
- if(!msg.from)return;const u=await registerUser(env,msg.from),locale=localeOf(msg.from),c=copy[locale];
+ if(!msg.from)return;const u=await registerUser(env,msg.from),locale=botLocaleFromUser(u,msg.from),c=copy[locale];
  if(startPayload.startsWith('staff_'))await claimStaffInvite(env,msg.from,startPayload.slice(6));
  if(startPayload.startsWith('ref_')&&env.DB){
   const code=startPayload.slice(4).trim();
@@ -117,7 +121,7 @@ async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
  await sendMessage(env,msg.chat.id,`🦎 <b>Chameleon Detailing</b>\n\n${c.hello}, <b>${name}</b>! ${c.body}${roleText}\n\n${c.tap}`,mainKeyboard(env,origin,locale,role));
  if(role!=='CLIENT'){const staff=await requireStaff(env,msg.from);const pl=staff?panelLocaleOf(staff,msg.from):locale;const pc=pcopy(pl);await sendMessage(env,msg.chat.id,`${roleLabel(role)} <b>${pc.panelTitle}</b>\n\n${pc.panelBody}`,panelKeyboard(role,pl));}
 }
-async function help(env:Env,origin:string,msg:TgMessage){const locale=localeOf(msg.from),c=copy[locale];const role=msg.from?(await getRole(env,msg.from)).role:'CLIENT';await sendMessage(env,msg.chat.id,c.helpText,mainKeyboard(env,origin,locale,role))}
+async function help(env:Env,origin:string,msg:TgMessage){const staff=msg.from?await getRole(env,msg.from):null;const locale=staff?botLocaleFromUser(staff.u,msg.from):localeOf(msg.from);const text=await botContent(env,'bot.help_text',locale,copy[locale].helpText);await sendMessage(env,msg.chat.id,text,await helpKeyboard(env,locale))}
 async function saveContact(env:Env,origin:string,msg:TgMessage){const from=msg.from,contact=msg.contact;if(!from||!contact)return;const locale=localeOf(from),c=copy[locale];if(contact.user_id&&contact.user_id!==from.id){await sendMessage(env,msg.chat.id,c.own);return}const {u,role}=await getRole(env,from);if(env.DB&&u.id){await env.DB.prepare(`INSERT INTO client_profiles(user_id,phone_number,phone_verified_via_telegram,phone_shared_at) VALUES(?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET phone_number=excluded.phone_number,phone_verified_via_telegram=1,phone_shared_at=CURRENT_TIMESTAMP`).bind(u.id,contact.phone_number).run();await event(env,u.id,'phone_shared_via_telegram')}await sendMessage(env,msg.chat.id,c.saved,mainKeyboard(env,origin,locale,role))}
 
 async function panelSection(env:Env,msg:TgMessage,from:TgFrom,section:string){
@@ -175,6 +179,12 @@ async function panelSection(env:Env,msg:TgMessage,from:TgFrom,section:string){
   text=`${section==='vehicles'?c.vehicleMultipliers:c.conditionMultipliers}\n\n${c.tapEdit}`;kb=backPanel(locale,(r.results||[]).map((x:any)=>[{text:`${x.enabled?'✅':'❌'} ${x.slug} × ${Number(x.multiplier).toFixed(2)}`,callback_data:`mult:${section}:${x.id}`}]))
  }else if(section==='content'){
   if(!can(staff.role,'content.edit'))return;const keys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description'];text=`${c.content}\n\n${c.contentIntro}`;kb=backPanel(locale,keys.map((k,i)=>[{text:`${i+1}. ${k}`,callback_data:`content:${i}`}]))
+ }else if(section==='botmenu'){
+  if(!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const contact=await getSetting(env,'bot.owner_contact_url','');const rows:any[]=[[{text:'🇺🇦 Меню UA',callback_data:'botcopy:menu:uk'},{text:'🇺🇦 Help UA',callback_data:'botcopy:help:uk'}],[{text:'🇵🇱 Menu PL',callback_data:'botcopy:menu:pl'},{text:'🇵🇱 Help PL',callback_data:'botcopy:help:pl'}],[{text:'🇬🇧 Menu EN',callback_data:'botcopy:menu:en'},{text:'🇬🇧 Help EN',callback_data:'botcopy:help:en'}],[{text:l3(locale,'✍️ Контакт власника','✍️ Kontakt właściciela','✍️ Owner contact'),callback_data:'action:setting:edit:bot.owner_contact_url'}]];text=`${l3(locale,'🤖 <b>Меню клієнта в боті</b>','🤖 <b>Menu klienta w bocie</b>','🤖 <b>Client bot menu</b>')}
+
+${l3(locale,'Тут можна змінити привітальний текст, Help-повідомлення для UA / PL / EN та посилання для кнопки «Написати власнику».','Tutaj możesz zmienić tekst powitalny, wiadomość Pomocy dla UA / PL / EN oraz link przycisku „Napisz do właściciela”.','Edit the welcome copy, Help message for UA / PL / EN and the “Message owner” button URL here.')}
+
+Owner URL: <code>${esc(contact||`tg://user?id=${String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID)}`)}</code>`;kb=backPanel(locale,rows)
  }else if(section==='languages'){
   if(!can(staff.role,'localization.edit'))return;const def=await getSetting(env,'default_locale','en'),avail=await getSetting(env,'available_locales','uk,pl,en');text=`${c.languages}\n\n${c.defaultLocale}: <b>${esc(def)}</b>\n${c.available}: <code>${esc(avail)}</code>\n\n${c.translationsNote}`;kb=backPanel(locale,[[{text:'🇺🇦 Default UA',callback_data:'action:setting:set:default_locale:uk'},{text:'🇵🇱 Default PL',callback_data:'action:setting:set:default_locale:pl'},{text:'🇬🇧 Default EN',callback_data:'action:setting:set:default_locale:en'}],[{text:'✏️ Available locales',callback_data:'action:setting:edit:available_locales'}]])
  }else if(section==='referrals'){
@@ -355,12 +365,25 @@ export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
   if(/^\/schedule(?:@\w+)?(?:\s|$)/i.test(text)&&msg.from){await panelSection(env,msg,msg.from,'schedule');return}
   if(/^\/reports(?:@\w+)?(?:\s|$)/i.test(text)&&msg.from){await panelSection(env,msg,msg.from,'reports');return}
   if(/^\/help(?:@\w+)?(?:\s|$)/i.test(text)){await help(env,origin,msg);return}
-  if(msg.from){const {u,role}=await getRole(env,msg.from);if(role!=='CLIENT'&&text&&await handleTextState(env,origin,msg,msg.from,u,role))return;if(text){const locale=localeOf(msg.from);await sendMessage(env,msg.chat.id,copy[locale].choose,mainKeyboard(env,origin,locale,role));return}}
+  if(msg.from){const {u,role}=await getRole(env,msg.from);if(role!=='CLIENT'&&text&&await handleTextState(env,origin,msg,msg.from,u,role))return;if(text){const locale=botLocaleFromUser(u,msg.from);await sendMessage(env,msg.chat.id,copy[locale].choose,mainKeyboard(env,origin,locale,role));return}}
  }
  const cb=update.callback_query;
  if(cb){
   await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id}).catch(()=>{});if(!cb.message)return;
   if(cb.data==='help'){await help(env,origin,{...cb.message,from:cb.from});return}
+  if(cb.data==='client:menu'){const {u,role}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);const text=await botContent(env,'bot.client_menu_text',locale,copy[locale].body);await safeEdit(env,cb.message,`🦎 <b>Chameleon Detailing</b>
+
+${text}`,mainKeyboard(env,origin,locale,role));return}
+  if(cb.data==='botlang:menu'){const {u}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);await safeEdit(env,cb.message,l3(locale,`🌐 <b>Мова бота</b>
+
+Оберіть зручну мову. Вона збережеться для наступних повідомлень.`,`🌐 <b>Język bota</b>
+
+Wybierz wygodny język. Zostanie zapamiętany dla kolejnych wiadomości.`,`🌐 <b>Bot language</b>
+
+Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[[{text:'🇺🇦 Українська',callback_data:'botlang:uk'}],[{text:'🇵🇱 Polski',callback_data:'botlang:pl'}],[{text:'🇬🇧 English',callback_data:'botlang:en'}],[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'help'}]]});return}
+  const botLang=(cb.data||'').match(/^botlang:(uk|pl|en)$/);if(botLang){const {u,role}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;const text=await botContent(env,'bot.client_menu_text',locale,copy[locale].body);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
+
+${text}`,mainKeyboard(env,origin,locale,role));return}
   if(cb.data==='staff:panel'||cb.data==='panel:home'){await showPanel(env,cb.message,cb.from);return}
   const panelLang=(cb.data||'').match(/^panel_lang:(uk|pl|en)$/);if(panelLang){const staff=await requireStaff(env,cb.from);if(!staff||!env.DB)return;const next=panelLang[1] as BotLocale;await ensureDb(env);await env.DB.prepare('UPDATE users SET management_language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(next,staff.u.id).run();await audit(env,staff.u.id,'panel.language.change','user',String(staff.u.id),{management_language:staff.u.management_language||null},{management_language:next});const pc=pcopy(next);await safeEdit(env,cb.message,`${pc.languageSaved}\n\n${roleLabel(staff.role)} <b>${pc.panelTitle}</b>\n\n${pc.panelBody}`,panelKeyboard(staff.role,next));return}
   if(cb.data==='panel:client'){const {role}=await getRole(env,cb.from);await safeEdit(env,cb.message,'🦎 <b>Chameleon Detailing</b>\n\nClient menu',mainKeyboard(env,origin,localeOf(cb.from),role));return}
@@ -392,6 +415,9 @@ export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
   const reportPick=(cb.data||'').match(/^reportpick:(orders|payments|revenue|referrals|staff|business)$/);if(reportPick){const staff=await requireStaff(env,cb.from);if(!staff)return;const locale=panelLocaleOf(staff,cb.from),type=reportPick[1];await safeEdit(env,cb.message,l3(locale,'📅 <b>Період звіту</b>\n\nОберіть діапазон даних.','📅 <b>Okres raportu</b>\n\nWybierz zakres danych.','📅 <b>Report period</b>\n\nChoose a data range.'),{inline_keyboard:[[{text:'7 days',callback_data:`report:${type}:7`},{text:'30 days',callback_data:`report:${type}:30`}],[{text:'90 days',callback_data:`report:${type}:90`},{text:'All',callback_data:`report:${type}:0`}],[{text:l3(locale,'⬅️ Звіти','⬅️ Raporty','⬅️ Reports'),callback_data:'panel:reports'}]]});return}
   const reportMatch=(cb.data||'').match(/^report:(users|vip|orders|payments|revenue|referrals|retention|blacklist|whitelist|staff|business):(\d+)$/);if(reportMatch){const staff=await requireStaff(env,cb.from);if(!staff)return;const type=reportMatch[1] as ReportType,days=Number(reportMatch[2]);const full=can(staff.role,'reports.export'),operational=can(staff.role,'reports.operational.export');if(!full&&!(operational&&type==='orders'))return;const locale=panelLocaleOf(staff,cb.from);await sendMessage(env,cb.message.chat.id,l3(locale,'⏳ Формую Excel…','⏳ Tworzę Excel…','⏳ Generating Excel…'));try{await sendReportDocument(env,cb.message.chat.id,staff.u.id,type,days);await sendMessage(env,cb.message.chat.id,l3(locale,'✅ Excel-звіт готовий.','✅ Raport Excel gotowy.','✅ Excel report is ready.'),reportsKeyboard(staff.role,locale))}catch(e:any){await sendMessage(env,cb.message.chat.id,`⚠️ ${esc(e?.message||'Report generation failed')}`,reportsKeyboard(staff.role,locale))}return}
   const mult=(cb.data||'').match(/^mult:(vehicles|conditions):(\d+)$/);if(mult){const staff=await requireStaff(env,cb.from,'calculator.edit');if(!staff)return;await promptState(env,cb.message,cb.from,'MULTIPLIER_EDIT',{kind:mult[1],id:Number(mult[2])},'✖️ Send new multiplier, e.g. <code>1.25</code>.');return}
+  const botCopy=(cb.data||'').match(/^botcopy:(menu|help):(uk|pl|en)$/);if(botCopy){const staff=await requireStaff(env,cb.from,'content.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const key=botCopy[1]==='menu'?'bot.client_menu_text':'bot.help_text';await promptState(env,cb.message,cb.from,'CONTENT_EDIT',{key,locale:botCopy[2]},`✏️ ${botCopy[1]==='menu'?'Client menu':'Help'} [${botCopy[2].toUpperCase()}]
+
+Send the new text.`);return}
   const content=(cb.data||'').match(/^content:(\d+)$/);if(content){const keys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description'];const key=keys[Number(content[1])];if(!key)return;await safeEdit(env,cb.message,`📝 <b>${esc(key)}</b>\n\nChoose locale.`,{inline_keyboard:[[{text:'UA',callback_data:`contentloc:${content[1]}:uk`},{text:'PL',callback_data:`contentloc:${content[1]}:pl`},{text:'EN',callback_data:`contentloc:${content[1]}:en`}],[{text:'⬅️ Content',callback_data:'panel:content'}]]});return}
   const contentLoc=(cb.data||'').match(/^contentloc:(\d+):(uk|pl|en)$/);if(contentLoc){const keys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description'];const key=keys[Number(contentLoc[1])];await promptState(env,cb.message,cb.from,'CONTENT_EDIT',{key,locale:contentLoc[2]},`📝 Send new value for <b>${esc(key)}</b> [${contentLoc[2].toUpperCase()}].`);return}
   const refCopy=(cb.data||'').match(/^refcopy:(title|subtitle|share_text)$/);if(refCopy){const staff=await requireStaff(env,cb.from,'content.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const pl=panelLocaleOf(staff,cb.from);const label=refCopy[1]==='title'?(pl==='uk'?'заголовок':pl==='pl'?'tytuł':'title'):refCopy[1]==='subtitle'?(pl==='uk'?'опис':pl==='pl'?'opis':'description'):(pl==='uk'?'текст поширення':pl==='pl'?'tekst udostępnienia':'share text');await promptState(env,cb.message,cb.from,'CONTENT_EDIT',{key:`referral.${refCopy[1]}`,locale:pl},`✏️ ${pl==='uk'?'Надішліть новий':pl==='pl'?'Wyślij nowy':'Send new'} ${label} [${pl.toUpperCase()}].`);return}
@@ -413,7 +439,7 @@ export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
    if(parts[1]==='setting'&&parts[2]==='edit'){const key=parts.slice(3).join(':');if(key.startsWith('maintenance.')&&staff.role!=='OWNER')return;await promptState(env,cb.message,cb.from,'SETTING_EDIT',{key},`✏️ Send new value for <code>${esc(key)}</code>.\n\n/cancel — cancel.`);return}
   }
   const a=(cb.data||'').match(/^analytics:(today|7|30)$/);if(a){const staff=await requireStaff(env,cb.from,'analytics.full');if(!staff||!env.DB)return;const pl=panelLocaleOf(staff,cb.from),pc=pcopy(pl);const where=a[1]==='today'?"date(created_at)=date('now')":`created_at>=datetime('now','-${a[1]} days')`;const r=await env.DB.prepare(`SELECT event_type,COUNT(*) n FROM analytics_events WHERE ${where} GROUP BY event_type ORDER BY n DESC LIMIT 20`).all<any>();await safeEdit(env,cb.message,`${pc.analytics} — ${a[1]==='today'?'Today':a[1]+' days'}\n\n`+((r.results||[]).map((x:any)=>`${esc(x.event_type)}: <b>${x.n}</b>`).join('\n')||pc.noEvents),backPanel(pl,[[{text:'Today',callback_data:'analytics:today'},{text:'7 days',callback_data:'analytics:7'},{text:'30 days',callback_data:'analytics:30'}]]));return}
-  const {role}=await getRole(env,cb.from);await sendMessage(env,cb.message.chat.id,copy[localeOf(cb.from)].choose,mainKeyboard(env,origin,localeOf(cb.from),role));
+  const {u,role}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);await sendMessage(env,cb.message.chat.id,copy[locale].choose,mainKeyboard(env,origin,locale,role));
  }
 }
 

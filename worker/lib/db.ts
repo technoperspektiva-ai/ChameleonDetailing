@@ -99,8 +99,8 @@ async function seed(env:Env){
  for(const [slug,mult,sort] of vehicles)await env.DB.prepare(`INSERT INTO vehicle_types(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
  const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
  for(const [slug,mult,sort] of conditions)await env.DB.prepare(`INSERT INTO condition_levels(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
- await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO')").run().catch(()=>{});
- const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.description','contact.description'];
+ await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO'),('bot.owner_contact_url','')").run().catch(()=>{});
+ const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','bot.client_menu_text','bot.help_text','calculator.result.note','vip.description','referral.description','contact.description'];
  for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
  const weeklyCount=await env.DB.prepare('SELECT COUNT(*) n FROM business_weekly_schedule').first<any>();
  if(!Number(weeklyCount?.n||0)){
@@ -115,6 +115,25 @@ async function seed(env:Env){
   en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'}
  } as const;
  for(const locale of ['uk','pl','en'] as const)for(const [key,value] of Object.entries(referralCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
+
+ const botMenuCopy={
+  uk:{'bot.client_menu_text':`Ласкаво просимо до Chameleon Detailing 🦎
+
+Усі послуги, розрахунок і заявки зібрані в Mini App. Якщо потрібна допомога — ми поруч.`,'bot.help_text':`💚 <b>Потрібна допомога?</b>
+
+Напишіть власнику Chameleon Detailing або змініть мову бота — оберіть потрібну дію нижче.`},
+  pl:{'bot.client_menu_text':`Witamy w Chameleon Detailing 🦎
+
+Wszystkie usługi, wyceny i zgłoszenia znajdziesz w Mini App. Jeśli potrzebujesz pomocy — jesteśmy obok.`,'bot.help_text':`💚 <b>Potrzebujesz pomocy?</b>
+
+Napisz do właściciela Chameleon Detailing lub zmień język bota — wybierz opcję poniżej.`},
+  en:{'bot.client_menu_text':`Welcome to Chameleon Detailing 🦎
+
+Services, estimates and requests are all inside the Mini App. If you need help, we are here for you.`,'bot.help_text':`💚 <b>Need a hand?</b>
+
+Message the owner of Chameleon Detailing or change the bot language — choose an option below.`}
+ } as const;
+ for(const locale of ['uk','pl','en'] as const)for(const [key,value] of Object.entries(botMenuCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
 }
 
 export async function upsertUser(env:Env,u:TelegramUser,owner=false){
