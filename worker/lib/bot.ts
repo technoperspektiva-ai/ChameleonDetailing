@@ -85,9 +85,15 @@ const persistentMenuLabel=(locale:BotLocale)=>l3(locale,'🦎 Відкрити �
 const persistentMenuKeyboard=(locale:BotLocale)=>({keyboard:[[{text:persistentMenuLabel(locale)}]],resize_keyboard:true,is_persistent:true,input_field_placeholder:startCommandLabel(locale)});
 async function showPersistentMenuKeyboard(env:Env,chatId:number,locale:BotLocale){
  if(!env.BOT_TOKEN||!chatId)return;
- const text=l3(locale,'⌨️ Швидке меню','⌨️ Szybkie menu','⌨️ Quick menu');
- await sendMessage(env,chatId,text,persistentMenuKeyboard(locale)).catch(e=>console.error('persistent menu keyboard failed',chatId,e));
+ try{
+  const sent:any=await sendMessage(env,chatId,'\u2063',persistentMenuKeyboard(locale));
+  if(sent?.message_id)await deleteMessageSafe(env,chatId,Number(sent.message_id));
+ }catch(e){console.error('persistent menu keyboard failed',chatId,e)}
 }
+const messageControlKeyboard=(locale:BotLocale,pinned=false)=>({inline_keyboard:[[
+ {text:pinned?l3(locale,'📍 Відкріпити','📍 Odepnij','📍 Unpin'):l3(locale,'📌 Закріпити','📌 Przypnij','📌 Pin'),callback_data:`msgctl:${pinned?'unpin':'pin'}:${locale}`},
+ {text:l3(locale,'✅ Прочитано','✅ Przeczytano','✅ Read'),callback_data:`msgctl:read:${locale}`}
+]]});
 
 export const telegramWebhookSecret=(env:Env)=>{const v=String(env.TELEGRAM_WEBHOOK_SECRET||'').trim();return /^[A-Za-z0-9_-]{1,256}$/.test(v)?v:''};
 function appUrl(env:Env,origin?:string){const live=(origin||'').trim();if(/^https:\/\//i.test(live))return live.replace(/\/$/,'');return String(env.APP_URL||'').replace(/\/$/,'')}
@@ -969,7 +975,7 @@ async function notifyClientOrderStatus(env:Env,orderId:number,status:string){
 🧽 ${serviceWord}: <b>${esc(r.service_slug||'—')}</b>
 📍 <b>${esc(label)}</b>
 💰 ${amountWord}: <b>${esc(amount)}</b>`;
-  const url=appUrl(env);const kb=url?{inline_keyboard:[[{text:l3(locale,'📋 Відкрити мої заявки','📋 Otwórz moje zlecenia','📋 Open my requests'),web_app:{url:url+'?startapp=orders'}}]]}:undefined;
+  const url=appUrl(env);const controls=messageControlKeyboard(locale).inline_keyboard;const kb={inline_keyboard:[...(url?[[{text:l3(locale,'📋 Відкрити мої заявки','📋 Otwórz moje zlecenia','📋 Open my requests'),web_app:{url:url+'?startapp=orders'}}]]:[]),...controls]};
   await sendMessage(env,Number(r.telegram_user_id),text,kb);
  }catch(e){console.error('client order status notification failed',orderId,status,e)}
 }
@@ -1032,6 +1038,27 @@ ${esc(caption)}
    return;
   }
   await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id}).catch(()=>{});
+  const msgCtl=(cb.data||'').match(/^msgctl:(pin|unpin|read):(uk|pl|en)$/);if(msgCtl){
+   const action=msgCtl[1],loc=msgCtl[2] as BotLocale,chatId=cb.message.chat.id,messageId=cb.message.message_id;
+   if(cb.message.chat.type==='private'&&Number(cb.from.id)!==Number(chatId))return;
+   if(action==='read'){
+    await tgApi(env,'unpinChatMessage',{chat_id:chatId,message_id:messageId}).catch(()=>{});
+    await tgApi(env,'deleteMessage',{chat_id:chatId,message_id:messageId}).catch(()=>{});
+    return;
+   }
+   if(action==='pin'){
+    try{
+     await tgApi(env,'pinChatMessage',{chat_id:chatId,message_id:messageId,disable_notification:true});
+     await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlKeyboard(loc,true)}).catch(()=>{});
+    }catch(e:any){
+     await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id,text:l3(loc,'Не вдалося закріпити повідомлення.','Nie udało się przypiąć wiadomości.','Could not pin this message.'),show_alert:false}).catch(()=>{});
+    }
+    return;
+   }
+   await tgApi(env,'unpinChatMessage',{chat_id:chatId,message_id:messageId}).catch(()=>{});
+   await tgApi(env,'editMessageReplyMarkup',{chat_id:chatId,message_id:messageId,reply_markup:messageControlKeyboard(loc,false)}).catch(()=>{});
+   return;
+  }
   if(cb.data==='help'){await help(env,origin,{...cb.message,from:cb.from});return}
   if(cb.data==='client:settings'){const {u}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,text,await clientSettingsKeyboard(env,u.id,locale));return}
   if(cb.data==='client:notifications:toggle'){const {u}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);if(env.DB&&u.id){await ensureDb(env);const row=await env.DB.prepare('SELECT notifications_enabled FROM users WHERE id=?').bind(u.id).first<any>();const next=Number(row?.notifications_enabled??1)===1?0:1;await env.DB.prepare('UPDATE users SET notifications_enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(next,u.id).run();await event(env,u.id,'client.notifications.toggle',{enabled:next})}const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,text,await clientSettingsKeyboard(env,u.id,locale));return}
