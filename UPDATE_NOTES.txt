@@ -1,10 +1,12 @@
-ChameleonDetailing v1.1.9 UPDATE
+ChameleonDetailing v1.1.46 UPDATE — Google Sheets via Apps Script
 
-1. VIP card: STANDARD/VIP tier label can no longer overflow on narrow iPhones.
-2. Referral card is now a working action button.
-3. Mini App creates a unique Telegram referral deep-link through backend.
-4. Telegram share flow opens with localized share text.
-5. /start ref_<code> records the referred user and referral_open analytics event.
-6. Referral link creation records referral_link_created.
+1. Google Sheets reporting uses a bound Google Apps Script Web App — no Service Account, IAM or Google API key is required.
+2. D1 remains the source of truth. Reports are exported as a batch snapshot only on manual sync or the configured interval.
+3. /sheets opens a private Owner/Admin control panel with Sync now, Connection check, OFF/1h/6h/24h schedule, Open Sheet and standard Excel reports.
+4. Existing .xlsx Telegram reports remain unchanged.
+5. The existing 30-minute Worker cron is reused; interval logic skips unnecessary runs, so 1h mode sends at most one Sheets snapshot per hour.
+6. After a full project reset, the wrapper schedules a Google Sheets refresh after the reset finishes, so report tabs are cleared to the new D1 state.
+7. Add Cloudflare secrets GOOGLE_SHEETS_WEBHOOK_URL and GOOGLE_SHEETS_WEBHOOK_SECRET, then redeploy.
+8. Paste integrations/google-apps-script.gs into the target spreadsheet Apps Script project and deploy it as a Web App.
 
 Upload these files over the existing repository, preserving paths, then redeploy.
