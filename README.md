@@ -1,4 +1,12 @@
 # ChameleonDetailing
+## v1.1.34 — Owner Menu Builder
+
+- Owner-only menu editor with shared layout for Owner / Admin / Manager; each role still sees only modules allowed by its permissions.
+- Sort any menu item up/down, move it into a folder or back to the top level, and rename it.
+- Create nested custom folders, rename them, move them, and delete them safely; deleting a folder moves its contents one level up instead of deleting system modules.
+- Hide/show any menu item globally without removing the underlying feature or permission.
+- Reset the custom layout back to the default structure at any time.
+
 ## v1.1.33 — Owner-controlled direct URL access
 
 - Removed the technical H1/H2/Body/Small font buttons from the Owner/Admin settings UI. Font defaults remain intact in the app.
