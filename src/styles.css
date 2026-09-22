@@ -72,3 +72,28 @@ html.theme-rainbow .primary,html.theme-rainbow .service-art,html.theme-rainbow .
 .referral-button:hover{border-color:color-mix(in srgb,var(--neon-color) 32%,#263426);box-shadow:0 0 24px color-mix(in srgb,var(--neon-color) 8%,transparent)}
 .total-row{border-top-color:color-mix(in srgb,var(--neon-color) 14%,transparent)}
 .order-adjustment-note{background:color-mix(in srgb,var(--neon-color) 6%,transparent);border-color:color-mix(in srgb,var(--neon-color) 16%,transparent)}
+
+/* v1.1.26 — vehicle selector list + full theme-aware background */
+.vehicle-choice-list{display:grid;gap:10px}
+.vehicle-choice-list .choice{min-height:92px;display:grid;grid-template-columns:96px minmax(0,1fr) 28px;align-items:center;gap:14px;padding:10px 14px;overflow:hidden}
+.vehicle-choice-list .choice-icon{width:96px;height:72px;border-radius:16px;display:grid;place-items:center;overflow:hidden;background:linear-gradient(145deg,color-mix(in srgb,var(--neon-color) 10%,#101610),color-mix(in srgb,var(--neon-color) 4%,#0a0f0a));border:1px solid color-mix(in srgb,var(--neon-color) 16%,#253025);box-shadow:inset 0 0 24px color-mix(in srgb,var(--neon-color) 5%,transparent)}
+.vehicle-choice-list .vehicle-choice-image{width:100%;height:100%;object-fit:contain;display:block;padding:4px}
+.vehicle-choice-list .choice b{font-size:1.02rem;line-height:1.2}
+.vehicle-choice-list .choice i{margin:0;justify-self:end;align-self:center}
+.vehicle-choice-list .choice.selected .choice-icon{border-color:color-mix(in srgb,var(--neon-color) 54%,#293329);box-shadow:0 0 22px color-mix(in srgb,var(--neon-color) 12%,transparent),inset 0 0 24px color-mix(in srgb,var(--neon-color) 8%,transparent)}
+@media (max-width:350px){.vehicle-choice-list .choice{grid-template-columns:80px minmax(0,1fr) 24px}.vehicle-choice-list .choice-icon{width:80px;height:64px}.vehicle-choice-list .choice b{font-size:.95rem}}
+
+/* The chosen neon theme now tints the entire application canvas, not only controls. */
+html{background:color-mix(in srgb,var(--neon-color) 4%,#050705)}
+body{background:
+ radial-gradient(circle at 15% 4%,color-mix(in srgb,var(--neon-color) 24%,transparent) 0,transparent 30%),
+ radial-gradient(circle at 88% 28%,color-mix(in srgb,var(--neon-color) 10%,transparent) 0,transparent 34%),
+ linear-gradient(180deg,color-mix(in srgb,var(--neon-color) 8%,#050805) 0%,color-mix(in srgb,var(--neon-color) 4%,#060906) 42%,#050705 100%);
+ background-attachment:fixed;transition:background .55s ease}
+.app::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:linear-gradient(145deg,color-mix(in srgb,var(--neon-color) 4%,transparent),transparent 35%,color-mix(in srgb,var(--neon-color) 3%,transparent));opacity:.9}
+header,nav{background:color-mix(in srgb,var(--neon-color) 3%,rgba(7,11,7,.96));border-color:color-mix(in srgb,var(--neon-color) 12%,var(--line))}
+.service-card,.list-card,.ref-card,.profile-card,.settings-card,.vip-card,.choice,.order-card,.empty-card{background:linear-gradient(155deg,color-mix(in srgb,var(--neon-color) 5%,#121912),color-mix(in srgb,var(--neon-color) 2%,#0c110c));border-color:color-mix(in srgb,var(--neon-color) 10%,var(--line))}
+html.theme-rainbow body{transition:none}
+html.theme-rainbow .app::before{background:conic-gradient(from 210deg at 50% 35%,color-mix(in srgb,var(--neon-color) 12%,transparent),transparent 22%,color-mix(in srgb,var(--neon-color) 8%,transparent) 50%,transparent 72%,color-mix(in srgb,var(--neon-color) 10%,transparent));animation:canvasFlow 13s linear infinite}
+@keyframes canvasFlow{to{transform:rotate(360deg) scale(1.08)}}
+@media (prefers-reduced-motion:reduce){html.theme-rainbow .app::before{animation:none}}
