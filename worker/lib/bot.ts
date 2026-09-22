@@ -181,9 +181,9 @@ async function panelSection(env:Env,msg:TgMessage,from:TgFrom,section:string){
   const p:Permission=targetRole==='ADMIN'?'admin.create':'manager.create';kb=backPanel(locale,can(staff.role,p)?[[{text:`${c.addRole} ${targetRole}`,callback_data:`action:staff:add:${targetRole}`}]]:[]);
  }else if(section==='services'){
   if(!can(staff.role,'service.edit')){await safeEdit(env,msg,'⛔ '+c.staffRequired,backPanel(locale));return}
-  const r=await env.DB.prepare(`SELECT s.id,s.slug,s.enabled,s.archived,COALESCE(t.title,s.slug) title FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? ORDER BY s.sort_order,s.id`).bind(locale).all<any>();
+  const r=await env.DB.prepare(`SELECT s.id,s.slug,s.enabled,s.archived,s.is_popular,COALESCE(t.title,s.slug) title FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? ORDER BY s.sort_order,s.id`).bind(locale).all<any>();
   text=`${c.services}\n\n${c.servicesIntro}`;
-  const rows=(r.results||[]).map((x:any)=>[{text:`${x.archived?'📦':x.enabled?'✅':'❌'} ${x.title}`,callback_data:`service:${x.id}:open`}]);rows.push([{text:c.addService,callback_data:'action:service:add'}]);kb=backPanel(locale,rows);
+  const rows=(r.results||[]).map((x:any)=>[{text:`${Number(x.is_popular)===1?'⭐ ':''}${x.archived?'📦':x.enabled?'✅':'❌'} ${x.title}`,callback_data:`service:${x.id}:open`}]);rows.push([{text:c.addService,callback_data:'action:service:add'}]);kb=backPanel(locale,rows);
  }else if(section==='pricing'){
   if(!can(staff.role,'pricing.edit')){await safeEdit(env,msg,'⛔ '+c.staffRequired,backPanel(locale));return}
   const r=await env.DB.prepare(`SELECT s.id,COALESCE(t.title,s.slug) title,p.base_price,p.base_currency FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? LEFT JOIN service_prices p ON p.service_id=s.id WHERE s.archived=0 ORDER BY s.sort_order`).bind(locale).all<any>();
@@ -304,9 +304,10 @@ ${c.duration}: <b>${s.duration_min} min</b>
 ${c.status}: <b>${status}</b>
 ${c.price}: <b>${Number(s.base_price||0).toFixed(2)} ${esc(s.base_currency||'PLN')}</b>
 🖼 Icon: <code>${esc(s.image_url||s.icon_key||'—')}</code>
+⭐ ${l3(locale,'Популярна','Popularna','Popular')}: <b>${Number(s.is_popular)===1?l3(locale,'ТАК','TAK','YES'):l3(locale,'НІ','NIE','NO')}</b>
 
 ${translations}`;
- const rows:any[]=[[{text:s.enabled?c.hide:c.enable,callback_data:`service:${id}:toggle`},{text:`💰 ${c.price}`,callback_data:`service:${id}:price`}],[{text:l3(locale,'💎 VIP ціни','💎 Ceny VIP','💎 VIP pricing'),callback_data:`service:${id}:vippricing`}],[{text:`⏱ ${c.duration}`,callback_data:`service:${id}:duration`},{text:`📦 ${c.category}`,callback_data:`service:${id}:category`}],[{text:'🖼 Icon URL',callback_data:`service:${id}:icon`}],[{text:'🇺🇦 UA text',callback_data:`service:${id}:tr:uk`},{text:'🇵🇱 PL text',callback_data:`service:${id}:tr:pl`},{text:'🇬🇧 EN text',callback_data:`service:${id}:tr:en`}],[{text:s.archived?c.restore:c.archive,callback_data:`service:${id}:archive`}],[{text:c.servicesBack,callback_data:'panel:services'}]];
+ const rows:any[]=[[{text:s.enabled?c.hide:c.enable,callback_data:`service:${id}:toggle`},{text:`💰 ${c.price}`,callback_data:`service:${id}:price`}],[{text:l3(locale,'💎 VIP ціни','💎 Ceny VIP','💎 VIP pricing'),callback_data:`service:${id}:vippricing`}],[{text:`⏱ ${c.duration}`,callback_data:`service:${id}:duration`},{text:`📦 ${c.category}`,callback_data:`service:${id}:category`}],[{text:'🖼 Icon URL',callback_data:`service:${id}:icon`}]];if(staff.role==='OWNER'||staff.role==='ADMIN')rows.push([{text:Number(s.is_popular)===1?l3(locale,'⭐ Прибрати з популярних','⭐ Usuń z popularnych','⭐ Remove from popular'):l3(locale,'☆ Додати в популярні','☆ Dodaj do popularnych','☆ Add to popular'),callback_data:`service:${id}:popular`}]);rows.push([{text:'🇺🇦 UA text',callback_data:`service:${id}:tr:uk`},{text:'🇵🇱 PL text',callback_data:`service:${id}:tr:pl`},{text:'🇬🇧 EN text',callback_data:`service:${id}:tr:en`}],[{text:s.archived?c.restore:c.archive,callback_data:`service:${id}:archive`}],[{text:c.servicesBack,callback_data:'panel:services'}]);
  await safeEdit(env,msg,text,{inline_keyboard:rows});
 }
 
@@ -390,6 +391,37 @@ async function handleTextState(env:Env,origin:string,msg:TgMessage,from:TgFrom,u
 }
 
 async function claimStaffInvite(env:Env,from:TgFrom,token:string){if(!env.DB||!token)return;await ensureDb(env);const inv=await env.DB.prepare("SELECT * FROM staff_invites_v2 WHERE token=? AND status='PENDING'").bind(token).first<any>();if(!inv)return;const username=String(from.username||'').toLowerCase();if(!username||username!==String(inv.username||'').toLowerCase())return;const u=await upsertUser(env,asUser(from),false);await env.DB.prepare('UPDATE users SET role=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(inv.role,u.id).run();await env.DB.prepare("UPDATE staff_invites_v2 SET status='CLAIMED',claimed_by_user_id=?,claimed_at=CURRENT_TIMESTAMP WHERE token=?").bind(u.id,token).run();await audit(env,Number(inv.created_by_user_id||0),'staff.invite.claim','user',String(u.id),null,{role:inv.role,username:inv.username})}
+
+async function notifyClientOrderStatus(env:Env,orderId:number,status:string){
+ if(!env.DB||!env.BOT_TOKEN)return;
+ try{
+  await ensureDb(env);
+  const r=await env.DB.prepare(`SELECT r.id,r.status,r.service_slug,r.calculated_price,r.final_job_price,r.currency,u.telegram_user_id,u.language,u.first_name FROM service_requests r JOIN users u ON u.id=r.user_id WHERE r.id=?`).bind(orderId).first<any>();
+  if(!r?.telegram_user_id)return;
+  const locale=(['uk','pl','en'].includes(String(r.language))?r.language:'en') as BotLocale;
+  const statusLabel:Record<string,[string,string,string]>={
+   CONFIRMED:['Підтверджено в роботу','Przyjęto do realizacji','Confirmed for work'],
+   IN_PROGRESS:['Авто вже в роботі','Auto jest w trakcie realizacji','Your car is now in progress'],
+   COMPLETED:['Роботу завершено','Praca została zakończona','Work completed'],
+   CANCELLED:['Заявку скасовано','Zlecenie anulowano','Request cancelled']
+  };
+  const v=statusLabel[String(status).toUpperCase()]||[status,status,status];
+  const label=locale==='uk'?v[0]:locale==='pl'?v[1]:v[2];
+  const amount=Number((r.final_job_price??r.calculated_price)??0).toFixed(2)+' '+String(r.currency||'PLN');
+  const title=l3(locale,'🔔 <b>Статус заявки оновлено</b>','🔔 <b>Status zlecenia został zmieniony</b>','🔔 <b>Request status updated</b>');
+  const requestWord=l3(locale,'Заявка','Zlecenie','Request');
+  const serviceWord=l3(locale,'Послуга','Usługa','Service');
+  const amountWord=l3(locale,'Сума','Kwota','Amount');
+  const text=`${title}
+
+📋 ${requestWord} <b>#${r.id}</b>
+🧽 ${serviceWord}: <b>${esc(r.service_slug||'—')}</b>
+📍 <b>${esc(label)}</b>
+💰 ${amountWord}: <b>${esc(amount)}</b>`;
+  const url=appUrl(env);const kb=url?{inline_keyboard:[[{text:l3(locale,'📋 Відкрити мої заявки','📋 Otwórz moje zlecenia','📋 Open my requests'),web_app:{url:url+'?startapp=orders'}}]]}:undefined;
+  await sendMessage(env,Number(r.telegram_user_id),text,kb);
+ }catch(e){console.error('client order status notification failed',orderId,status,e)}
+}
 
 export async function notifyNewOrder(env:Env,orderId:number){
  if(!env.DB||!env.BOT_TOKEN)return;
@@ -477,9 +509,10 @@ ${text}`,mainKeyboard(env,origin,locale,role));return}
    if(action==='duration'){await promptState(env,cb.message,cb.from,'SERVICE_DURATION',{serviceId:id},'⏱ Send duration in minutes.');return}
    if(action==='category'){await promptState(env,cb.message,cb.from,'SERVICE_CATEGORY',{serviceId:id},'📦 Send service category, e.g. <code>EXTERIOR</code>.');return}
    if(action==='icon'){await promptState(env,cb.message,cb.from,'SERVICE_ICON',{serviceId:id},'🖼 Send the icon image URL or path (for example <code>/service-icons/full-detailing.png</code>). Send <code>clear</code> to remove the custom icon.');return}
+   if(action==='popular'){if(!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const old=await env.DB.prepare('SELECT is_popular FROM services WHERE id=?').bind(id).first<any>();await env.DB.prepare('UPDATE services SET is_popular=CASE WHEN is_popular=1 THEN 0 ELSE 1 END,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id).run();await audit(env,staff.u.id,'service.popular.toggle','service',String(id),old,null);await serviceDetail(env,cb.message,cb.from,id);return}
    const tr=action.match(/^tr:(uk|pl|en)$/);if(tr){await promptState(env,cb.message,cb.from,'SERVICE_TR_TITLE',{serviceId:id,locale:tr[1]},`🌐 Send ${tr[1].toUpperCase()} title.`);return}
   }
-  const orderMatch=(cb.data||'').match(/^order:(\d+):(open|edit|CONFIRMED|IN_PROGRESS|COMPLETED|CANCELLED)$/);if(orderMatch){const staff=await requireStaff(env,cb.from,'orders.read');if(!staff||!env.DB)return;const id=Number(orderMatch[1]),action=orderMatch[2];if(action==='open'){await requestDetail(env,cb.message,cb.from,id);return}if(action==='edit'){if(!can(staff.role,'orders.manage'))return;await promptState(env,cb.message,cb.from,'ORDER_EDIT_PRICE',{orderId:id},'💰 Send new final amount and optional note in the format <code>2999.99 | Added ceramic spray</code>. Send <code>clear</code> to remove the manual amount.');return}if(!can(staff.role,'orders.manage'))return;const old=await env.DB.prepare('SELECT status FROM service_requests WHERE id=?').bind(id).first<any>();const fields=action==='CONFIRMED'?",confirmed_at=CURRENT_TIMESTAMP":action==='COMPLETED'?",completed_at=CURRENT_TIMESTAMP":"";await env.DB.prepare(`UPDATE service_requests SET status=?${fields} WHERE id=?`).bind(action,id).run();await audit(env,staff.u.id,'order.status.update','service_request',String(id),old,{status:action});await requestDetail(env,cb.message,cb.from,id);return}
+  const orderMatch=(cb.data||'').match(/^order:(\d+):(open|edit|CONFIRMED|IN_PROGRESS|COMPLETED|CANCELLED)$/);if(orderMatch){const staff=await requireStaff(env,cb.from,'orders.read');if(!staff||!env.DB)return;const id=Number(orderMatch[1]),action=orderMatch[2];if(action==='open'){await requestDetail(env,cb.message,cb.from,id);return}if(action==='edit'){if(!can(staff.role,'orders.manage'))return;await promptState(env,cb.message,cb.from,'ORDER_EDIT_PRICE',{orderId:id},'💰 Send new final amount and optional note in the format <code>2999.99 | Added ceramic spray</code>. Send <code>clear</code> to remove the manual amount.');return}if(!can(staff.role,'orders.manage'))return;const old=await env.DB.prepare('SELECT status FROM service_requests WHERE id=?').bind(id).first<any>();const fields=action==='CONFIRMED'?",confirmed_at=CURRENT_TIMESTAMP":action==='COMPLETED'?",completed_at=CURRENT_TIMESTAMP":"";await env.DB.prepare(`UPDATE service_requests SET status=?${fields} WHERE id=?`).bind(action,id).run();await audit(env,staff.u.id,'order.status.update','service_request',String(id),old,{status:action});await notifyClientOrderStatus(env,id,action);await requestDetail(env,cb.message,cb.from,id);return}
   const vipPrice=(cb.data||'').match(/^vipprice:(\d+):(VIP|VIP_PLUS)$/);if(vipPrice){const staff=await requireStaff(env,cb.from,'pricing.edit');if(!staff)return;await promptState(env,cb.message,cb.from,'VIP_PRICE_RULE',{serviceId:Number(vipPrice[1]),tier:vipPrice[2]},`💎 ${vipPrice[2]} pricing\n\nSend one of:\n<code>PERCENT 10</code>\n<code>PRICE 220 PLN</code>\n<code>MULTIPLIER 0.90</code>`);return}
   const vipClear=(cb.data||'').match(/^vippriceclear:(\d+):(VIP|VIP_PLUS)$/);if(vipClear){const staff=await requireStaff(env,cb.from,'pricing.edit');if(!staff||!env.DB)return;await env.DB.prepare('DELETE FROM vip_pricing_rules WHERE service_id=? AND tier=?').bind(Number(vipClear[1]),vipClear[2]).run();await audit(env,staff.u.id,'vip.pricing.clear','service',vipClear[1],null,{tier:vipClear[2]});await vipPricingDetail(env,cb.message,cb.from,Number(vipClear[1]));return}
   const reportPick=(cb.data||'').match(/^reportpick:(orders|payments|revenue|referrals|staff|business)$/);if(reportPick){const staff=await requireStaff(env,cb.from);if(!staff)return;const locale=panelLocaleOf(staff,cb.from),type=reportPick[1];await safeEdit(env,cb.message,l3(locale,'📅 <b>Період звіту</b>\n\nОберіть діапазон даних.','📅 <b>Okres raportu</b>\n\nWybierz zakres danych.','📅 <b>Report period</b>\n\nChoose a data range.'),{inline_keyboard:[[{text:'7 days',callback_data:`report:${type}:7`},{text:'30 days',callback_data:`report:${type}:30`}],[{text:'90 days',callback_data:`report:${type}:90`},{text:'All',callback_data:`report:${type}:0`}],[{text:l3(locale,'⬅️ Звіти','⬅️ Raporty','⬅️ Reports'),callback_data:'panel:reports'}]]});return}

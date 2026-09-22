@@ -72,6 +72,7 @@ export const fallbackServicesFor=(locale?:string|null)=>{
     durationMin:s.durationMin,
     category:s.category,
     imageUrl:s.defaultImageUrl||'',
-    iconKey:s.defaultIconKey||''
+    iconKey:s.defaultIconKey||'',
+    isPopular:true
   }));
 };

@@ -189,3 +189,8 @@ Each new-order alert contains client/order details and an `Open request` button.
 ## Clean single-panel bot UI (v1.1.18)
 
 Private bot interactions now keep one active UI panel. User commands and staff text inputs are deleted after processing, callback navigation edits the existing panel, and old tracked panels are replaced automatically. Excel report documents are intentionally preserved in chat. Shared order-notification chats are not cleaned.
+
+## v1.1.21
+- Owner/Admin can mark services as Popular directly from the Telegram service editor; the Mini App home screen follows that selection.
+- Mini App profile now pulls the Telegram profile photo (initData photo URL first, Bot API profile-photo fallback).
+- Clients receive a Telegram notification whenever staff changes a request to CONFIRMED, IN_PROGRESS, COMPLETED or CANCELLED, with a shortcut to My requests.

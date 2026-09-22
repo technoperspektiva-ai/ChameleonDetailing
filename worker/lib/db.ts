@@ -13,12 +13,12 @@ export async function ensureDb(env:Env){
  if(!env.DB)return false;
  if(ready)return true;
  await env.DB.exec(`
-CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT);
 CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS blacklist(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,public_reason TEXT NOT NULL,internal_note TEXT,blocked_by INTEGER,blocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,is_active INTEGER NOT NULL DEFAULT 1,unblocked_by INTEGER,unblocked_at TEXT);
-CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,category TEXT NOT NULL DEFAULT 'DETAILING',duration_min INTEGER NOT NULL DEFAULT 60,archived INTEGER NOT NULL DEFAULT 0,image_url TEXT,icon_key TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,category TEXT NOT NULL DEFAULT 'DETAILING',duration_min INTEGER NOT NULL DEFAULT 60,archived INTEGER NOT NULL DEFAULT 0,image_url TEXT,icon_key TEXT,is_popular INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_translations(service_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,PRIMARY KEY(service_id,locale));
 CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_price REAL NOT NULL,base_currency TEXT NOT NULL DEFAULT 'PLN',currency_mode TEXT NOT NULL DEFAULT 'LIVE',usd_override REAL,uah_override REAL,pln_override REAL,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS vip_pricing_rules(service_id INTEGER NOT NULL,tier TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'PERCENT',percent_discount REAL,multiplier REAL,fixed_price REAL,currency TEXT,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(service_id,tier));
@@ -48,6 +48,8 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
 `);
  // Backward-compatible upgrades for D1 databases created by older builds.
  await safeAlter(env,"ALTER TABLE users ADD COLUMN management_language TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN photo_url TEXT");
+ await safeAlter(env,"ALTER TABLE services ADD COLUMN is_popular INTEGER NOT NULL DEFAULT 0");
  // client_profiles was smaller in early production builds. Keep runtime upgrades
  // exhaustive so reports, VIP and retention never depend on a manual D1 reset.
  await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN phone_number TEXT");
@@ -88,7 +90,7 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
 async function seed(env:Env){
  if(!env.DB)return;
  for(const service of serviceCatalog){
-  await env.DB.prepare(`INSERT INTO services(slug,sort_order,category,duration_min,enabled,archived,image_url,icon_key) VALUES(?,?,?,?,1,0,?,?) ON CONFLICT(slug) DO UPDATE SET sort_order=excluded.sort_order,category=excluded.category,duration_min=excluded.duration_min,image_url=COALESCE(services.image_url,excluded.image_url),icon_key=COALESCE(services.icon_key,excluded.icon_key)`).bind(service.slug,service.id*10,service.category,service.durationMin,service.defaultImageUrl||null,service.defaultIconKey||service.slug).run();
+  await env.DB.prepare(`INSERT INTO services(slug,sort_order,category,duration_min,enabled,archived,image_url,icon_key,is_popular) VALUES(?,?,?,?,1,0,?,?,1) ON CONFLICT(slug) DO UPDATE SET sort_order=excluded.sort_order,category=excluded.category,duration_min=excluded.duration_min,image_url=COALESCE(services.image_url,excluded.image_url),icon_key=COALESCE(services.icon_key,excluded.icon_key)`).bind(service.slug,service.id*10,service.category,service.durationMin,service.defaultImageUrl||null,service.defaultIconKey||service.slug).run();
   const row=await env.DB.prepare('SELECT id FROM services WHERE slug=?').bind(service.slug).first<{id:number}>();
   if(!row?.id)continue;
   for(const locale of ['uk','pl','en'] as const){
@@ -97,6 +99,8 @@ async function seed(env:Env){
   }
   await env.DB.prepare(`INSERT INTO service_prices(service_id,base_price,base_currency) VALUES(?,?,?) ON CONFLICT(service_id) DO NOTHING`).bind(row.id,service.basePrice,service.currency).run();
  }
+ const popularInit=await env.DB.prepare("SELECT value FROM settings WHERE key='popular_services_initialized'").first<any>();
+ if(!popularInit){await env.DB.prepare(`UPDATE services SET is_popular=1 WHERE slug IN ('exterior-detailing','interior-detailing','full-detailing','ceramic-coating')`).run();await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES('popular_services_initialized','1',CURRENT_TIMESTAMP)").run()}
  const vehicles=[['car',1,10],['suv',1.15,20],['truck',1.3,30],['van',1.25,40]];
  for(const [slug,mult,sort] of vehicles)await env.DB.prepare(`INSERT INTO vehicle_types(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
  const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
@@ -142,7 +146,7 @@ export async function upsertUser(env:Env,u:TelegramUser,owner=false){
  const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':'en';
  if(!env.DB)return {id:0,telegram_user_id:u.id,first_name:u.first_name,username:u.username,language:lang,preferred_currency:env.DEFAULT_CURRENCY,role:owner?'OWNER':'CLIENT',client_tier:'STANDARD',phone_number:null};
  await ensureDb(env);
- await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role) VALUES(?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT').run();
+ await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role,photo_url) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,photo_url=COALESCE(excluded.photo_url,users.photo_url),last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT',u.photo_url||null).run();
  const row=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?`).bind(u.id).first<any>();
  await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) VALUES(?)').bind(row.id).run();
  return row;
@@ -152,7 +156,7 @@ export async function getServices(env:Env,locale='en',targetCurrency?:string|nul
  const convertItem=(item:any)=>{if(!target)return item;const baseCurrency=normalizeCurrency(item.currency);const override=target==='USD'?item.usdOverride:target==='UAH'?item.uahOverride:target==='PLN'?item.plnOverride:null;const price=override!=null&&Number(override)>0?Number(override):convertCurrency(Number(item.basePrice||0),baseCurrency,target);return {...item,basePrice:price,currency:target}};
  if(!env.DB)return fallbackServicesFor(normalized).map(convertItem);
  await ensureDb(env);
- const r=await env.DB.prepare(`SELECT s.id,s.slug,COALESCE(t.title,s.slug) title,COALESCE(t.description,'') description,p.base_price basePrice,p.base_currency currency,p.usd_override usdOverride,p.uah_override uahOverride,p.pln_override plnOverride,s.duration_min durationMin,s.category,s.image_url imageUrl,s.icon_key iconKey FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? JOIN service_prices p ON p.service_id=s.id WHERE s.enabled=1 AND s.archived=0 ORDER BY s.sort_order,s.id`).bind(normalized).all<any>();
+ const r=await env.DB.prepare(`SELECT s.id,s.slug,COALESCE(t.title,s.slug) title,COALESCE(t.description,'') description,p.base_price basePrice,p.base_currency currency,p.usd_override usdOverride,p.uah_override uahOverride,p.pln_override plnOverride,s.duration_min durationMin,s.category,s.image_url imageUrl,s.icon_key iconKey,s.is_popular isPopular FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale=? JOIN service_prices p ON p.service_id=s.id WHERE s.enabled=1 AND s.archived=0 ORDER BY s.sort_order,s.id`).bind(normalized).all<any>();
  const items=r.results.length?r.results:fallbackServicesFor(normalized);
  return items.map(convertItem).map(({usdOverride,uahOverride,plnOverride,...item}:any)=>item); // imageUrl/iconKey preserved
 }

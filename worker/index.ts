@@ -1,11 +1,11 @@
 import type {Env} from './lib/types';
-import {validateInitData} from './lib/telegram';
+import {validateInitData,tgApi} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
 import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 
-const VERSION='1.1.20';
+const VERSION='1.1.21';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -41,7 +41,7 @@ async function auth(env:Env,initData:string){
  if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN is not configured');
  const v=await validateInitData(initData,env.BOT_TOKEN);
  if(!v)throw new Error('Invalid or expired Telegram session');
- return {...await upsertUser(env,v.user,String(v.user.id)===String(env.OWNER_TELEGRAM_ID)),demo:false};
+ return {...await upsertUser(env,v.user,String(v.user.id)===String(env.OWNER_TELEGRAM_ID)),photo_url:v.user.photo_url||null,demo:false};
 }
 async function sessionState(env:Env,u:any){
  const maintenance=(await getSetting(env,'maintenance.enabled','0'))==='1';
@@ -131,13 +131,28 @@ export default {
     webhookCheckedAt=Date.now();
     return json(result);
    }
+   if(url.pathname==='/api/profile/photo'&&request.method==='GET'){
+    const u=await auth(env,url.searchParams.get('initData')||'');
+    if(u.demo||!env.BOT_TOKEN)return new Response(null,{status:404});
+    try{
+     const photos=await tgApi(env,'getUserProfilePhotos',{user_id:u.telegram_user_id,limit:1});
+     const variants=photos?.photos?.[0];
+     if(!Array.isArray(variants)||!variants.length)return new Response(null,{status:404});
+     const best=variants[variants.length-1];
+     const file=await tgApi(env,'getFile',{file_id:best.file_id});
+     if(!file?.file_path)return new Response(null,{status:404});
+     const upstream=await fetch(`https://api.telegram.org/file/bot${env.BOT_TOKEN}/${file.file_path}`);
+     if(!upstream.ok)return new Response(null,{status:404});
+     return new Response(upstream.body,{status:200,headers:{'content-type':upstream.headers.get('content-type')||'image/jpeg','cache-control':'private, max-age=300'}});
+    }catch{return new Response(null,{status:404})}
+   }
    if(url.pathname==='/api/auth/telegram'&&request.method==='POST'){
     // A successful Mini App open is also a reliable opportunity to fix a missing/stale webhook.
     ctx.waitUntil(selfHealWebhook(env,url.origin));
     const b=await read(request),u=await auth(env,b.initData||'');
     if(env.DB)await event(env,u.id,'miniapp_open');
     const state=await sessionState(env,u);
-    return json({user:{telegramId:u.telegram_user_id,firstName:u.first_name,username:u.username,locale:u.language||'en',currency:u.preferred_currency,tier:u.client_tier,role:u.role,phoneShared:!!u.phone_number},...state,demo:u.demo});
+    return json({user:{telegramId:u.telegram_user_id,firstName:u.first_name,username:u.username,locale:u.language||'en',currency:u.preferred_currency,tier:u.client_tier,role:u.role,phoneShared:!!u.phone_number,photoUrl:u.photo_url||null},...state,demo:u.demo});
    }
    if(url.pathname==='/api/services'){
     const locale=url.searchParams.get('locale')||'en';const currency=url.searchParams.get('currency');const initData=url.searchParams.get('initData')||'';
