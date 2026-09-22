@@ -135,6 +135,10 @@ const reportTypeLabel=(locale:ReportLocale,type:ReportType)=>reportLabel(locale,
  users:'Users report',vip:'VIP report',orders:'Orders report',payments:'Payments report',revenue:'Revenue report',referrals:'Referrals report',retention:'Retention report',blacklist:'Blacklist report',whitelist:'Whitelist report',staff:'Staff report',business:'Business report'
 } as Record<ReportType,string>)[type]);
 const reportRangeLabel=(locale:ReportLocale,days:number)=>days>0?String(days)+' '+reportLabel(locale,'days'):reportLabel(locale,'All period');
+const reportMessageControls=(locale:ReportLocale)=>({inline_keyboard:[[
+ {text:locale==='uk'?'📌 Закріпити':locale==='pl'?'📌 Przypnij':'📌 Pin',callback_data:'msgctl:pin:'+locale},
+ {text:locale==='uk'?'✅ Прочитано':locale==='pl'?'✅ Przeczytano':'✅ Read',callback_data:'msgctl:read:'+locale}
+]]});
 const localizeReportValue=(locale:ReportLocale,key:string,value:unknown)=>{
  if(value===null||value===undefined)return value;
  const raw=String(value),upper=raw.toUpperCase();
@@ -228,6 +232,7 @@ export async function sendReportDocument(env:Env,chatId:number,actorUserId:numbe
  const form=new FormData();
  form.set('chat_id',String(chatId));
  form.set('caption','📊 Chameleon Detailing — '+reportTypeLabel(locale,type));
+ form.set('reply_markup',JSON.stringify(reportMessageControls(locale)));
  form.set('document',new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename);
  const res=await fetch('https://api.telegram.org/bot'+env.BOT_TOKEN+'/sendDocument',{method:'POST',body:form});
  const data:any=await res.json();
