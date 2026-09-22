@@ -1,12 +1,12 @@
-ChameleonDetailing v1.1.47 UPDATE — Order Payments + Google Sheets
+ChameleonDetailing v1.1.48 UPDATE — Localized Reports + Order Payments
 
-1. Order/request cards now include a 💳 Payments button, including new-order notifications in personal staff chats and the connected order chat.
-2. Payments flow: Payments → ✅ Paid → choose 💵 Cash or 💳 Card.
-3. Marking a payment creates a PAID row in D1 payments with the order amount, selected method, staff marker and paid timestamp.
-4. service_requests.payment_status is updated to PAID and the payment method is shown in the order card.
-5. Duplicate PAID rows are prevented by checking for an existing paid payment before insert.
-6. Payment actions work in the shared order chat without exposing the management panel.
-7. Google Sheets Payments/Revenue reports pick up the new D1 payment rows on the next manual or automatic sync.
-8. Existing Google Sheets via Apps Script integration and Excel reports remain unchanged.
+1. Excel reports now follow each staff member's selected management language: Ukrainian, Polish or English.
+2. The selected language is read from users.management_language, with users.language as fallback.
+3. Workbook sheet names, column headers, dashboard labels and Telegram report captions are localized.
+4. Common report values are localized too: order/payment statuses, Cash/Card, first/repeat client and yes/no flags.
+5. The language choice is personal: Owner/Admin/Manager can receive the same report type in different languages.
+6. Order cards keep the v1.1.47 Payments flow: Payments → Paid → Cash/Card.
+7. PAID payment rows continue to feed Payments/Revenue Excel reports and Google Sheets snapshots.
+8. Google Sheets control panel already uses UA/PL/EN interface localization; Sheets tab schema remains stable for automation.
 
-Redeploy the Worker after updating the repository.
+Redeploy the Cloudflare Worker after updating the repository.
