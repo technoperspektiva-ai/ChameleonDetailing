@@ -16,6 +16,7 @@ export const api={
  orders:()=>json<any>('/api/orders?initData='+encodeURIComponent(initData())),
  deleteOrder:(id:number)=>json<any>(`/api/orders/${id}`,{method:'DELETE',body:JSON.stringify({initData:initData()})}),
  socials:()=>json<any>('/api/socials'),
+ specialists:()=>json<any>('/api/specialists'),
  status:()=>json<any>('/api/system/status'),
  profilePhotoUrl:()=>`/api/profile/photo?initData=${encodeURIComponent(initData())}`,
  referral:()=>json<{ok:boolean;code:string;url:string}>('/api/referrals/create',{method:'POST',body:JSON.stringify({initData:initData()})})
