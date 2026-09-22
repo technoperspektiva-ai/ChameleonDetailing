@@ -171,3 +171,16 @@ This browser page resets and re-registers the Telegram webhook against the exact
 - Manager: users, add client, VIP, whitelist/blacklist, client notes, calculator history and basic analytics.
 - Editing flows use bot state, confirmations/step prompts, backend permission checks and audit entries.
 - D1 bootstrap now creates/repairs management tables needed by these flows.
+
+## Order notifications (v1.1.17)
+
+Staff roles OWNER / ADMIN / MANAGER can enable personal new-order notifications in Bot Panel → Order notifications.
+
+OWNER / ADMIN can also connect a Telegram group/chat for shared order alerts:
+
+1. Add `@ChameleonDetailing_bot` to the target group/chat.
+2. From an OWNER or ADMIN account send `/connectorders` in that chat.
+3. Shared notifications can be enabled/disabled and their UA/PL/EN language selected from Bot Panel → Order notifications.
+4. Send `/disconnectorders` to disconnect the shared chat.
+
+Each new-order alert contains client/order details and an `Open request` button.

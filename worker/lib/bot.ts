@@ -5,7 +5,7 @@ import {editMessage,sendMessage,tgApi} from './telegram';
 import {sendReportDocument,type ReportType} from './reports';
 
 type TgFrom={id:number;first_name?:string;last_name?:string;username?:string;language_code?:string};
-type TgMessage={message_id:number;chat:{id:number;type:string};from?:TgFrom;text?:string;contact?:{phone_number:string;user_id?:number;first_name?:string;last_name?:string}};
+type TgMessage={message_id:number;chat:{id:number;type:string;title?:string;username?:string};from?:TgFrom;text?:string;contact?:{phone_number:string;user_id?:number;first_name?:string;last_name?:string}};
 type TgCallback={id:string;from:TgFrom;message?:TgMessage;data?:string};
 type TgUpdate={update_id:number;message?:TgMessage;callback_query?:TgCallback};
 type BotLocale='uk'|'pl'|'en';
@@ -58,6 +58,7 @@ const panelKeyboard=(role:Role,locale:BotLocale='en')=> {
  rows.push([{text:c.vip,callback_data:'panel:vip'},{text:c.whitelist,callback_data:'panel:whitelist'}]);
  rows.push([{text:c.blacklist,callback_data:'panel:blacklist'},{text:c.calculations,callback_data:'panel:calculations'}]);
  rows.push([{text:l3(locale,'📥 Заявки','📥 Zlecenia','📥 Requests'),callback_data:'panel:requests'}]);
+ rows.push([{text:l3(locale,'🔔 Сповіщення заявок','🔔 Powiadomienia zleceń','🔔 Order notifications'),callback_data:'panel:notifications'}]);
  if(role==='OWNER'||role==='ADMIN'){
   rows.push([{text:c.managers,callback_data:'panel:managers'},...(role==='OWNER'?[{text:c.admins,callback_data:'panel:admins'}]:[])]);
   rows.push([{text:c.services,callback_data:'panel:services'},{text:c.pricing,callback_data:'panel:pricing'}]);
@@ -216,6 +217,25 @@ ${esc(subtitle)}
   );
   if(can(staff.role,'settings.edit'))rows.push([{text:enabled==='1'?c.disableModule:c.enableModule,callback_data:'action:setting:toggle:referral_enabled'}]);
   kb=backPanel(locale,rows)
+ }else if(section==='notifications'){
+  if(!can(staff.role,'orders.read'))return;
+  const pref=await env.DB.prepare('SELECT enabled FROM staff_order_notifications WHERE user_id=?').bind(staff.u.id).first<any>();
+  const personal=Number(pref?.enabled||0)===1;
+  const groupEnabled=(await getSetting(env,'order_notifications.chat_enabled','0'))==='1';
+  const groupId=await getSetting(env,'order_notifications.chat_id','');
+  const groupTitle=await getSetting(env,'order_notifications.chat_title','');
+  const groupLocale=(await getSetting(env,'order_notifications.chat_locale','uk')) as BotLocale;
+  text=`${l3(locale,'🔔 <b>Сповіщення про нові заявки</b>','🔔 <b>Powiadomienia o nowych zleceniach</b>','🔔 <b>New order notifications</b>')}
+
+${l3(locale,'Особисті повідомлення в боті','Prywatne wiadomości w bocie','Private bot notifications')}: <b>${personal?'ON':'OFF'}</b>
+${l3(locale,'Підключений чат','Podłączony czat','Connected chat')}: <b>${groupId?esc(groupTitle||groupId):'—'}</b>
+${l3(locale,'Надсилання в чат','Wysyłanie do czatu','Send to chat')}: <b>${groupEnabled?'ON':'OFF'}</b>
+${l3(locale,'Мова чату','Język czatu','Chat language')}: <b>${groupLocale.toUpperCase()}</b>
+
+${l3(locale,'Щоб підключити групу/чат: додайте туди бота і надішліть команду /connectorders від Owner або Admin.','Aby podłączyć grupę/czat: dodaj bota i wyślij /connectorders jako Owner lub Admin.','To connect a group/chat: add the bot there and send /connectorders as Owner or Admin.')}`;
+  const rows:any[]=[[{text:personal?l3(locale,'🔕 Вимкнути мої','🔕 Wyłącz moje','🔕 Disable mine'):l3(locale,'🔔 Увімкнути мої','🔔 Włącz moje','🔔 Enable mine'),callback_data:'notify:personal:toggle'}]];
+  if(staff.role==='OWNER'||staff.role==='ADMIN')rows.push([{text:groupEnabled?l3(locale,'🔕 Вимкнути чат','🔕 Wyłącz czat','🔕 Disable chat'):l3(locale,'🔔 Увімкнути чат','🔔 Włącz czat','🔔 Enable chat'),callback_data:'notify:group:toggle'}],[{text:'🇺🇦 UA',callback_data:'notify:group:locale:uk'},{text:'🇵🇱 PL',callback_data:'notify:group:locale:pl'},{text:'🇬🇧 EN',callback_data:'notify:group:locale:en'}]);
+  kb=backPanel(locale,rows)
  }else if(section==='requests'){
   if(!can(staff.role,'orders.read'))return;const r=await env.DB.prepare(`SELECT r.id,r.status,r.request_type,r.calculated_price,r.currency,r.created_at,u.first_name,u.username FROM service_requests r LEFT JOIN users u ON u.id=r.user_id WHERE r.is_test=0 AND r.client_deleted_at IS NULL ORDER BY r.id DESC LIMIT 15`).all<any>();
   text=`${l3(locale,'📥 <b>Заявки клієнтів</b>','📥 <b>Zlecenia klientów</b>','📥 <b>Client requests</b>')}\n\n`+((r.results||[]).map((x:any)=>`#${x.id} · ${esc(x.first_name||x.username||'User')} · <b>${esc(x.status)}</b> · ${Number(x.calculated_price||0).toFixed(2)} ${esc(x.currency||'PLN')} · ${fmtDate(x.created_at)}`).join('\n')||l3(locale,'Заявок поки немає.','Brak zleceń.','No requests yet.'));
@@ -352,12 +372,34 @@ async function handleTextState(env:Env,origin:string,msg:TgMessage,from:TgFrom,u
 
 async function claimStaffInvite(env:Env,from:TgFrom,token:string){if(!env.DB||!token)return;await ensureDb(env);const inv=await env.DB.prepare("SELECT * FROM staff_invites_v2 WHERE token=? AND status='PENDING'").bind(token).first<any>();if(!inv)return;const username=String(from.username||'').toLowerCase();if(!username||username!==String(inv.username||'').toLowerCase())return;const u=await upsertUser(env,asUser(from),false);await env.DB.prepare('UPDATE users SET role=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(inv.role,u.id).run();await env.DB.prepare("UPDATE staff_invites_v2 SET status='CLAIMED',claimed_by_user_id=?,claimed_at=CURRENT_TIMESTAMP WHERE token=?").bind(u.id,token).run();await audit(env,Number(inv.created_by_user_id||0),'staff.invite.claim','user',String(u.id),null,{role:inv.role,username:inv.username})}
 
+export async function notifyNewOrder(env:Env,orderId:number){
+ if(!env.DB||!env.BOT_TOKEN)return;
+ await ensureDb(env);
+ const r=await env.DB.prepare(`SELECT r.*,u.first_name,u.last_name,u.username,u.telegram_user_id,p.phone_number FROM service_requests r LEFT JOIN users u ON u.id=r.user_id LEFT JOIN client_profiles p ON p.user_id=u.id WHERE r.id=? AND r.client_deleted_at IS NULL`).bind(orderId).first<any>();
+ if(!r)return;
+ const options=(()=>{try{const x=JSON.parse(String(r.options_json||'[]'));return Array.isArray(x)?x:[]}catch{return []}})();
+ const money=(v:any,c:any)=>`${Number(v||0).toFixed(2)} ${String(c||'PLN')}`;
+ const build=(locale:BotLocale)=>{
+  const title=l3(locale,'🆕 <b>Нова заявка</b>','🆕 <b>Nowe zlecenie</b>','🆕 <b>New request</b>');
+  const client=l3(locale,'Клієнт','Klient','Client'),service=l3(locale,'Послуга','Usługa','Service'),vehicle=l3(locale,'Авто','Auto','Vehicle'),condition=l3(locale,'Стан','Stan','Condition'),extras=l3(locale,'Опції','Dodatki','Extras'),type=l3(locale,'Тип','Typ','Type'),amount=l3(locale,'Сума','Kwota','Amount'),phone=l3(locale,'Телефон','Telefon','Phone');
+  return `${title} <b>#${r.id}</b>\n\n👤 ${client}: <b>${esc([r.first_name,r.last_name].filter(Boolean).join(' ')||r.username||r.telegram_user_id||'—')}</b>${r.username?` @${esc(r.username)}`:''}\n📞 ${phone}: <code>${esc(r.phone_number||'—')}</code>\n🧽 ${service}: <b>${esc(r.service_slug||'—')}</b>\n🚙 ${vehicle}: <b>${esc(r.vehicle_slug||'—')}</b>\n🧼 ${condition}: <b>${esc(r.condition_slug||'—')}</b>\n➕ ${extras}: <b>${options.length?esc(options.join(', ')):'—'}</b>\n📦 ${type}: <b>${esc(r.request_type||'STANDARD')}</b>\n💰 ${amount}: <b>${money(r.final_job_price??r.calculated_price,r.currency)}</b>\n🕘 ${fmtDate(r.created_at)}`;
+ };
+ const kb={inline_keyboard:[[{text:'📋 Open request',callback_data:`order:${orderId}:open`}]]};
+ const staff=await env.DB.prepare(`SELECT u.telegram_user_id,u.management_language,u.language FROM users u JOIN staff_order_notifications n ON n.user_id=u.id AND n.enabled=1 WHERE u.role IN ('OWNER','ADMIN','MANAGER') AND u.status='ACTIVE'`).all<any>();
+ for(const x of staff.results||[]){const locale=(['uk','pl','en'].includes(String(x.management_language))?x.management_language:['uk','pl','en'].includes(String(x.language))?x.language:'en') as BotLocale;try{await sendMessage(env,Number(x.telegram_user_id),build(locale),kb)}catch(e){console.error('personal order notification failed',x.telegram_user_id,e)}}
+ const chatEnabled=(await getSetting(env,'order_notifications.chat_enabled','0'))==='1';
+ const chatId=await getSetting(env,'order_notifications.chat_id','');
+ if(chatEnabled&&chatId){const locale=(await getSetting(env,'order_notifications.chat_locale','uk')) as BotLocale;try{await sendMessage(env,Number(chatId),build(['uk','pl','en'].includes(locale)?locale:'uk'),kb)}catch(e){console.error('group order notification failed',chatId,e)}}
+}
+
 export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
  const msg=update.message;
  if(msg){
   if(msg.contact){await saveContact(env,origin,msg);return}
   const text=(msg.text||'').trim();
   if(/^\/cancel(?:@\w+)?$/i.test(text)&&msg.from){const {u,role}=await getRole(env,msg.from);const pl=(String(u.management_language||'')==='uk'||String(u.management_language||'')==='pl'||String(u.management_language||'')==='en'?String(u.management_language):localeOf(msg.from)) as BotLocale;await setBotState(env,u.id,null);await sendMessage(env,msg.chat.id,pl==='uk'?'✅ Скасовано.':pl==='pl'?'✅ Anulowano.':'✅ Cancelled.',panelKeyboard(role,pl));return}
+  if(/^\/connectorders(?:@\w+)?$/i.test(text)&&msg.from){const staff=await requireStaff(env,msg.from,'settings.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;if(msg.chat.type==='private'){await sendMessage(env,msg.chat.id,'ℹ️ Add the bot to the group/chat where order notifications should arrive, then send /connectorders there.');return}await setSetting(env,'order_notifications.chat_id',String(msg.chat.id));await setSetting(env,'order_notifications.chat_title',msg.chat.title||msg.chat.username||String(msg.chat.id));await setSetting(env,'order_notifications.chat_enabled','1');await audit(env,staff.u.id,'order.notifications.chat.connect','chat',String(msg.chat.id),null,{title:msg.chat.title||msg.chat.username||'',type:msg.chat.type});await sendMessage(env,msg.chat.id,'✅ <b>Chameleon Detailing</b>\n\nThis chat is now connected to new-order notifications.');return}
+  if(/^\/disconnectorders(?:@\w+)?$/i.test(text)&&msg.from){const staff=await requireStaff(env,msg.from,'settings.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const current=await getSetting(env,'order_notifications.chat_id','');if(String(msg.chat.id)!==String(current)&&msg.chat.type!=='private'){await sendMessage(env,msg.chat.id,'⚠️ This chat is not the connected order-notification chat.');return}await setSetting(env,'order_notifications.chat_enabled','0');await setSetting(env,'order_notifications.chat_id','');await setSetting(env,'order_notifications.chat_title','');await audit(env,staff.u.id,'order.notifications.chat.disconnect','chat',String(msg.chat.id),null,{});await sendMessage(env,msg.chat.id,'✅ Order notifications disconnected from the shared chat.');return}
   const start=text.match(/^\/start(?:@\w+)?(?:\s+(.+))?$/i);if(start){await welcome(env,origin,msg,start[1]||'');await tgApi(env,'deleteMessage',{chat_id:msg.chat.id,message_id:msg.message_id}).catch(()=>{});return}
   if(/^\/(panel|owner)(?:@\w+)?(?:\s|$)/i.test(text)&&msg.from){const staff=await requireStaff(env,msg.from);if(staff){const pl=panelLocaleOf(staff,msg.from),pc=pcopy(pl);await sendMessage(env,msg.chat.id,`${roleLabel(staff.role)} <b>${pc.panelTitle}</b>\n\n${pc.panelBody}`,panelKeyboard(staff.role,pl));}else await sendMessage(env,msg.chat.id,pcopy(localeOf(msg.from)).staffRequired);return}
   if(/^\/services(?:@\w+)?(?:\s|$)/i.test(text)&&msg.from){await panelSection(env,msg,msg.from,'services');return}
@@ -388,6 +430,9 @@ ${text}`,mainKeyboard(env,origin,locale,role));return}
   const panelLang=(cb.data||'').match(/^panel_lang:(uk|pl|en)$/);if(panelLang){const staff=await requireStaff(env,cb.from);if(!staff||!env.DB)return;const next=panelLang[1] as BotLocale;await ensureDb(env);await env.DB.prepare('UPDATE users SET management_language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(next,staff.u.id).run();await audit(env,staff.u.id,'panel.language.change','user',String(staff.u.id),{management_language:staff.u.management_language||null},{management_language:next});const pc=pcopy(next);await safeEdit(env,cb.message,`${pc.languageSaved}\n\n${roleLabel(staff.role)} <b>${pc.panelTitle}</b>\n\n${pc.panelBody}`,panelKeyboard(staff.role,next));return}
   if(cb.data==='panel:client'){const {role}=await getRole(env,cb.from);await safeEdit(env,cb.message,'🦎 <b>Chameleon Detailing</b>\n\nClient menu',mainKeyboard(env,origin,localeOf(cb.from),role));return}
   if((cb.data||'').startsWith('panel:')){await panelSection(env,cb.message,cb.from,(cb.data||'').slice(6));return}
+  if(cb.data==='notify:personal:toggle'){const staff=await requireStaff(env,cb.from,'orders.read');if(!staff||!env.DB)return;const row=await env.DB.prepare('SELECT enabled FROM staff_order_notifications WHERE user_id=?').bind(staff.u.id).first<any>();const next=Number(row?.enabled||0)===1?0:1;await env.DB.prepare(`INSERT INTO staff_order_notifications(user_id,enabled) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET enabled=excluded.enabled,updated_at=CURRENT_TIMESTAMP`).bind(staff.u.id,next).run();await audit(env,staff.u.id,'order.notifications.personal','user',String(staff.u.id),row,{enabled:next});await panelSection(env,cb.message,cb.from,'notifications');return}
+  if(cb.data==='notify:group:toggle'){const staff=await requireStaff(env,cb.from,'settings.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;const old=await getSetting(env,'order_notifications.chat_enabled','0'),next=old==='1'?'0':'1';await setSetting(env,'order_notifications.chat_enabled',next);await audit(env,staff.u.id,'order.notifications.group.toggle','settings','order_notifications.chat_enabled',{value:old},{value:next});await panelSection(env,cb.message,cb.from,'notifications');return}
+  const notifyLocale=(cb.data||'').match(/^notify:group:locale:(uk|pl|en)$/);if(notifyLocale){const staff=await requireStaff(env,cb.from,'settings.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;await setSetting(env,'order_notifications.chat_locale',notifyLocale[1]);await audit(env,staff.u.id,'order.notifications.group.locale','settings','order_notifications.chat_locale',null,{value:notifyLocale[1]});await panelSection(env,cb.message,cb.from,'notifications');return}
   const userMatch=(cb.data||'').match(/^user:(\d+):(.+)$/);if(userMatch){const targetId=Number(userMatch[1]),action=userMatch[2],staff=await requireStaff(env,cb.from);if(!staff||!env.DB)return;
    if(action==='open'){await showUser(env,cb.message,cb.from,targetId);return}
    if(action==='vip'){const target=await env.DB.prepare("SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.id=?").bind(targetId).first<any>();if(target){await setVip(env,staff.u,target,target.client_tier==='STANDARD'?'VIP':'STANDARD');await showUser(env,cb.message,cb.from,targetId)}return}

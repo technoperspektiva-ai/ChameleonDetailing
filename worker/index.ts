@@ -3,9 +3,9 @@ import {validateInitData} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
 import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
-import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot} from './lib/bot';
+import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 
-const VERSION='1.1.16';
+const VERSION='1.1.17';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -196,6 +196,7 @@ export default {
     const em=requestType==='EMERGENCY'?state.schedule.emergencyMultiplier:1;const q=await quote(env,b,u.client_tier,em);
     const res=await env.DB!.prepare(`INSERT INTO service_requests(user_id,service_slug,vehicle_slug,condition_slug,options_json,request_type,is_deferred,scheduled_for,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,emergency_multiplier,emergency_surcharge) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,b.service,b.vehicle,b.condition,JSON.stringify(b.options||[]),requestType,requestType==='DEFERRED'?1:0,requestType==='DEFERRED'?state.schedule.nextWorkingAt:null,q.basePrice,q.optionsTotal,q.discount,q.finalPrice,q.currency,requestType==='EMERGENCY'?em:null,q.emergencySurcharge||0).run();
     await event(env,u.id,'service_request_created',{id:res.meta.last_row_id,type:requestType,price:q.finalPrice,currency:q.currency});
+    ctx.waitUntil(notifyNewOrder(env,Number(res.meta.last_row_id)).catch(error=>console.error('notifyNewOrder failed',error)));
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }
    if(url.pathname==='/api/orders'){
