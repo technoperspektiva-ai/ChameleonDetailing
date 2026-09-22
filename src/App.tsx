@@ -17,6 +17,10 @@ const applyTheme=(theme?:Session['theme'])=>{
  root.style.setProperty('--h2',theme?.fontH2||'clamp(1.25rem,5.4vw,1.6rem)');
  root.style.setProperty('--body',theme?.fontBody||'clamp(.94rem,3.8vw,1rem)');
  root.style.setProperty('--small',theme?.fontSmall||'clamp(.78rem,3.2vw,.875rem)');
+ const color=/^#[0-9a-f]{6}$/i.test(theme?.neonColor||'')?(theme?.neonColor as string):'#a4ff00';
+ root.style.setProperty('--neon-color',color);
+ root.classList.toggle('theme-rainbow',theme?.neonMode==='RAINBOW');
+ root.classList.toggle('theme-static',theme?.neonMode!=='RAINBOW');
 };
 
 export function App(){
@@ -29,7 +33,7 @@ export function App(){
  const setLocale=(next:Locale)=>{localStorage.setItem('chameleon.locale',next);setLocaleState(next)};
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
- useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall]);
+ useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor]);
  useEffect(()=>{initTelegram();(async()=>{const started=Date.now();try{
    setStartup({stage:'AUTH',progress:35,error:''});
    const s=await api.session();

@@ -5,7 +5,7 @@ import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 
-const VERSION='1.1.21';
+const VERSION='1.1.22';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -51,7 +51,9 @@ async function sessionState(env:Env,u:any){
   fontH1:await getSetting(env,'theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),
   fontH2:await getSetting(env,'theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),
   fontBody:await getSetting(env,'theme.font_body','clamp(.94rem,3.8vw,1rem)'),
-  fontSmall:await getSetting(env,'theme.font_small','clamp(.78rem,3.2vw,.875rem)')
+  fontSmall:await getSetting(env,'theme.font_small','clamp(.78rem,3.2vw,.875rem)'),
+  neonMode:(await getSetting(env,'theme.neon_mode','STATIC')).toUpperCase()==='RAINBOW'?'RAINBOW':'STATIC',
+  neonColor:await getSetting(env,'theme.neon_color','#a4ff00')
  };
  return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule,theme};
 }

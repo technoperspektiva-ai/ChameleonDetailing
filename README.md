@@ -194,3 +194,8 @@ Private bot interactions now keep one active UI panel. User commands and staff t
 - Owner/Admin can mark services as Popular directly from the Telegram service editor; the Mini App home screen follows that selection.
 - Mini App profile now pulls the Telegram profile photo (initData photo URL first, Bot API profile-photo fallback).
 - Clients receive a Telegram notification whenever staff changes a request to CONFIRMED, IN_PROGRESS, COMPLETED or CANCELLED, with a shortcut to My requests.
+
+
+## v1.1.22 — Dynamic neon theme
+
+Owner/Admin can switch the Mini App neon theme from Bot Panel → Settings → Neon theme. Supports preset colors, custom HEX, default green and animated Rainbow Flow. Theme state is persisted in D1 and Mini App refreshes it automatically.
