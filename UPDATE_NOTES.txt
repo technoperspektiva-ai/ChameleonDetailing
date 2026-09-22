@@ -1,16 +1,9 @@
-ChameleonDetailing v1.1.52 UPDATE — Clean chat notifications
+ChameleonDetailing v1.1.53 UPDATE — Content edit explanations
 
-1. Removed the visible “⌨️ Quick menu / Швидке меню” service message. The persistent localized Open menu keyboard is now refreshed through a transient invisible carrier that is deleted immediately.
-2. Client order-status notifications now include:
-   - 📌 Pin / 📍 Unpin
-   - ✅ Read
-   - existing “Open my requests” action is preserved.
-3. Excel report documents sent by the bot now include:
-   - 📌 Pin / 📍 Unpin
-   - ✅ Read
-4. Pinning uses Telegram pinned-message UI and does not replace or move the tracked main bot menu panel.
-5. “Read” unpins the message if needed and then deletes that notification/report message from the chat.
-6. Pin/unpin updates only the control row and preserves the other inline actions on the message.
-7. Button labels follow UA / PL / EN.
+1. The Content panel now explains what each editable text actually changes before asking for a language.
+2. After choosing a language, the explanation is repeated before the bot asks for the new text.
+3. Explanations are localized for UA / PL / EN.
+4. Clarifies which parts of the Mini App or bot are affected, and where editing text does not change business logic, prices, links, or referral rules.
+5. Existing chat cleanup controls, persistent menu keyboard, social links, specialists, payments, reports and Google Sheets remain unchanged.
 
 Redeploy the Cloudflare Worker after updating the repository.
