@@ -268,7 +268,10 @@ export default {
     await env.DB!.prepare('UPDATE service_requests SET status=?,client_deleted_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?').bind(nextStatus,id,u.id).run();await event(env,u.id,'service_request_client_deleted',{id,previousStatus:status,status:nextStatus});return json({ok:true,id,status:nextStatus});
    }
    if(url.pathname==='/api/socials'){
-    if(!env.DB)return json({socials:[]});await ensureDb(env);const r=await env.DB.prepare('SELECT type,url FROM social_links WHERE enabled=1 ORDER BY sort_order,id').all<any>();return json({socials:r.results});
+    if(!env.DB)return json({socials:[]});await ensureDb(env);if((await getSetting(env,'home.socials_enabled','1'))!=='1')return json({socials:[]});const r=await env.DB.prepare("SELECT type,url FROM social_links WHERE enabled=1 AND trim(url)<>'' ORDER BY sort_order,id").all<any>();return json({socials:r.results});
+   }
+   if(url.pathname==='/api/specialists'){
+    if(!env.DB)return json({specialists:[]});await ensureDb(env);if((await getSetting(env,'home.specialists_enabled','1'))!=='1')return json({specialists:[]});const r=await env.DB.prepare("SELECT id,name,role_title roleTitle,portfolio_url portfolioUrl,contact_url contactUrl,contact_label contactLabel,photo_url photoUrl FROM specialists WHERE enabled=1 ORDER BY sort_order,id").all<any>();return json({specialists:r.results});
    }
    if(url.pathname.startsWith('/api/'))return json({error:'Not found'},404);
    return env.ASSETS.fetch(request);
