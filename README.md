@@ -1,4 +1,11 @@
 # ChameleonDetailing
+## v1.1.40 — scrollable calculator confirmation modal
+
+- Fixed the calculator result/confirmation popup on iPhone and other short mobile viewports.
+- The popup now scrolls vertically with touch when its content is taller than the available Mini App viewport.
+- Fixed stacking so the result popup stays above the app bottom navigation instead of being covered by it.
+- The close button remains reachable while scrolling and safe-area insets are respected.
+
 ## v1.1.39 — human-readable analytics and content labels
 
 - Analytics now shows plain-language labels instead of internal event codes.
