@@ -25,6 +25,8 @@ const fmtDate=(v:unknown)=>v?esc(String(v).slice(0,16).replace('T',' ')):'—';
 const parsePayload=(s?:string|null)=>{try{return s?JSON.parse(s):{}}catch{return {}}};
 const dayName=(locale:BotLocale,d:number)=>({uk:['','Пн','Вт','Ср','Чт','Пт','Сб','Нд'],pl:['','Pon','Wt','Śr','Czw','Pt','Sob','Nd'],en:['','Mon','Tue','Wed','Thu','Fri','Sat','Sun']}[locale] as string[])[d]||String(d);
 const validHours=(v:string)=>{const m=v.trim().match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);if(!m)return null;const a=Number(m[1])*60+Number(m[2]),b=Number(m[3])*60+Number(m[4]);if(Number(m[1])>23||Number(m[3])>23||Number(m[2])>59||Number(m[4])>59||a>=b)return null;return {open:`${m[1]}:${m[2]}`,close:`${m[3]}:${m[4]}`}};
+const validWebUrl=(v:string)=>{try{const u=new URL(String(v||'').trim());return u.protocol==='http:'||u.protocol==='https:'}catch{return false}};
+const socialTypes=['instagram','facebook','tiktok','youtube','telegram','whatsapp','website'] as const;
 
 const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description'] as const;
 const contentLabel=(locale:BotLocale,key:string)=>{const map:Record<string,[string,string,string]>={
@@ -591,6 +593,23 @@ ${l3(locale,'У MANUAL вибрана тема працює постійно. AU
 
 ${l3(locale,'NORMAL — усі дії в журналі. CRITICAL_ONLY — тільки критичні. HIDDEN — звичайні дії не записуються. Зміна цього режиму, ролей, цін, безпеки та інших критичних дій завжди лишається в журналі.','NORMAL — wszystkie działania. CRITICAL_ONLY — tylko krytyczne. HIDDEN — zwykłe działania nie trafiają do dziennika. Zmiana tego trybu oraz krytyczne operacje zawsze pozostają w dzienniku.','NORMAL logs everything. CRITICAL_ONLY logs only critical actions. HIDDEN suppresses ordinary actions. Changes to this mode and other critical/security actions are always logged.')}`;
   const rows:any[]=(r.results||[]).map((x:any)=>[{text:`${x.role==='ADMIN'?'🛡':'🧑‍💼'} ${x.first_name||x.username||x.id} · ${x.mode}`,callback_data:`auditmode:${x.id}:cycle`}]);kb=backPanel(locale,rows)
+ }else if(section==='socials'){
+  if(!(staff.role==='OWNER'||staff.role==='ADMIN'))return;
+  const globalEnabled=(await getSetting(env,'home.socials_enabled','1'))==='1';
+  const existing=await env.DB.prepare('SELECT type,url,enabled,sort_order FROM social_links ORDER BY sort_order,id').all<any>();
+  const map=new Map((existing.results||[]).map((x:any)=>[String(x.type),x]));
+  text=`${l3(locale,'📱 <b>Соцмережі на головній</b>','📱 <b>Social media na stronie głównej</b>','📱 <b>Social media on home</b>')}\n\n${l3(locale,'Блок','Sekcja','Section')}: <b>${globalEnabled?'ON':'OFF'}</b>\n\n${l3(locale,'Для кожної мережі можна задати посилання та окремо вмикати/вимикати її відображення.','Dla każdej sieci możesz ustawić link i osobno włączyć/wyłączyć jej widoczność.','Each network can have its own link and visibility toggle.')}`;
+  const rows:any[]=[[{text:globalEnabled?l3(locale,'🙈 Сховати весь блок','🙈 Ukryj całą sekcję','🙈 Hide section'):l3(locale,'👁 Показати весь блок','👁 Pokaż całą sekcję','👁 Show section'),callback_data:'socials:section:toggle'}]];
+  for(const type of socialTypes){const row:any=map.get(type),enabled=Number(row?.enabled||0)===1,url=String(row?.url||'');rows.push([{text:`${enabled?'✅':'❌'} ${type==='instagram'?'Instagram':type==='facebook'?'Facebook':type==='tiktok'?'TikTok':type==='youtube'?'YouTube':type==='telegram'?'Telegram':type==='whatsapp'?'WhatsApp':'Website'}`,callback_data:`social:${type}:toggle`},{text:url?l3(locale,'🔗 Змінити','🔗 Zmień','🔗 Edit link'):l3(locale,'➕ Лінк','➕ Link','➕ Link'),callback_data:`social:${type}:url`}])}
+  kb=backPanel(locale,rows)
+ }else if(section==='specialists'){
+  if(!(staff.role==='OWNER'||staff.role==='ADMIN'))return;
+  const globalEnabled=(await getSetting(env,'home.specialists_enabled','1'))==='1';
+  const r=await env.DB.prepare('SELECT id,name,role_title,portfolio_url,contact_url,contact_label,photo_url,enabled,sort_order FROM specialists ORDER BY sort_order,id').all<any>();
+  text=`${l3(locale,'👨‍🔧 <b>Професійні спеціалісти</b>','👨‍🔧 <b>Profesjonalni specjaliści</b>','👨‍🔧 <b>Professional specialists</b>')}\n\n${l3(locale,'Блок','Sekcja','Section')}: <b>${globalEnabled?'ON':'OFF'}</b>\n\n${l3(locale,'Картки показуються на головній Mini App. Для кожного спеціаліста можна додати посаду, портфоліо, фото та будь-яке зовнішнє посилання з власним підписом.','Karty są widoczne na stronie głównej Mini App. Dla każdego specjalisty możesz dodać stanowisko, portfolio, zdjęcie i dowolny link z własną etykietą.','Cards appear on the Mini App home. Each specialist can have a role, portfolio, photo and any external link with a custom label.')}`;
+  const rows:any[]=[[{text:globalEnabled?l3(locale,'🙈 Сховати весь блок','🙈 Ukryj całą sekcję','🙈 Hide section'):l3(locale,'👁 Показати весь блок','👁 Pokaż całą sekcję','👁 Show section'),callback_data:'specialists:section:toggle'}],[{text:l3(locale,'➕ Додати спеціаліста','➕ Dodaj specjalistę','➕ Add specialist'),callback_data:'specialist:add'}]];
+  for(const x of r.results||[])rows.push([{text:`${Number(x.enabled)===1?'✅':'❌'} ${x.name}`,callback_data:`specialist:${x.id}:toggle`},{text:l3(locale,'✏️ Редагувати','✏️ Edytuj','✏️ Edit'),callback_data:`specialist:${x.id}:edit`},{text:'🗑',callback_data:`specialist:${x.id}:delete`}]);
+  kb=backPanel(locale,rows)
  }else if(section==='theme'){
   if(!(staff.role==='OWNER'||staff.role==='ADMIN'))return;
   const mode=String(await getSetting(env,'theme.neon_mode','STATIC')).toUpperCase()==='RAINBOW'?'RAINBOW':'STATIC';
