@@ -1,4 +1,13 @@
 # ChameleonDetailing
+## v1.1.45 — full collected-data reset
+
+- Owner and Admin now have a protected “Reset project data” action in Settings.
+- Two-step confirmation prevents accidental deletion.
+- Reset clears requests, calculations, payments, analytics/open events, client accounts, referrals, personal discounts/offers, VIP history, whitelist/blacklist, campaign history and prior audit history.
+- Owner/Admin/Manager accounts, services, pricing, calculator add-ons, schedules, themes, business settings, permissions and the custom menu layout are preserved.
+- Activity table sequences are reset where possible so new requests/calculations start cleanly.
+- A single post-reset audit entry records that the destructive reset occurred.
+
 ## v1.1.44 — request chat isolation
 
 - Management navigation is now blocked in every non-private Telegram chat, not only the configured notification chat ID.
