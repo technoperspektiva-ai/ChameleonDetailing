@@ -129,6 +129,8 @@ const menuModules:MenuModule[]=[
  {id:'settings',callback:'panel:settings',labels:['⚙️ Налаштування','⚙️ Ustawienia','⚙️ Settings'],roles:['OWNER','ADMIN','MANAGER'],managerBlock:'settings'},
  {id:'schedule',callback:'panel:schedule',labels:['🗓 Робочий графік','🗓 Harmonogram','🗓 Working schedule'],roles:['OWNER','ADMIN','MANAGER'],managerBlock:'settings',defaultParent:'settings'},
  {id:'theme',callback:'panel:theme',labels:['🎨 Неонова тема','🎨 Motyw neonowy','🎨 Neon theme'],roles:['OWNER','ADMIN'],defaultParent:'settings'},
+ {id:'socials',callback:'panel:socials',labels:['📱 Соцмережі','📱 Social media','📱 Social media'],roles:['OWNER','ADMIN'],defaultParent:'settings'},
+ {id:'specialists',callback:'panel:specialists',labels:['👨‍🔧 Спеціалісти','👨‍🔧 Specjaliści','👨‍🔧 Specialists'],roles:['OWNER','ADMIN'],defaultParent:'settings'},
  {id:'botmenu',callback:'panel:botmenu',labels:['🤖 Меню бота','🤖 Menu bota','🤖 Bot menu'],roles:['OWNER','ADMIN'],defaultParent:'settings'},
  {id:'panel_language',callback:'panel:panel_language',labels:['🌐 Мова панелі','🌐 Język panelu','🌐 Panel language'],roles:['OWNER','ADMIN','MANAGER']},
  {id:'client',callback:'panel:client',labels:['🦎 Меню клієнта','🦎 Menu klienta','🦎 Client menu'],roles:['OWNER','ADMIN']}
