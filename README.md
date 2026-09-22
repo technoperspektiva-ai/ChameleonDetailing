@@ -1,4 +1,11 @@
 # ChameleonDetailing
+## v1.1.35 — nested menu sorting
+
+- Owner Menu Builder now edits every folder level, not only the root.
+- Each nested item has direct up/down controls inside its own folder.
+- Navigation now returns to the correct parent folder instead of jumping back to the root editor.
+- Moving an item into a folder opens that destination level immediately so its exact order can be adjusted.
+
 ## v1.1.34 — Owner Menu Builder
 
 - Owner-only menu editor with shared layout for Owner / Admin / Manager; each role still sees only modules allowed by its permissions.
