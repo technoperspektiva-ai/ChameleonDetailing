@@ -44,6 +44,10 @@ CREATE TABLE IF NOT EXISTS staff_invites_v2(token TEXT PRIMARY KEY,username TEXT
 CREATE TABLE IF NOT EXISTS staff_order_notifications(user_id INTEGER PRIMARY KEY,enabled INTEGER NOT NULL DEFAULT 0,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS broadcast_campaigns(id INTEGER PRIMARY KEY AUTOINCREMENT,type TEXT NOT NULL,text TEXT NOT NULL,photo_file_id TEXT,created_by INTEGER,status TEXT NOT NULL DEFAULT 'DRAFT',recipient_count INTEGER NOT NULL DEFAULT 0,sent_count INTEGER NOT NULL DEFAULT 0,failed_count INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,sent_at TEXT);
 CREATE TABLE IF NOT EXISTS campaign_deliveries(id INTEGER PRIMARY KEY AUTOINCREMENT,campaign_id INTEGER,user_id INTEGER NOT NULL,kind TEXT NOT NULL,reference_key TEXT NOT NULL DEFAULT '',status TEXT NOT NULL DEFAULT 'SENT',error TEXT,sent_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,UNIQUE(user_id,kind,reference_key));
+CREATE TABLE IF NOT EXISTS service_promotions(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER NOT NULL,percent_discount REAL NOT NULL,starts_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,ends_at TEXT NOT NULL,label TEXT,enabled INTEGER NOT NULL DEFAULT 1,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS personal_discounts(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,percent_discount REAL NOT NULL,greeting TEXT,status TEXT NOT NULL DEFAULT 'OFFERED',expires_at TEXT,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,activated_at TEXT,used_at TEXT,used_request_id INTEGER);
+CREATE INDEX IF NOT EXISTS idx_service_promotions_active ON service_promotions(service_id,enabled,starts_at,ends_at);
+CREATE INDEX IF NOT EXISTS idx_personal_discounts_user ON personal_discounts(user_id,status,expires_at);
 CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
 CREATE INDEX IF NOT EXISTS idx_users_role ON users(role);
 CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,created_at);
@@ -85,6 +89,10 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN completed_at TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN payment_status TEXT NOT NULL DEFAULT 'PENDING'");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN updated_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN promotion_id INTEGER");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN personal_discount_id INTEGER");
+ await safeAlter(env,"ALTER TABLE calculator_sessions ADD COLUMN promotion_id INTEGER");
+ await safeAlter(env,"ALTER TABLE calculator_sessions ADD COLUMN personal_discount_id INTEGER");
  await seed(env);
  ready=true;
  return true;

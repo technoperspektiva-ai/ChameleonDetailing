@@ -1,7 +1,7 @@
 import type {Env} from './lib/types';
 import {validateInitData,tgApi} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
-import {quote,vipBasePrice} from './lib/pricing';
+import {quote,serviceDisplayPrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
@@ -160,7 +160,7 @@ export default {
    if(url.pathname==='/api/services'){
     const locale=url.searchParams.get('locale')||'en';const currency=url.searchParams.get('currency');const initData=url.searchParams.get('initData')||'';
     const list=await getServices(env,locale,currency);let tier='STANDARD';try{if(initData){const u=await auth(env,initData);tier=u.client_tier||'STANDARD'}}catch{}
-    if(tier!=='STANDARD')for(const item of list){const baseCurrency=String(item.currency||currency||'PLN');const eff=await vipBasePrice(env,Number(item.id),Number(item.basePrice||0),baseCurrency,tier);(item as any).standardBasePrice=item.basePrice;(item as any).basePrice=Math.round(eff.price*100)/100;(item as any).vipPricingMode=eff.mode;(item as any).clientTier=tier}
+    for(const item of list){const baseCurrency=String(item.currency||currency||'PLN');const eff=await serviceDisplayPrice(env,Number(item.id),Number(item.basePrice||0),baseCurrency,tier);if(eff.mode!=='STANDARD'){(item as any).standardBasePrice=item.basePrice;(item as any).basePrice=Math.round(eff.price*100)/100;(item as any).vipPricingMode=eff.mode;(item as any).clientTier=tier;(item as any).promotion=eff.promotion||null}}
     return json({services:list,tier});
    }
    if(url.pathname==='/api/content'&&request.method==='GET'){
@@ -197,8 +197,8 @@ export default {
     const b=await read(request),u=await auth(env,b.initData||'');const state=await sessionState(env,u);
     if(state.blocked)return json({error:state.blockedReason||'Access limited'},403);
     if(state.maintenance&&u.role!=='OWNER')return json({error:'Service is under maintenance'},503);
-    const q=await quote(env,b,u.client_tier);
-    if(env.DB&&!u.demo){const r=await env.DB.prepare(`INSERT INTO calculator_sessions(user_id,base_price_snapshot,vehicle_multiplier_snapshot,condition_multiplier_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,fx_rate,fx_provider,fx_timestamp) VALUES(?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,q.basePrice,q.vehicleMultiplier,q.conditionMultiplier,q.optionsTotal,q.discount,q.finalPrice,q.currency,q.fxRate,q.fxProvider,q.fxTimestamp).run();(q as any).calculationId=r.meta.last_row_id;await event(env,u.id,'calculator_completed',{service:b.service,currency:q.currency})}
+    const q=await quote(env,b,u.client_tier,1,u.id);
+    if(env.DB&&!u.demo){const r=await env.DB.prepare(`INSERT INTO calculator_sessions(user_id,base_price_snapshot,vehicle_multiplier_snapshot,condition_multiplier_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,fx_rate,fx_provider,fx_timestamp,promotion_id,personal_discount_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,q.basePrice,q.vehicleMultiplier,q.conditionMultiplier,q.optionsTotal,q.discount,q.finalPrice,q.currency,q.fxRate,q.fxProvider,q.fxTimestamp,q.promotion?.id||null,q.personalDiscount?.id||null).run();(q as any).calculationId=r.meta.last_row_id;await event(env,u.id,'calculator_completed',{service:b.service,currency:q.currency})}
     return json(q);
    }
    if(url.pathname==='/api/orders/request'&&request.method==='POST'){
@@ -214,9 +214,10 @@ export default {
       const last=await env.DB!.prepare("SELECT created_at FROM service_requests WHERE user_id=? AND is_test=0 AND client_deleted_at IS NULL AND COALESCE(status,'REQUESTED') NOT IN ('CANCELLED','REJECTED') ORDER BY id DESC LIMIT 1").bind(u.id).first<any>();
       if(last&&Date.now()-Date.parse(last.created_at)<3600000)return json({error:'Your previous request was already sent. A new request can be sent after 60 minutes.'},429);
     }
-    const em=requestType==='EMERGENCY'?state.schedule.emergencyMultiplier:1;const q=await quote(env,b,u.client_tier,em);
-    const res=await env.DB!.prepare(`INSERT INTO service_requests(user_id,service_slug,vehicle_slug,condition_slug,options_json,request_type,is_deferred,scheduled_for,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,emergency_multiplier,emergency_surcharge) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,b.service,b.vehicle,b.condition,JSON.stringify(b.options||[]),requestType,requestType==='DEFERRED'?1:0,requestType==='DEFERRED'?state.schedule.nextWorkingAt:null,q.basePrice,q.optionsTotal,q.discount,q.finalPrice,q.currency,requestType==='EMERGENCY'?em:null,q.emergencySurcharge||0).run();
+    const em=requestType==='EMERGENCY'?state.schedule.emergencyMultiplier:1;const q=await quote(env,b,u.client_tier,em,u.id);
+    const res=await env.DB!.prepare(`INSERT INTO service_requests(user_id,service_slug,vehicle_slug,condition_slug,options_json,request_type,is_deferred,scheduled_for,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,emergency_multiplier,emergency_surcharge,promotion_id,personal_discount_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,b.service,b.vehicle,b.condition,JSON.stringify(b.options||[]),requestType,requestType==='DEFERRED'?1:0,requestType==='DEFERRED'?state.schedule.nextWorkingAt:null,q.basePrice,q.optionsTotal,q.discount,q.finalPrice,q.currency,requestType==='EMERGENCY'?em:null,q.emergencySurcharge||0,q.promotion?.id||null,q.personalDiscount?.id||null).run();
     await event(env,u.id,'service_request_created',{id:res.meta.last_row_id,type:requestType,price:q.finalPrice,currency:q.currency});
+    if(q.personalDiscount?.id){await env.DB!.prepare("UPDATE personal_discounts SET status='USED',used_at=CURRENT_TIMESTAMP,used_request_id=? WHERE id=? AND user_id=? AND status='ACTIVATED'").bind(res.meta.last_row_id,q.personalDiscount.id,u.id).run();}
     ctx.waitUntil(notifyNewOrder(env,Number(res.meta.last_row_id)).catch(error=>console.error('notifyNewOrder failed',error)));
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }

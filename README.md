@@ -224,3 +224,11 @@ Owner/Admin Bot Panel now includes **📣 Campaigns**:
 - delivery log prevents the same automatic reactivation message from being sent twice for the same completed request.
 
 The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. Client notification opt-out is respected for campaign mailings.
+
+## v1.1.27
+- Added Owner/Admin Discounts & Gifts center in the Telegram management panel.
+- Added timed service promotions with percent discounts and duration in hours.
+- Active service promotions suppress VIP pricing for that service (no stacking).
+- Added personal gift discounts for a specific client with greeting and Telegram activation button.
+- Activated personal discounts apply to the whole next quote/request and are consumed only after the request is submitted.
+- Personal gift discounts do not stack with service promotions or VIP; personal gift has priority.

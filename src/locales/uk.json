@@ -132,5 +132,8 @@
   "orders.hint.rejected": "Команда не змогла підтвердити цю заявку.",
   "orders.hint.cancelled": "Цю заявку скасовано.",
   "orders.hint.deferred": "Заявка запланована на найближчий робочий день.",
-  "common.total": "Разом"
+  "common.total": "Разом",
+  "calculator.promotion": "Акційна знижка",
+  "calculator.personalGift": "Подарункова знижка",
+  "calculator.vipDiscount": "VIP"
 }

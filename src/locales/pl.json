@@ -132,5 +132,8 @@
   "orders.hint.rejected": "Zespół nie mógł przyjąć tego zlecenia.",
   "orders.hint.cancelled": "Zlecenie zostało anulowane.",
   "orders.hint.deferred": "Zlecenie zaplanowano na najbliższy dzień roboczy.",
-  "common.total": "Razem"
+  "common.total": "Razem",
+  "calculator.promotion": "Promocja",
+  "calculator.personalGift": "Rabat prezentowy",
+  "calculator.vipDiscount": "VIP"
 }

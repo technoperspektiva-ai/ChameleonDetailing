@@ -132,5 +132,8 @@
   "orders.hint.rejected": "The team could not accept this request.",
   "orders.hint.cancelled": "This request has been cancelled.",
   "orders.hint.deferred": "The request is queued for the nearest working day.",
-  "common.total": "Total"
+  "common.total": "Total",
+  "calculator.promotion": "Promotion",
+  "calculator.personalGift": "Personal gift",
+  "calculator.vipDiscount": "VIP"
 }
