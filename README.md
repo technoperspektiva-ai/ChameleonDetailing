@@ -1,4 +1,13 @@
 # ChameleonDetailing
+## v1.1.36 — deep Owner Menu Builder
+
+- Owner Menu Builder can now open system sections themselves (Dashboard, Campaigns, Reports, Settings, Calculator, Seasonal Theme, etc.) and edit their stable inner buttons as real layout items.
+- Stable inner actions can be moved to the top level, into a custom folder, or into another system section; moved items disappear from their original section.
+- Custom folders can be created at the root, inside folders, or inside system sections.
+- Added a reliable Finish editing button and Cancel flow for menu prompts, fixing the editor trap and folder-creation flow.
+- Added button row sizing: WIDE (one per row), HALF (two), COMPACT (up to three). Telegram controls physical button height, so sizing changes row span rather than pixel height.
+- Existing v1 menu layout is migrated automatically into the new v2 layout setting without deleting the old data.
+
 ## v1.1.35 — nested menu sorting
 
 - Owner Menu Builder now edits every folder level, not only the root.
