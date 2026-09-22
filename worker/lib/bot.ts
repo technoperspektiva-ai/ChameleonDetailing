@@ -47,7 +47,7 @@ function appUrl(env:Env,origin?:string){const live=(origin||'').trim();if(/^http
 function mainKeyboard(env:Env,origin:string,locale:BotLocale,role:Role='CLIENT'){const c=copy[locale],url=appUrl(env,origin);const rows:any[]=[[{text:c.open,web_app:{url}}]];if(role!=='CLIENT')rows.push([{text:role==='OWNER'?c.panel:l3(locale,'🛠 Панель керування','🛠 Panel zarządzania','🛠 Management panel'),callback_data:'staff:panel'}]);rows.push([{text:c.help,callback_data:'help'}]);return {inline_keyboard:rows}}
 async function botContent(env:Env,key:string,locale:BotLocale,fallback:string){if(!env.DB)return fallback;await ensureDb(env);const row=await env.DB.prepare('SELECT value FROM content_blocks WHERE key=? AND locale=?').bind(key,locale).first<any>();const value=String(row?.value||'').trim();return value||fallback}
 const botLocaleFromUser=(u:any,from?:TgFrom):BotLocale=>{const v=String(u?.language||'').toLowerCase();return v==='uk'||v==='pl'||v==='en'?v as BotLocale:localeOf(from)};
-async function helpKeyboard(env:Env,locale:BotLocale){const contact=String(await getSetting(env,'bot.owner_contact_url','')).trim()||`tg://user?id=${String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID)}`;return {inline_keyboard:[[{text:l3(locale,'✍️ Написати власнику Детейлінгу','✍️ Napisz do właściciela','✍️ Message the detailing owner'),url:contact}],[{text:l3(locale,'🌐 Змінити мову','🌐 Zmień język','🌐 Change language'),callback_data:'botlang:menu'}],[{text:l3(locale,'⬅️ Головне меню','⬅️ Menu główne','⬅️ Main menu'),callback_data:'client:menu'}]]}}
+async function helpKeyboard(env:Env,locale:BotLocale){const contact=String(await getSetting(env,'bot.owner_contact_url','')).trim()||`tg://user?id=${String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID)}`;return {inline_keyboard:[[{text:l3(locale,'✍️ Написати власнику Детейлінгу','✍️ Napisz do właściciela','✍️ Message the detailing owner'),url:contact}],[{text:l3(locale,'📱 Добровільно поділитися номером','📱 Dobrowolnie udostępnij numer','📱 Voluntarily share phone number'),callback_data:'client:phone'}],[{text:l3(locale,'🌐 Змінити мову','🌐 Zmień język','🌐 Change language'),callback_data:'botlang:menu'}],[{text:l3(locale,'⬅️ Головне меню','⬅️ Menu główne','⬅️ Main menu'),callback_data:'client:menu'}]]}}
 
 
 const roleLabel=(role:Role)=>role==='OWNER'?'👑 OWNER':role==='ADMIN'?'🛡 ADMIN':role==='MANAGER'?'🧑‍💼 MANAGER':'👤 CLIENT';
@@ -126,7 +126,22 @@ async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
  await sendPanel(env,msg.chat.id,`🦎 <b>Chameleon Detailing</b>\n\n${c.hello}, <b>${name}</b>! ${c.body}${roleText}\n\n${c.tap}`,mainKeyboard(env,origin,locale,role));
 }
 async function help(env:Env,origin:string,msg:TgMessage){const staff=msg.from?await getRole(env,msg.from):null;const locale=staff?botLocaleFromUser(staff.u,msg.from):localeOf(msg.from);const text=await botContent(env,'bot.help_text',locale,copy[locale].helpText);await sendPanel(env,msg.chat.id,text,await helpKeyboard(env,locale))}
-async function saveContact(env:Env,origin:string,msg:TgMessage){const from=msg.from,contact=msg.contact;if(!from||!contact)return;const locale=localeOf(from),c=copy[locale];if(contact.user_id&&contact.user_id!==from.id){await sendMessage(env,msg.chat.id,c.own);return}const {u,role}=await getRole(env,from);if(env.DB&&u.id){await env.DB.prepare(`INSERT INTO client_profiles(user_id,phone_number,phone_verified_via_telegram,phone_shared_at) VALUES(?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET phone_number=excluded.phone_number,phone_verified_via_telegram=1,phone_shared_at=CURRENT_TIMESTAMP`).bind(u.id,contact.phone_number).run();await event(env,u.id,'phone_shared_via_telegram')}await sendMessage(env,msg.chat.id,c.saved,mainKeyboard(env,origin,locale,role))}
+async function saveContact(env:Env,origin:string,msg:TgMessage){
+ const from=msg.from,contact=msg.contact;if(!from||!contact)return;
+ const {u}=await getRole(env,from);const locale=botLocaleFromUser(u,from),c=copy[locale];
+ if(contact.user_id&&contact.user_id!==from.id){
+  await deleteMessageSafe(env,msg.chat.id,msg.message_id);
+  const sent:any=await sendMessage(env,msg.chat.id,c.own,{remove_keyboard:true});if(sent?.message_id)await deleteMessageSafe(env,msg.chat.id,sent.message_id);
+  const text=await botContent(env,'bot.help_text',locale,copy[locale].helpText);await sendPanel(env,msg.chat.id,text,await helpKeyboard(env,locale));return;
+ }
+ if(env.DB&&u.id){
+  await env.DB.prepare(`INSERT INTO client_profiles(user_id,phone_number,phone_verified_via_telegram,phone_shared_at) VALUES(?,?,1,CURRENT_TIMESTAMP) ON CONFLICT(user_id) DO UPDATE SET phone_number=excluded.phone_number,phone_verified_via_telegram=1,phone_shared_at=CURRENT_TIMESTAMP`).bind(u.id,contact.phone_number).run();
+  await event(env,u.id,'phone_shared_via_telegram');
+ }
+ await deleteMessageSafe(env,msg.chat.id,msg.message_id);
+ const sent:any=await sendMessage(env,msg.chat.id,c.saved,{remove_keyboard:true});if(sent?.message_id)await deleteMessageSafe(env,msg.chat.id,sent.message_id);
+ const text=await botContent(env,'bot.help_text',locale,copy[locale].helpText);await sendPanel(env,msg.chat.id,text,await helpKeyboard(env,locale));
+}
 
 async function panelSection(env:Env,msg:TgMessage,from:TgFrom,section:string){
  const staff=await requireStaff(env,from);if(!staff){await sendMessage(env,msg.chat.id,pcopy(localeOf(from)).staffRequired);return}
@@ -315,7 +330,7 @@ async function requestDetail(env:Env,msg:TgMessage,from:TgFrom,id:number){
 💳 ${l3(locale,'Оплата','Płatność','Payment')}: <b>${esc(r.payment_status||'PENDING')}</b>
 🕘 ${fmtDate(r.created_at)}${r.scheduled_for?`
 📅 ${fmtDate(r.scheduled_for)}`:''}`;
- const rows:any[]=[];if(can(staff.role,'orders.manage'))rows.push([{text:'✅ CONFIRMED',callback_data:`order:${id}:CONFIRMED`},{text:'🛠 IN_PROGRESS',callback_data:`order:${id}:IN_PROGRESS`}],[{text:'🏁 COMPLETED',callback_data:`order:${id}:COMPLETED`},{text:'❌ CANCELLED',callback_data:`order:${id}:CANCELLED`}],[{text:l3(locale,'💰 Змінити суму / доп. послуги','💰 Zmień kwotę / dodatki','💰 Edit final price / extras'),callback_data:`order:${id}:edit`}]);rows.push([{text:l3(locale,'⬅️ Заявки','⬅️ Zlecenia','⬅️ Requests'),callback_data:'panel:requests'}]);await safeEdit(env,msg,text,{inline_keyboard:rows});
+ const rows:any[]=[];if(can(staff.role,'orders.manage'))rows.push([{text:'✅ CONFIRMED',callback_data:`order:${id}:CONFIRMED`},{text:'🛠 IN_PROGRESS',callback_data:`order:${id}:IN_PROGRESS`}],[{text:'🏁 COMPLETED',callback_data:`order:${id}:COMPLETED`},{text:'❌ CANCELLED',callback_data:`order:${id}:CANCELLED`}],[{text:l3(locale,'💰 Змінити суму / доп. послуги','💰 Zmień kwotę / dodatki','💰 Edit final price / extras'),callback_data:`order:${id}:edit`}]);const sharedChatId=await getSetting(env,'order_notifications.chat_id','');const isSharedOrderChat=String(msg.chat.id)===String(sharedChatId)&&msg.chat.type!=='private';if(!isSharedOrderChat)rows.push([{text:l3(locale,'⬅️ Заявки','⬅️ Zlecenia','⬅️ Requests'),callback_data:'panel:requests'}]);await safeEdit(env,msg,text,{inline_keyboard:rows});
 }
 
 async function vipPricingDetail(env:Env,msg:TgMessage,from:TgFrom,serviceId:number){
@@ -388,12 +403,12 @@ export async function notifyNewOrder(env:Env,orderId:number){
   const client=l3(locale,'Клієнт','Klient','Client'),service=l3(locale,'Послуга','Usługa','Service'),vehicle=l3(locale,'Авто','Auto','Vehicle'),condition=l3(locale,'Стан','Stan','Condition'),extras=l3(locale,'Опції','Dodatki','Extras'),type=l3(locale,'Тип','Typ','Type'),amount=l3(locale,'Сума','Kwota','Amount'),phone=l3(locale,'Телефон','Telefon','Phone');
   return `${title} <b>#${r.id}</b>\n\n👤 ${client}: <b>${esc([r.first_name,r.last_name].filter(Boolean).join(' ')||r.username||r.telegram_user_id||'—')}</b>${r.username?` @${esc(r.username)}`:''}\n📞 ${phone}: <code>${esc(r.phone_number||'—')}</code>\n🧽 ${service}: <b>${esc(r.service_slug||'—')}</b>\n🚙 ${vehicle}: <b>${esc(r.vehicle_slug||'—')}</b>\n🧼 ${condition}: <b>${esc(r.condition_slug||'—')}</b>\n➕ ${extras}: <b>${options.length?esc(options.join(', ')):'—'}</b>\n📦 ${type}: <b>${esc(r.request_type||'STANDARD')}</b>\n💰 ${amount}: <b>${money(r.final_job_price??r.calculated_price,r.currency)}</b>\n🕘 ${fmtDate(r.created_at)}`;
  };
- const kb={inline_keyboard:[[{text:'📋 Open request',callback_data:`order:${orderId}:open`}]]};
+ const personalKb={inline_keyboard:[[{text:'📋 Open request',callback_data:`order:${orderId}:open`}]]};
  const staff=await env.DB.prepare(`SELECT u.telegram_user_id,u.management_language,u.language FROM users u JOIN staff_order_notifications n ON n.user_id=u.id AND n.enabled=1 WHERE u.role IN ('OWNER','ADMIN','MANAGER') AND u.status='ACTIVE'`).all<any>();
- for(const x of staff.results||[]){const locale=(['uk','pl','en'].includes(String(x.management_language))?x.management_language:['uk','pl','en'].includes(String(x.language))?x.language:'en') as BotLocale;try{await sendMessage(env,Number(x.telegram_user_id),build(locale),kb)}catch(e){console.error('personal order notification failed',x.telegram_user_id,e)}}
+ for(const x of staff.results||[]){const locale=(['uk','pl','en'].includes(String(x.management_language))?x.management_language:['uk','pl','en'].includes(String(x.language))?x.language:'en') as BotLocale;try{await sendMessage(env,Number(x.telegram_user_id),build(locale),personalKb)}catch(e){console.error('personal order notification failed',x.telegram_user_id,e)}}
  const chatEnabled=(await getSetting(env,'order_notifications.chat_enabled','0'))==='1';
  const chatId=await getSetting(env,'order_notifications.chat_id','');
- if(chatEnabled&&chatId){const locale=(await getSetting(env,'order_notifications.chat_locale','uk')) as BotLocale;try{await sendMessage(env,Number(chatId),build(['uk','pl','en'].includes(locale)?locale:'uk'),kb)}catch(e){console.error('group order notification failed',chatId,e)}}
+ if(chatEnabled&&chatId){const locale=(await getSetting(env,'order_notifications.chat_locale','uk')) as BotLocale;const groupLocale=(['uk','pl','en'].includes(locale)?locale:'uk') as BotLocale;const groupKb={inline_keyboard:[[{text:l3(groupLocale,'✏️ Відкрити та редагувати заявку','✏️ Otwórz i edytuj zlecenie','✏️ Open & edit request'),callback_data:`order:${orderId}:open`}]]};try{await sendMessage(env,Number(chatId),build(groupLocale),groupKb)}catch(e){console.error('group order notification failed',chatId,e)}}
 }
 
 export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
@@ -417,6 +432,12 @@ export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
  if(cb){
   await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id}).catch(()=>{});if(!cb.message)return;
   if(cb.data==='help'){await help(env,origin,{...cb.message,from:cb.from});return}
+  if(cb.data==='client:phone'){
+   const {u}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);
+   const prompt=l3(locale,'📱 <b>Поділитися номером телефону</b>\n\nЦе добровільно. Номер буде використано лише для зв’язку щодо деталей ваших заявок. Натисніть кнопку нижче, якщо хочете поділитися номером.','📱 <b>Udostępnij numer telefonu</b>\n\nTo jest dobrowolne. Numer będzie używany wyłącznie do kontaktu w sprawie szczegółów Twoich zleceń. Naciśnij przycisk poniżej, jeśli chcesz udostępnić numer.','📱 <b>Share phone number</b>\n\nThis is voluntary. Your number will only be used to contact you about details of your requests. Tap the button below if you want to share it.');
+   const label=l3(locale,'📱 Поділитися моїм номером','📱 Udostępnij mój numer','📱 Share my phone number');
+   await sendPanel(env,cb.message.chat.id,prompt,{keyboard:[[{text:label,request_contact:true}]],resize_keyboard:true,one_time_keyboard:true,input_field_placeholder:label});return;
+  }
   if(cb.data==='client:menu'){const {u,role}=await getRole(env,cb.from);const locale=botLocaleFromUser(u,cb.from);const text=await botContent(env,'bot.client_menu_text',locale,copy[locale].body);await safeEdit(env,cb.message,`🦎 <b>Chameleon Detailing</b>
 
 ${text}`,mainKeyboard(env,origin,locale,role));return}
