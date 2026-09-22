@@ -97,3 +97,10 @@ html.theme-rainbow body{transition:none}
 html.theme-rainbow .app::before{background:conic-gradient(from 210deg at 50% 35%,color-mix(in srgb,var(--neon-color) 12%,transparent),transparent 22%,color-mix(in srgb,var(--neon-color) 8%,transparent) 50%,transparent 72%,color-mix(in srgb,var(--neon-color) 10%,transparent));animation:canvasFlow 13s linear infinite}
 @keyframes canvasFlow{to{transform:rotate(360deg) scale(1.08)}}
 @media (prefers-reduced-motion:reduce){html.theme-rainbow .app::before{animation:none}}
+
+/* v1.1.28 mobile typography / calculator glass header */
+.hero h1{font-size:clamp(1.55rem,8.2vw,3.05rem);line-height:.96;overflow-wrap:normal;word-break:normal;text-wrap:balance;max-width:100%}
+@media(max-width:480px){.hero{grid-template-columns:minmax(0,1fr) minmax(78px,.48fr)}.hero h1{font-size:clamp(1.48rem,8.5vw,2.7rem);letter-spacing:-.045em}.hero-mascot img{width:min(31vw,150px)}}
+.calc-top{background:linear-gradient(180deg,color-mix(in srgb,var(--neon-color) 6%,rgba(7,11,7,.68)),rgba(7,11,7,.28));backdrop-filter:blur(14px) saturate(1.08);-webkit-backdrop-filter:blur(14px) saturate(1.08);border:1px solid color-mix(in srgb,var(--neon-color) 14%,transparent);border-radius:18px;padding:12px 12px 14px;margin:0 0 12px;box-shadow:0 14px 36px rgba(0,0,0,.16)}
+.theme-rainbow .calc-top{background:linear-gradient(135deg,hsla(var(--rainbow-hue),85%,10%,.58),rgba(7,11,7,.38));border-color:hsla(var(--rainbow-hue),100%,55%,.22)}
+.order-extra-services{display:grid;gap:6px;margin-top:10px}.order-extra-services span{padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--neon-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--neon-color) 12%,transparent);font-size:var(--small);color:#c6d1c2}

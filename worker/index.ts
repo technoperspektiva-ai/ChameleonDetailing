@@ -222,7 +222,7 @@ export default {
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }
    if(url.pathname==='/api/orders'){
-    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();return json({orders:r.results});
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
 
    const deleteOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);

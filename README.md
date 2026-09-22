@@ -232,3 +232,9 @@ The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. C
 - Added personal gift discounts for a specific client with greeting and Telegram activation button.
 - Activated personal discounts apply to the whole next quote/request and are consumed only after the request is submitted.
 - Personal gift discounts do not stack with service promotions or VIP; personal gift has priority.
+
+## v1.1.28
+- Mobile hero typography fix and glass/translucent calculator header.
+- Personal client offers: Owner/Admin/Manager can build a ready service package and final price; Manager offers can require Admin/Owner approval; client accepts in Telegram and a confirmed request is created and assigned to the offer creator.
+- Manager access control: Owner/Admin can enable selected management blocks for Manager with backend permission checks.
+- Existing requests can add/remove additional services from the live service catalog while retaining manual final-price editing.
