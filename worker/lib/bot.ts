@@ -161,7 +161,28 @@ const menuActions:MenuAction[]=[
  {id:'reports_staff',callback:'reportpick:staff',labels:['🧑‍💼 Staff Activity Excel','🧑‍💼 Staff Activity Excel','🧑‍💼 Staff Activity Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_blacklist',callback:'report:blacklist:0',labels:['⛔ Blacklist Excel','⛔ Blacklist Excel','⛔ Blacklist Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_whitelist',callback:'report:whitelist:0',labels:['✅ Whitelist Excel','✅ Whitelist Excel','✅ Whitelist Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
- {id:'reports_business',callback:'reportpick:business',labels:['📦 Full Business Report','📦 Full Business Report','📦 Full Business Report'],roles:['OWNER','ADMIN'],defaultParent:'reports'}
+ {id:'reports_business',callback:'reportpick:business',labels:['📦 Full Business Report','📦 Full Business Report','📦 Full Business Report'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
+ {id:'panel_lang_uk',callback:'panel_lang:uk',labels:['🇺🇦 Українська','🇺🇦 Українська','🇺🇦 Ukrainian'],roles:['OWNER','ADMIN','MANAGER'],defaultParent:'panel_language'},
+ {id:'panel_lang_pl',callback:'panel_lang:pl',labels:['🇵🇱 Польська','🇵🇱 Polski','🇵🇱 Polish'],roles:['OWNER','ADMIN','MANAGER'],defaultParent:'panel_language'},
+ {id:'panel_lang_en',callback:'panel_lang:en',labels:['🇬🇧 Англійська','🇬🇧 Angielski','🇬🇧 English'],roles:['OWNER','ADMIN','MANAGER'],defaultParent:'panel_language'},
+ {id:'manager_perm_users',callback:'managerperm:users:toggle',labels:['👥 Доступ: Користувачі','👥 Dostęp: Użytkownicy','👥 Access: Users'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_vip',callback:'managerperm:vip:toggle',labels:['💎 Доступ: VIP','💎 Dostęp: VIP','💎 Access: VIP'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_whitelist',callback:'managerperm:whitelist:toggle',labels:['✅ Доступ: Whitelist','✅ Dostęp: Whitelist','✅ Access: Whitelist'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_blacklist',callback:'managerperm:blacklist:toggle',labels:['⛔ Доступ: Blacklist','⛔ Dostęp: Blacklist','⛔ Access: Blacklist'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_orders',callback:'managerperm:orders:toggle',labels:['📥 Доступ: Заявки','📥 Dostęp: Zlecenia','📥 Access: Requests'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_services',callback:'managerperm:services:toggle',labels:['🧽 Доступ: Послуги','🧽 Dostęp: Usługi','🧽 Access: Services'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_pricing',callback:'managerperm:pricing:toggle',labels:['💰 Доступ: Ціни','💰 Dostęp: Cennik','💰 Access: Pricing'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_calculator',callback:'managerperm:calculator:toggle',labels:['🧮 Доступ: Калькулятор','🧮 Dostęp: Kalkulator','🧮 Access: Calculator'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_content',callback:'managerperm:content:toggle',labels:['📝 Доступ: Контент','📝 Dostęp: Treści','📝 Access: Content'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_languages',callback:'managerperm:languages:toggle',labels:['🌐 Доступ: Мови','🌐 Dostęp: Języki','🌐 Access: Languages'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_referrals',callback:'managerperm:referrals:toggle',labels:['🤝 Доступ: Реферали','🤝 Dostęp: Polecenia','🤝 Access: Referrals'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_analytics',callback:'managerperm:analytics:toggle',labels:['📈 Доступ: Аналітика','📈 Dostęp: Analityka','📈 Access: Analytics'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_audit',callback:'managerperm:audit:toggle',labels:['📜 Доступ: Журнал дій','📜 Dostęp: Audit','📜 Access: Audit log'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_settings',callback:'managerperm:settings:toggle',labels:['⚙️ Доступ: Налаштування','⚙️ Dostęp: Ustawienia','⚙️ Access: Settings'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_reports',callback:'managerperm:reports:toggle',labels:['📊 Доступ: Звіти','📊 Dostęp: Raporty','📊 Access: Reports'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'manager_perm_offers',callback:'managerperm:offers:toggle',labels:['🤝 Доступ: Особисті умови','🤝 Dostęp: Oferty osobiste','🤝 Access: Personal offers'],roles:['OWNER','ADMIN'],defaultParent:'manager_access'},
+ {id:'settings_maintenance_message',callback:'action:setting:edit:maintenance.message',labels:['📝 Maintenance повідомлення','📝 Komunikat maintenance','📝 Maintenance message'],roles:['OWNER'],defaultParent:'settings'},
+ {id:'settings_maintenance_eta',callback:'action:setting:edit:maintenance.eta',labels:['⏱ Maintenance ETA','⏱ Maintenance ETA','⏱ Maintenance ETA'],roles:['OWNER'],defaultParent:'settings'}
 ];
 const menuAction=(id:string)=>menuActions.find(a=>a.id===id);
 const menuNodeCallback=(node:MenuNode)=>node.type==='module'?menuModule(node.id)?.callback:node.type==='action'?menuAction(node.id)?.callback:undefined;

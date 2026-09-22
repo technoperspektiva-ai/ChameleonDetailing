@@ -1,4 +1,12 @@
 # ChameleonDetailing
+## v1.1.37 — complete Menu Builder conversion
+
+- Converted the remaining Owner/Admin panel sections into the same Menu Builder registry instead of leaving fixed system-only controls.
+- Added editable internal entries for Manager access and panel language.
+- Preserved editable internal entries for campaigns, discounts, seasonal themes, reports, settings and personal offers, so their controls can be moved to the top level, into folders, or into other sections.
+- Added Maintenance message / ETA as editable Settings children.
+- Existing saved layouts are migrated non-destructively: newly registered items are appended using their default parent without resetting Owner custom structure.
+
 ## v1.1.36 — deep Owner Menu Builder
 
 - Owner Menu Builder can now open system sections themselves (Dashboard, Campaigns, Reports, Settings, Calculator, Seasonal Theme, etc.) and edit their stable inner buttons as real layout items.
