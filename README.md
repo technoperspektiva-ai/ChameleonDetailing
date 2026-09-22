@@ -1,4 +1,11 @@
 # ChameleonDetailing
+## v1.1.38 — Menu Builder registry sync + pagination
+
+- Fixed missing newly registered menu modules in the Owner menu editor.
+- Menu Builder now paginates every level, preventing Telegram from truncating large inline keyboards.
+- Added explicit Sync menu items action; newly introduced modules/actions are also persisted automatically into the saved D1 layout.
+- Added menu-item count per level so Owner can verify that all modules are present.
+
 ## v1.1.37 — complete Menu Builder conversion
 
 - Converted the remaining Owner/Admin panel sections into the same Menu Builder registry instead of leaving fixed system-only controls.

@@ -197,8 +197,12 @@ const safeMenuTitle=(v:unknown)=>String(v||'').replace(/[\r\n\t]/g,' ').trim().s
 const normalizeMenuSize=(v:unknown):MenuSize=>v==='WIDE'||v==='COMPACT'?'WIDE'===v?'WIDE':'COMPACT':'HALF';
 async function loadMenuLayout(env:Env):Promise<MenuNode[]>{
  let nodes:MenuNode[]=[];try{const raw=await getSetting(env,'owner_menu_layout_v2','')||await getSetting(env,'owner_menu_layout_v1','');const parsed=raw?JSON.parse(raw):[];if(Array.isArray(parsed))nodes=parsed.filter((x:any)=>x&&typeof x.id==='string'&&(x.type==='module'||x.type==='folder'||x.type==='action')).map((x:any)=>({id:String(x.id),type:x.type,parentId:x.parentId?String(x.parentId):null,order:Number(x.order)||0,title:safeMenuTitle(x.title),hidden:!!x.hidden,size:normalizeMenuSize(x.size)}))}catch{}
- const ids=new Set(nodes.map(x=>x.id));let max=Math.max(0,...nodes.map(x=>Number(x.order)||0));for(const m of menuModules)if(!ids.has(m.id)){max+=10;nodes.push({id:m.id,type:'module',parentId:m.defaultParent??null,order:max,size:'HALF'})}for(const a of menuActions)if(!ids.has(a.id)){max+=10;nodes.push({id:a.id,type:'action',parentId:a.defaultParent,order:max,size:'HALF'})}
- nodes=nodes.filter(n=>n.type==='folder'||(n.type==='module'&&!!menuModule(n.id))||(n.type==='action'&&!!menuAction(n.id)));return nodes;
+ const ids=new Set(nodes.map(x=>x.id));let max=Math.max(0,...nodes.map(x=>Number(x.order)||0)),changed=false;
+ for(const m of menuModules)if(!ids.has(m.id)){max+=10;nodes.push({id:m.id,type:'module',parentId:m.defaultParent??null,order:max,size:'HALF'});ids.add(m.id);changed=true}
+ for(const a of menuActions)if(!ids.has(a.id)){max+=10;nodes.push({id:a.id,type:'action',parentId:a.defaultParent,order:max,size:'HALF'});ids.add(a.id);changed=true}
+ const filtered=nodes.filter(n=>n.type==='folder'||(n.type==='module'&&!!menuModule(n.id))||(n.type==='action'&&!!menuAction(n.id)));if(filtered.length!==nodes.length)changed=true;nodes=filtered;
+ if(changed&&env.DB)await setSetting(env,'owner_menu_layout_v2',JSON.stringify(nodes.map(n=>({...n,title:n.title||undefined,size:n.size||'HALF'})))).catch(()=>{});
+ return nodes;
 }
 async function saveMenuLayout(env:Env,nodes:MenuNode[]){await setSetting(env,'owner_menu_layout_v2',JSON.stringify(nodes.map(n=>({...n,title:n.title||undefined,size:n.size||'HALF'}))));}
 const menuModule=(id:string)=>menuModules.find(m=>m.id===id);
@@ -227,27 +231,33 @@ async function applySectionMenuLayout(env:Env,role:Role,locale:BotLocale,section
  const custom=packMenuButtons(items);const backRows=keep.filter(r=>r.some((b:any)=>callbackKey(b)==='panel:home'));const body=keep.filter(r=>!r.some((b:any)=>callbackKey(b)==='panel:home'));return {inline_keyboard:[...body,...custom,...backRows]}
 }
 const managerBlockLabels:Record<string,[string,string,string]>={users:['👥 Користувачі','👥 Użytkownicy','👥 Users'],vip:['💎 VIP','💎 VIP','💎 VIP'],whitelist:['✅ Білий список','✅ Biała lista','✅ Whitelist'],blacklist:['⛔ Чорний список','⛔ Czarna lista','⛔ Blacklist'],orders:['📥 Заявки','📥 Zlecenia','📥 Requests'],services:['🧽 Послуги','🧽 Usługi','🧽 Services'],pricing:['💰 Ціни','💰 Cennik','💰 Pricing'],calculator:['🧮 Калькулятор','🧮 Kalkulator','🧮 Calculator'],content:['📝 Контент','📝 Treści','📝 Content'],languages:['🌐 Мови','🌐 Języki','🌐 Languages'],referrals:['🤝 Реферали','🤝 Polecenia','🤝 Referrals'],analytics:['📈 Аналітика','📈 Analityka','📈 Analytics'],audit:['📜 Audit','📜 Audit','📜 Audit'],settings:['⚙️ Налаштування','⚙️ Ustawienia','⚙️ Settings'],reports:['📊 Excel','📊 Excel','📊 Excel'],offers:['🤝 Особисті умови','🤝 Oferty osobiste','🤝 Personal offers']};
-async function menuEditorKeyboard(env:Env,locale:BotLocale,parentId:string|null=null){
+const MENU_EDITOR_PAGE_SIZE=7;
+async function menuEditorKeyboard(env:Env,locale:BotLocale,parentId:string|null=null,page=0){
  const nodes=await loadMenuLayout(env),children=nodes.filter(n=>n.parentId===parentId).sort((a,b)=>a.order-b.order),rows:any[]=[];
- for(const n of children){
-  rows.push([{text:`${n.hidden?'🙈':'👁'} ${localizedMenuTitle(n,locale)}`,callback_data:`menuedit:item:${n.id}`}]);
-  const controls:any[]=[{text:'⬆️',callback_data:`menuedit:up:${n.id}`},{text:'⬇️',callback_data:`menuedit:down:${n.id}`},{text:'📦',callback_data:`menuedit:move:${n.id}`},{text:'📐',callback_data:`menuedit:size:${n.id}`}];
-  if(n.type!=='action')controls.push({text:'📂',callback_data:`menuedit:level:${n.id}`});
-  rows.push(controls);
+ const pages=Math.max(1,Math.ceil(children.length/MENU_EDITOR_PAGE_SIZE));page=Math.max(0,Math.min(page,pages-1));
+ const visible=children.slice(page*MENU_EDITOR_PAGE_SIZE,(page+1)*MENU_EDITOR_PAGE_SIZE);
+ for(const n of visible){
+  rows.push([{text:`${n.hidden?'🙈':'👁'} ${localizedMenuTitle(n,locale)}`,callback_data:`menuedit:item:${n.id}`},{text:'⬆️',callback_data:`menuedit:up:${n.id}`},{text:'⬇️',callback_data:`menuedit:down:${n.id}`}]);
  }
+ if(pages>1){const nav:any[]=[];if(page>0)nav.push({text:'⬅️',callback_data:`menuedit:page:${parentId||'root'}:${page-1}`});nav.push({text:`${page+1}/${pages}`,callback_data:`menuedit:page:${parentId||'root'}:${page}`});if(page<pages-1)nav.push({text:'➡️',callback_data:`menuedit:page:${parentId||'root'}:${page+1}`});rows.push(nav)}
  rows.push([{text:l3(locale,'➕ Створити папку тут','➕ Utwórz folder tutaj','➕ Create folder here'),callback_data:`menuedit:newfolder:${parentId||'root'}`}]);
  if(parentId){const parent=nodes.find(n=>n.id===parentId),up=parent?.parentId||'root';rows.push([{text:l3(locale,'⬅️ Рівень вище','⬅️ Poziom wyżej','⬅️ Parent level'),callback_data:`menuedit:level:${up}`}]);}
- else rows.push([{text:l3(locale,'♻️ Скинути структуру','♻️ Resetuj układ','♻️ Reset layout'),callback_data:'menuedit:reset'}]);
+ else rows.push([{text:l3(locale,'🔄 Синхронізувати пункти','🔄 Synchronizuj pozycje','🔄 Sync menu items'),callback_data:'menuedit:sync'},{text:l3(locale,'♻️ Скинути структуру','♻️ Resetuj układ','♻️ Reset layout'),callback_data:'menuedit:reset'}]);
  rows.push([{text:l3(locale,'✅ Завершити редагування','✅ Zakończ edycję','✅ Finish editing'),callback_data:'menuedit:exit'}]);
  return {inline_keyboard:rows};
 }
-async function showMenuEditorLevel(env:Env,msg:TgMessage,from:TgFrom,parentId:string|null){
+async function showMenuEditorLevel(env:Env,msg:TgMessage,from:TgFrom,parentId:string|null,page=0){
  const staff=await requireStaff(env,from);if(!staff||staff.role!=='OWNER')return;const locale=panelLocaleOf(staff,from),nodes=await loadMenuLayout(env);
  const parent=parentId?nodes.find(n=>n.id===parentId&&n.type!=='action'):null;if(parentId&&!parent){await panelSection(env,msg,from,'menu_builder');return}
  const title=parent?localizedMenuTitle(parent,locale).replace(/^📁\s*/,''):l3(locale,'Верхній рівень','Poziom główny','Top level');
- const typeHint=parent?.type==='module'?l3(locale,'Це системний розділ. Сюди можна переносити інші пункти та папки, а його внутрішні системні кнопки теж доступні як окремі елементи редактора.','To sekcja systemowa. Możesz przenosić tutaj inne elementy i foldery, a jej wewnętrzne przyciski systemowe są również osobnymi elementami edytora.','This is a system section. You can move other items and folders into it, and its internal system buttons are exposed as editable items too.') : l3(locale,'Стрілки змінюють порядок саме на цьому рівні.','Strzałki zmieniają kolejność dokładnie na tym poziomie.','Arrows reorder items on this exact level.');
- const text=`✏️ <b>${esc(title)}</b>\n\n${typeHint}`;
- await safeEdit(env,msg,text,await menuEditorKeyboard(env,locale,parentId));
+ const count=nodes.filter(n=>n.parentId===parentId).length;
+ const typeHint=parent?.type==='module'?l3(locale,'Це системний розділ. Його внутрішні кнопки теж можна витягувати наверх, переносити в інші розділи, перейменовувати та приховувати.','To sekcja systemowa. Jej wewnętrzne przyciski można przenosić na poziom główny, do innych sekcji, zmieniać nazwy i ukrywać.','This is a system section. Its internal buttons can be moved to the top level or other sections, renamed and hidden.') : l3(locale,'Усі пункти показуються сторінками, щоб Telegram не обрізав редактор.','Wszystkie pozycje są stronicowane, aby Telegram nie obcinał edytora.','Items are paginated so Telegram does not truncate the editor.');
+ const text=`✏️ <b>${esc(title)}</b>
+
+${typeHint}
+
+${l3(locale,'Пунктів на цьому рівні','Pozycji na tym poziomie','Items on this level')}: <b>${count}</b>`;
+ await safeEdit(env,msg,text,await menuEditorKeyboard(env,locale,parentId,page));
 }
 async function showMenuEditorItem(env:Env,msg:TgMessage,from:TgFrom,id:string){
  const staff=await requireStaff(env,from);if(!staff||staff.role!=='OWNER')return;const locale=panelLocaleOf(staff,from),nodes=await loadMenuLayout(env),node=nodes.find(n=>n.id===id);if(!node){await panelSection(env,msg,from,'menu_builder');return}
@@ -927,6 +937,8 @@ ${l3(loc,'15 = %, 72 = годин від поточного моменту, на
   const menuFolder=(cb.data||'').match(/^menufolder:([a-z0-9_]+)$/);if(menuFolder){const staff=await requireStaff(env,cb.from);if(!staff)return;const loc=panelLocaleOf(staff,cb.from),nodes=await loadMenuLayout(env),folder=nodes.find(n=>n.id===menuFolder[1]&&n.type==='folder');if(!folder)return;await safeEdit(env,cb.message,`📁 <b>${esc(localizedMenuTitle(folder,loc).replace(/^📁\s*/,''))}</b>`,await panelKeyboardFor(env,staff.role,loc,folder.id));return}
   if(cb.data==='menuedit:exit'){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await setBotState(env,staff.u.id,null);await showPanel(env,cb.message,cb.from);return}
   const menuCancelPrompt=(cb.data||'').match(/^menuedit:cancelprompt:([a-z0-9_]+)$/);if(menuCancelPrompt){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await setBotState(env,staff.u.id,null);const target=menuCancelPrompt[1];const nodes=await loadMenuLayout(env);const n=nodes.find(x=>x.id===target);await showMenuEditorLevel(env,cb.message,cb.from,n?.type==='action'?(n.parentId||null):(target==='root'?null:target));return}
+  const menuEditPage=(cb.data||'').match(/^menuedit:page:([a-z0-9_]+):(\d+)$/);if(menuEditPage){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await showMenuEditorLevel(env,cb.message,cb.from,menuEditPage[1]==='root'?null:menuEditPage[1],Number(menuEditPage[2]||0));return}
+  if(cb.data==='menuedit:sync'){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;const nodes=await loadMenuLayout(env);await saveMenuLayout(env,nodes);await audit(env,staff.u.id,'menu.layout.sync','menu','root',null,{items:nodes.length});await showMenuEditorLevel(env,cb.message,cb.from,null,0);return}
   const menuEditItem=(cb.data||'').match(/^menuedit:item:([a-z0-9_]+)$/);if(menuEditItem){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await showMenuEditorItem(env,cb.message,cb.from,menuEditItem[1]);return}
   const menuEditLevel=(cb.data||'').match(/^menuedit:level:([a-z0-9_]+)$/);if(menuEditLevel){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await showMenuEditorLevel(env,cb.message,cb.from,menuEditLevel[1]==='root'?null:menuEditLevel[1]);return}
   const menuEditFolder=(cb.data||'').match(/^menuedit:folder:([a-z0-9_]+)$/);if(menuEditFolder){const staff=await requireStaff(env,cb.from);if(!staff||staff.role!=='OWNER')return;await showMenuEditorLevel(env,cb.message,cb.from,menuEditFolder[1]);return}
