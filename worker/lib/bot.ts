@@ -139,17 +139,19 @@ async function showPanel(env:Env,msg:TgMessage,from:TgFrom){
 }
 async function showUser(env:Env,msg:TgMessage,from:TgFrom,userId:number){
  const staff=await requireStaff(env,from,'user.read');if(!staff||!env.DB)return;await ensureDb(env);const locale=panelLocaleOf(staff,from),c=pcopy(locale);
- const u=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number,p.notes FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.id=?`).bind(userId).first<any>();
+ const u=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number,p.phone_verified_via_telegram,p.phone_shared_at,p.notes FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.id=?`).bind(userId).first<any>();
  if(!u){await safeEdit(env,msg,c.userNotFound,backPanel(locale));return}const f=await userFlags(env,u.id);const rows:any[]=[];
  if(await canStaff(env,staff.role,'vip.assign')||await canStaff(env,staff.role,'vip.remove'))rows.push([{text:u.client_tier==='STANDARD'?c.setVip:c.removeVip,callback_data:`user:${u.id}:vip`}]);
  if(await canStaff(env,staff.role,'whitelist.manage'))rows.push([{text:f.whitelist?c.removeWhitelist:c.addWhitelist,callback_data:`user:${u.id}:whitelist`}]);
  if(await canStaff(env,staff.role,'blacklist.manage'))rows.push([{text:f.blacklist?c.removeBlacklist:c.addBlacklist,callback_data:`user:${u.id}:blacklist`}]);
+ if(u.phone_number)rows.push([{text:l3(locale,'📞 Контакт для дзвінка','📞 Kontakt do telefonu','📞 Contact for call'),callback_data:`user:${u.id}:contact`}]);
  if(await canStaff(env,staff.role,'user.update'))rows.push([{text:c.editNote,callback_data:`user:${u.id}:note`}]);
  if((staff.role==='OWNER'||staff.role==='ADMIN')&&u.role==='MANAGER')rows.push([{text:c.removeManager,callback_data:`user:${u.id}:demote`}]);
  if(staff.role==='OWNER'&&u.role==='ADMIN')rows.push([{text:c.removeAdmin,callback_data:`user:${u.id}:demote`}],[{text:'🔁 Admin → Manager',callback_data:`user:${u.id}:to_manager`}]);
  if(staff.role==='OWNER'&&u.role==='MANAGER')rows.push([{text:'⬆️ Manager → Admin',callback_data:`user:${u.id}:to_admin`}]);
  rows.push([{text:`⬅️ ${c.users.replace(/^👥\s*/, '')}`,callback_data:'panel:users'}]);
- const text=`👤 <b>${esc(u.first_name||'User')} ${esc(u.last_name||'')}</b>\n${u.username?'@'+esc(u.username)+'\n':''}<code>${u.telegram_user_id}</code>\n\n${c.role}: <b>${esc(u.role)}</b>\n${c.status}: <b>${esc(u.status)}</b>\n${c.tier}: <b>${esc(u.client_tier)}</b>\n${c.whitelist}: <b>${f.whitelist?c.yes:c.no}</b>\n${c.blacklist}: <b>${f.blacklist?c.yes:c.no}</b>\n${c.phone}: ${esc(u.phone_number||'—')}\n${c.lastSeen}: ${fmtDate(u.last_seen_at)}\n\n${c.note}: ${esc(u.notes||'—')}`;
+ const phoneShared=Number(u.phone_verified_via_telegram||0)===1;
+ const text=`👤 <b>${esc(u.first_name||'User')} ${esc(u.last_name||'')}</b>\n${u.username?'@'+esc(u.username)+'\n':''}<code>${u.telegram_user_id}</code>\n\n${c.role}: <b>${esc(u.role)}</b>\n${c.status}: <b>${esc(u.status)}</b>\n${c.tier}: <b>${esc(u.client_tier)}</b>\n${c.whitelist}: <b>${f.whitelist?c.yes:c.no}</b>\n${c.blacklist}: <b>${f.blacklist?c.yes:c.no}</b>\n${c.phone}: <b>${esc(u.phone_number||'—')}</b>\n${l3(locale,'Поділився через Telegram','Udostępniono przez Telegram','Shared via Telegram')}: <b>${phoneShared?c.yes:c.no}</b>${u.phone_shared_at?`\n${l3(locale,'Поділився','Udostępniono','Shared at')}: ${fmtDate(u.phone_shared_at)}`:''}\n${c.lastSeen}: ${fmtDate(u.last_seen_at)}\n\n${c.note}: ${esc(u.notes||'—')}`;
  await safeEdit(env,msg,text,{inline_keyboard:rows});
 }
 
@@ -764,6 +766,7 @@ ${l3(loc,'15 = %, 72 = годин від поточного моменту, на
   const notifyLocale=(cb.data||'').match(/^notify:group:locale:(uk|pl|en)$/);if(notifyLocale){const staff=await requireStaff(env,cb.from,'settings.edit');if(!staff||!(staff.role==='OWNER'||staff.role==='ADMIN'))return;await setSetting(env,'order_notifications.chat_locale',notifyLocale[1]);await audit(env,staff.u.id,'order.notifications.group.locale','settings','order_notifications.chat_locale',null,{value:notifyLocale[1]});await panelSection(env,cb.message,cb.from,'notifications');return}
   const userMatch=(cb.data||'').match(/^user:(\d+):(.+)$/);if(userMatch){const targetId=Number(userMatch[1]),action=userMatch[2],staff=await requireStaff(env,cb.from);if(!staff||!env.DB)return;
    if(action==='open'){await showUser(env,cb.message,cb.from,targetId);return}
+   if(action==='contact'){const target=await env.DB.prepare(`SELECT u.first_name,u.last_name,p.phone_number FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.id=?`).bind(targetId).first<any>();if(!target?.phone_number){await showUser(env,cb.message,cb.from,targetId);return}await tgApi(env,'sendContact',{chat_id:cb.message.chat.id,phone_number:String(target.phone_number),first_name:String(target.first_name||'Client'),last_name:target.last_name?String(target.last_name):undefined});return}
    if(action==='vip'){const target=await env.DB.prepare("SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.id=?").bind(targetId).first<any>();if(target){await setVip(env,staff.u,target,target.client_tier==='STANDARD'?'VIP':'STANDARD');await showUser(env,cb.message,cb.from,targetId)}return}
    if(action==='whitelist'){if(await canStaff(env,staff.role,'whitelist.manage')){await toggleWhitelist(env,staff.u,targetId);await showUser(env,cb.message,cb.from,targetId)}return}
    if(action==='blacklist'){if(!await canStaff(env,staff.role,'blacklist.manage'))return;const removed=await toggleBlacklistRemove(env,staff.u,targetId);if(removed){await showUser(env,cb.message,cb.from,targetId);return}await promptState(env,cb.message,cb.from,'BLACKLIST_REASON',{targetId},'⛔ Send the public reason for blocking this client.');return}

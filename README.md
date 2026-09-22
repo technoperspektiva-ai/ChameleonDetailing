@@ -252,3 +252,8 @@ The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. C
 - Owner-only Hidden Audit panel for Admin/Manager with NORMAL / CRITICAL_ONLY / HIDDEN modes.
 - Critical/security actions remain auditable even when ordinary staff actions are hidden.
 - Calculator extra options now support description, price, enable/disable, ordering and deletion from Owner/Admin Bot Panel.
+
+## v1.1.31 — client phone visibility
+- Client cards now show the stored phone number, whether it was shared through Telegram, and the share timestamp.
+- Staff client cards include a **Contact for call** action that sends a native Telegram contact card, so staff can tap the phone number and call.
+- Users, VIP, Orders, and Business Excel reports now include phone number, Telegram-share status, and phone-share timestamp.
