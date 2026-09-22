@@ -133,3 +133,11 @@ html.theme-halloween .primary{background:linear-gradient(180deg,#ffba35,#ff8700)
  .result-modal .modal-actions{padding-bottom:4px}
  .result-modal .modal-close{position:sticky;top:0;z-index:6;margin-left:auto;float:right;box-shadow:0 6px 18px rgba(0,0,0,.28)}
 }
+
+/* v1.1.42 — emergency pricing is visible before confirmation */
+.breakdown .emergency-row{margin-top:10px;padding-top:12px;border-top:1px dashed color-mix(in srgb,var(--warning) 42%,transparent);color:#ffd69a}
+.breakdown .emergency-total{margin-top:0;padding:10px 12px;border-radius:13px;background:color-mix(in srgb,var(--warning) 9%,transparent);border:1px solid color-mix(in srgb,var(--warning) 24%,transparent);color:#ffc45e;font-weight:900}
+.emergency-hint{display:block;margin-top:10px;color:#b9b09d;line-height:1.45}
+.emergency-order-btn{min-height:66px;flex-direction:column;gap:4px}
+.emergency-order-btn span{font-size:.96rem}
+.emergency-order-btn b{font-size:.82rem;color:#ffdca4}

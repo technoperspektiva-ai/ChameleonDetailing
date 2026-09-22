@@ -57,6 +57,6 @@ export async function scheduleState(env:Env,now=new Date()){
  const override=String(await getSetting(env,'business_status_override','AUTO')).toUpperCase();
  if(override==='OPEN'){isWorkingDay=true;isOpen=true}
  if(override==='CLOSED'){isOpen=false}
- const emergencyEnabled=(await getSetting(env,'emergency_enabled','0'))==='1';const multiplier=Math.min(2,Math.max(1.5,Number(await getSetting(env,'emergency_multiplier','1.5'))||1.5));
+ const emergencyEnabled=(await getSetting(env,'emergency_enabled','0'))==='1';const multiplier=Math.min(3,Math.max(1.05,Number(await getSetting(env,'emergency_multiplier','1.5'))||1.5));
  return {isOpen,isWorkingDay,nextWorkingAt:isOpen?null:await nextWorking(env,now,timezone,fallbackDays,fallbackHours),emergencyEnabled,emergencyMultiplier:multiplier,timezone,workingHours:`${cfg.openTime}-${cfg.closeTime}`,override};
 }

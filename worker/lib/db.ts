@@ -96,6 +96,8 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_by INTEGER");
  await safeAlter(env,"ALTER TABLE service_prices ADD COLUMN updated_at TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN client_deleted_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN staff_deleted_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN staff_deleted_by INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN final_job_price REAL");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN price_adjustment_reason TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN confirmed_at TEXT");

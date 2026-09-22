@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS service_requests (
   service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,
   base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,
   emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,confirmed_by INTEGER,started_at TEXT,started_by INTEGER,
-  rejected_at TEXT,rejected_by INTEGER,rejection_reason TEXT,completed_at TEXT,completed_by INTEGER,payment_status TEXT NOT NULL DEFAULT 'PENDING',client_deleted_at TEXT,first_paid_job_for_user INTEGER NOT NULL DEFAULT 0,is_repeat_customer INTEGER NOT NULL DEFAULT 0,referral_id INTEGER,metadata_json TEXT
+  rejected_at TEXT,rejected_by INTEGER,rejection_reason TEXT,completed_at TEXT,completed_by INTEGER,payment_status TEXT NOT NULL DEFAULT 'PENDING',client_deleted_at TEXT,staff_deleted_at TEXT,staff_deleted_by INTEGER,first_paid_job_for_user INTEGER NOT NULL DEFAULT 0,is_repeat_customer INTEGER NOT NULL DEFAULT 0,referral_id INTEGER,metadata_json TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_requests_user_created ON service_requests(user_id,created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_requests_status ON service_requests(status);

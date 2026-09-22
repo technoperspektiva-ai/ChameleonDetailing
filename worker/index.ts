@@ -227,8 +227,13 @@ export default {
     if(state.blocked)return json({error:state.blockedReason||'Access limited'},403);
     if(state.maintenance&&u.role!=='OWNER')return json({error:'Service is under maintenance'},503);
     const q=await quote(env,b,u.client_tier,1,u.id);
+    let emergencyPreview=null;
+    if(!state.schedule.isOpen&&state.schedule.emergencyEnabled){
+     const eq=await quote(env,b,u.client_tier,state.schedule.emergencyMultiplier,u.id);
+     emergencyPreview={multiplier:state.schedule.emergencyMultiplier,surcharge:eq.emergencySurcharge,finalPrice:eq.finalPrice,currency:eq.currency};
+    }
     if(env.DB&&!u.demo){const r=await env.DB.prepare(`INSERT INTO calculator_sessions(user_id,base_price_snapshot,vehicle_multiplier_snapshot,condition_multiplier_snapshot,options_total_snapshot,discount_snapshot,calculated_price,currency,fx_rate,fx_provider,fx_timestamp,promotion_id,personal_discount_id) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)`).bind(u.id,q.basePrice,q.vehicleMultiplier,q.conditionMultiplier,q.optionsTotal,q.discount,q.finalPrice,q.currency,q.fxRate,q.fxProvider,q.fxTimestamp,q.promotion?.id||null,q.personalDiscount?.id||null).run();(q as any).calculationId=r.meta.last_row_id;await event(env,u.id,'calculator_completed',{service:b.service,currency:q.currency})}
-    return json(q);
+    return json({...q,emergencyPreview});
    }
    if(url.pathname==='/api/orders/request'&&request.method==='POST'){
     const b=await read(request),u=await auth(env,b.initData||'');if(u.demo)return json({ok:true,id:'DEMO'});const state=await sessionState(env,u);
@@ -240,7 +245,7 @@ export default {
     if(!['STANDARD','DEFERRED','EMERGENCY'].includes(requestType))return json({error:'Invalid request type'},400);
     const cooldownEnabled=(await getSetting(env,'request_cooldown_enabled','1'))==='1';
     if(cooldownEnabled){
-      const last=await env.DB!.prepare("SELECT created_at FROM service_requests WHERE user_id=? AND is_test=0 AND client_deleted_at IS NULL AND COALESCE(status,'REQUESTED') NOT IN ('CANCELLED','REJECTED') ORDER BY id DESC LIMIT 1").bind(u.id).first<any>();
+      const last=await env.DB!.prepare("SELECT created_at FROM service_requests WHERE user_id=? AND is_test=0 AND client_deleted_at IS NULL AND staff_deleted_at IS NULL AND COALESCE(status,'REQUESTED') NOT IN ('CANCELLED','REJECTED') ORDER BY id DESC LIMIT 1").bind(u.id).first<any>();
       if(last&&Date.now()-Date.parse(last.created_at)<3600000)return json({error:'Your previous request was already sent. A new request can be sent after 60 minutes.'},429);
     }
     const em=requestType==='EMERGENCY'?state.schedule.emergencyMultiplier:1;const q=await quote(env,b,u.client_tier,em,u.id);
@@ -251,13 +256,13 @@ export default {
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }
    if(url.pathname==='/api/orders'){
-    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL AND staff_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
 
    const deleteOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
    if(deleteOrderMatch&&request.method==='DELETE'){
     const b=await read(request),u=await auth(env,b.initData||'');if(u.demo)return json({ok:true});await ensureDb(env);const id=Number(deleteOrderMatch[1]);
-    const row=await env.DB!.prepare('SELECT id,status FROM service_requests WHERE id=? AND user_id=? AND client_deleted_at IS NULL').bind(id,u.id).first<any>();if(!row)return json({error:'Request not found'},404);
+    const row=await env.DB!.prepare('SELECT id,status FROM service_requests WHERE id=? AND user_id=? AND client_deleted_at IS NULL AND staff_deleted_at IS NULL').bind(id,u.id).first<any>();if(!row)return json({error:'Request not found'},404);
     const status=String(row.status||'REQUESTED').toUpperCase();const removable=['REQUESTED','PENDING_CONFIRMATION','REJECTED','CANCELLED','DEFERRED'];if(!removable.includes(status))return json({error:'This request can no longer be removed because it is already in work.'},409);
     const nextStatus=['REQUESTED','PENDING_CONFIRMATION','DEFERRED'].includes(status)?'CANCELLED':status;
     await env.DB!.prepare('UPDATE service_requests SET status=?,client_deleted_at=CURRENT_TIMESTAMP WHERE id=? AND user_id=?').bind(nextStatus,id,u.id).run();await event(env,u.id,'service_request_client_deleted',{id,previousStatus:status,status:nextStatus});return json({ok:true,id,status:nextStatus});

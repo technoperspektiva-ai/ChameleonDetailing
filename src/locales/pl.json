@@ -135,5 +135,9 @@
   "common.total": "Razem",
   "calculator.promotion": "Promocja",
   "calculator.personalGift": "Rabat prezentowy",
-  "calculator.vipDiscount": "VIP"
+  "calculator.vipDiscount": "VIP",
+  "calculator.emergencyExtra": "Dopłata za zlecenie awaryjne",
+  "calculator.emergencyTotal": "Razem awaryjnie",
+  "calculator.emergencyMultiplier": "Mnożnik awaryjny",
+  "calculator.emergencyHint": "Zlecenie poza godzinami pracy z priorytetową obsługą."
 }

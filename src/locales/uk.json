@@ -135,5 +135,9 @@
   "common.total": "Разом",
   "calculator.promotion": "Акційна знижка",
   "calculator.personalGift": "Подарункова знижка",
-  "calculator.vipDiscount": "VIP"
+  "calculator.vipDiscount": "VIP",
+  "calculator.emergencyExtra": "Доплата за екстрене замовлення",
+  "calculator.emergencyTotal": "Разом екстрено",
+  "calculator.emergencyMultiplier": "Екстрений множник",
+  "calculator.emergencyHint": "Замовлення поза робочим часом із пріоритетним виконанням."
 }
