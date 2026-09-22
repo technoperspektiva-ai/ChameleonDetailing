@@ -6,7 +6,7 @@ import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
 
-const VERSION='1.1.30';
+const VERSION='1.1.33';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -171,7 +171,12 @@ export default {
    if(url.pathname==='/api/auth/telegram'&&request.method==='POST'){
     // A successful Mini App open is also a reliable opportunity to fix a missing/stale webhook.
     ctx.waitUntil(selfHealWebhook(env,url.origin));
-    const b=await read(request),u=await auth(env,b.initData||'');
+    const b=await read(request);
+    const hasTelegramInit=!!String(b.initData||'').trim();
+    if(!hasTelegramInit&&(await getSetting(env,'web_direct_access_enabled','0'))!=='1'){
+     return json({error:'DIRECT_WEB_DISABLED',botUsername:String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'')},403);
+    }
+    const u=await auth(env,b.initData||'');
     if(env.DB)await event(env,u.id,'miniapp_open');
     const state=await sessionState(env,u);
     return json({user:{telegramId:u.telegram_user_id,firstName:u.first_name,username:u.username,locale:u.language||'en',currency:u.preferred_currency,tier:u.client_tier,role:u.role,phoneShared:!!u.phone_number,photoUrl:u.photo_url||null},...state,demo:u.demo});

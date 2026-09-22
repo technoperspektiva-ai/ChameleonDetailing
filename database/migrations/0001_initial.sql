@@ -90,7 +90,7 @@ CREATE TABLE IF NOT EXISTS staff_invites (id INTEGER PRIMARY KEY AUTOINCREMENT,u
 CREATE TABLE IF NOT EXISTS staff_invites_v2 (token TEXT PRIMARY KEY,username TEXT NOT NULL,role TEXT NOT NULL,created_by_user_id INTEGER,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,claimed_by_user_id INTEGER,claimed_at TEXT);
 
 INSERT OR IGNORE INTO settings(key,value) VALUES
- ('maintenance.enabled','0'),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN');
+ ('maintenance.enabled','0'),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('web_direct_access_enabled','0');
 
 -- Canonical starter services. Runtime bootstrap also UPSERTs these rows so older D1
 -- databases are repaired automatically after deploy.

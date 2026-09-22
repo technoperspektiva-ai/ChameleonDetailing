@@ -49,9 +49,9 @@ const applyTheme=(theme?:Session['theme'])=>{
 export function App(){
  const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return v==='calculator'||v==='orders'?v:'home'},[]);
  const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[serviceOptions,setServiceOptions]=useState<ServiceOption[]>([]),[content,setContent]=useState<Record<string,string>>({}),[tab,setTab]=useState<Tab>(initialTab);
- const initialLocale=useMemo(()=>normalizeLocale(localStorage.getItem('chameleon.locale')||telegramLanguage()),[]);
+ const initialLocale=useMemo(()=>normalizeLocale(localStorage.getItem('chameleon.locale')||telegramLanguage()||navigator.language),[]);
  const [locale,setLocaleState]=useState<Locale>(initialLocale),[currency,setCurrency]=useState('PLN');
- const [startup,setStartup]=useState({stage:'INIT',progress:15,error:''}),[splash,setSplash]=useState(true);
+ const [startup,setStartup]=useState({stage:'INIT',progress:15,error:''}),[splash,setSplash]=useState(true),[directWebBlocked,setDirectWebBlocked]=useState(false);
  const t=useMemo(()=>createTranslator(locale),[locale]);
  const setLocale=(next:Locale)=>{localStorage.setItem('chameleon.locale',next);setLocaleState(next)};
 
@@ -70,7 +70,7 @@ export function App(){
    setServices(sv.services);setServiceOptions(opt.options||[]);setContent(ct.content||{});
    setStartup({stage:'READY',progress:100,error:''});
    const elapsed=Date.now()-started;if(elapsed<motion.splashMin)await wait(motion.splashMin-elapsed);await wait(160);setSplash(false);
-  }catch(e:unknown){setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
+  }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
  useEffect(()=>{if(!session)return;Promise.all([api.services(locale,currency),api.options(locale,currency),api.content(locale)]).then(([x,opt,ct])=>{setServices(x.services);setServiceOptions(opt.options||[]);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session]);
  // Staff can change opening hours from Telegram while the Mini App is already open.
  // Refresh runtime business state automatically so the closed/open banner follows D1
@@ -78,6 +78,7 @@ export function App(){
  useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  const goto=(x:Tab)=>{haptic();setTab(x);scrollTo({top:0,behavior:'smooth'})};
  if(splash)return <StartupSplash locale={locale} startup={startup} onRetry={()=>location.reload()} t={t}/>;
+ if(directWebBlocked)return <DirectWebGate locale={locale}/>;
  if(!session)return <StateScreen title="Chameleon Detailing" text={startup.error||t('errors.startup')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
  if(session.blocked)return <StateScreen title={t('blacklist.title')} text={session.blockedReason||t('blacklist.text')} action={()=>openBot()} actionLabel={t('common.support')}/>;
  if(session.maintenance&&session.user.role!=='OWNER')return <StateScreen title={t('maintenance.title')} text={t('maintenance.text')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
@@ -100,6 +101,7 @@ function SeasonalDecor({theme}:{theme?:SeasonalTheme}){
  const icons=seasonalDecorIcons[key]||[];
  if(!icons.length)return null;
  return <div className={`seasonal-decor seasonal-${key.toLowerCase().replace(/_/g,'-')}`} aria-hidden="true">{seasonalDecorPlacements.map((p,idx)=><span key={idx} className="seasonal-decor-item" style={{left:p.left,top:p.top,fontSize:`${p.size}px`,animationDuration:`${p.dur}s`,animationDelay:`${p.delay}s`,opacity:p.alpha}}>{icons[idx%icons.length]}</span>)}</div>}
+function DirectWebGate({locale}:{locale:Locale}){const copy={uk:{title:'Найкраще працює прямо в Telegram',text:'Цей веб-вхід зараз закритий. Відкрий Chameleon Detailing у Telegram — там доступні твій профіль, заявки, персональні умови та всі можливості сервісу.',button:'Відкрити в Telegram'},pl:{title:'Najlepiej działa bezpośrednio w Telegramie',text:'Dostęp przez zwykły link jest teraz wyłączony. Otwórz Chameleon Detailing w Telegramie — tam znajdziesz swój profil, zlecenia i pełną funkcjonalność.',button:'Otwórz w Telegramie'},en:{title:'Best experienced directly in Telegram',text:'Direct web access is currently turned off. Open Chameleon Detailing in Telegram for your profile, requests, personal offers and the full experience.',button:'Open in Telegram'}}[locale];return <div className="web-gate"><div className="web-gate-glow"/><div className="web-gate-card"><img src="/brand/chameleon-logo.webp" alt="Chameleon Detailing"/><span className="eyebrow">CHAMELEON DETAILING</span><h1>{copy.title}</h1><p>{copy.text}</p><button className="primary" onClick={()=>openBot()}><MessageCircle/><span>{copy.button}</span><ChevronRight/></button></div></div>}
 function StartupSplash({locale,startup,onRetry,t}:any){const stageKey:{[k:string]:TranslationKey}={INIT:'loading.init',AUTH:'loading.auth',PROFILE:'loading.profile',CONFIG:'loading.config',READY:'loading.ready'};return <div className={`startup-splash ${startup.stage==='READY'?'ready':''}`}><div className="splash-glow"/><img src="/brand/chameleon-logo.webp" className="splash-logo" alt=""/><h1>Chameleon Detailing</h1><div className="startup-progress"><i style={{width:`${startup.progress}%`}}/></div><b className="startup-stage">{t(stageKey[startup.stage]||'loading.init')}</b><p>{splashSlogan[locale as Locale]||splashSlogan.en}</p>{startup.error&&<div className="startup-error"><TriangleAlert/><span>{startup.error}</span><button onClick={onRetry}>{t('common.retry')}</button></div>}</div>}
 function StateScreen({title,text,action,actionLabel}:any){return <div className="state-screen"><img src="/brand/chameleon-logo.webp" className="logo xl" alt=""/><h1>{title}</h1><p>{text}</p>{action&&<button className="primary" onClick={action}>{actionLabel}</button>}</div>}
 function HolidayBanner({t,schedule,locale}:any){return <div className="holiday-banner"><Clock3/><div><b>{t('holiday.title')}</b><span>{t('holiday.text')}{schedule.nextWorkingAt?` · ${new Date(schedule.nextWorkingAt).toLocaleString(locale==='uk'?'uk-UA':locale==='pl'?'pl-PL':'en-US')}`:''}</span></div></div>}

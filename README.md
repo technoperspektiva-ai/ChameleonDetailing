@@ -1,4 +1,11 @@
 # ChameleonDetailing
+## v1.1.33 — Owner-controlled direct URL access
+
+- Removed the technical H1/H2/Body/Small font buttons from the Owner/Admin settings UI. Font defaults remain intact in the app.
+- Added Owner-only `Direct URL access` ON/OFF control.
+- When direct URL access is OFF, opening the Worker URL outside Telegram shows a polished Chameleon screen that sends the visitor to `@ChameleonDetailing_bot`.
+- Telegram Mini App access is unaffected. When URL access is ON, the public URL can open the browsing/calculator experience.
+
 ## v1.1.32 — seasonal decorations moved behind content
 
 - Seasonal floating icons now render on a dedicated background layer behind the main cards/tiles instead of sitting on top of the interface.
