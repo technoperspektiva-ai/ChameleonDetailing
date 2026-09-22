@@ -4,8 +4,9 @@ import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUs
 import {quote,vipBasePrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
+import {runReactivationCampaigns} from './lib/campaigns';
 
-const VERSION='1.1.23';
+const VERSION='1.1.25';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -240,5 +241,6 @@ export default {
  },
  async scheduled(_controller:ScheduledController,env:Env,_ctx:ExecutionContext):Promise<void>{
   await selfHealWebhook(env,undefined,true);
+  await runReactivationCampaigns(env,false).catch(error=>console.error('reactivation campaign failed',error));
  }
 };

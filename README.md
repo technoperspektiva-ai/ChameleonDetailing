@@ -211,3 +211,16 @@ Owner/Admin can switch the Mini App neon theme from Bot Panel → Settings → N
 - Client bot Settings keeps notification toggle, language and Help in one place.
 - Owner/Admin Settings now includes a global client status-notification switch.
 - Global notification switch is enforced before sending request-status updates.
+
+## v1.1.25 — client campaigns and reactivation
+
+Owner/Admin Bot Panel now includes **📣 Campaigns**:
+
+- manual important-update broadcast to all active clients who have notifications enabled;
+- broadcast can be sent as text or as a Telegram photo with caption;
+- automatic reactivation after a configurable number of days from the client's latest completed request;
+- configurable business-local send time, reminder text and optional Telegram photo;
+- manual "send to due clients now" action;
+- delivery log prevents the same automatic reactivation message from being sent twice for the same completed request.
+
+The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. Client notification opt-out is respected for campaign mailings.
