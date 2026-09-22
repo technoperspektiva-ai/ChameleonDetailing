@@ -10,6 +10,23 @@ const vehicles=[['sedan','vehicle.sedan','/vehicle-types/sedan.webp'],['hatchbac
 const conditions=[['light','condition.light'],['normal','condition.normal'],['dirty','condition.dirty'],['very-dirty','condition.veryDirty']] as const;
 const wait=(ms:number)=>new Promise(r=>setTimeout(r,ms));
 const friendlyError=(e:unknown,t:(key:TranslationKey)=>string)=>{const m=e instanceof Error?e.message:String(e||'');if(/BOT_TOKEN/i.test(m))return t('errors.botToken');if(/Invalid or expired Telegram session/i.test(m))return t('errors.telegramSession');if(/maintenance/i.test(m))return t('errors.maintenance');if(/Access limited/i.test(m))return t('errors.accessLimited');if(/outside working hours/i.test(m))return t('errors.outsideHours');if(/Emergency mode/i.test(m))return t('errors.emergencyUnavailable');if(/60 minutes/i.test(m))return t('errors.rateLimit');return t('errors.generic')};
+type SeasonalTheme='DEFAULT'|'HALLOWEEN'|'NEW_YEAR'|'EASTER'|undefined;
+const seasonalDecorPlacements=[
+ {left:'4%',top:'14%',size:22,dur:17,delay:-2,alpha:.18},{left:'82%',top:'16%',size:24,dur:18,delay:-6,alpha:.16},
+ {left:'12%',top:'26%',size:28,dur:22,delay:-8,alpha:.18},{left:'70%',top:'28%',size:20,dur:16,delay:-4,alpha:.15},
+ {left:'88%',top:'33%',size:30,dur:19,delay:-10,alpha:.17},{left:'7%',top:'42%',size:24,dur:18,delay:-1,alpha:.14},
+ {left:'58%',top:'41%',size:22,dur:20,delay:-12,alpha:.15},{left:'25%',top:'50%',size:34,dur:24,delay:-9,alpha:.16},
+ {left:'78%',top:'54%',size:26,dur:18,delay:-3,alpha:.14},{left:'9%',top:'62%',size:24,dur:21,delay:-11,alpha:.13},
+ {left:'50%',top:'62%',size:20,dur:16,delay:-5,alpha:.12},{left:'86%',top:'68%',size:28,dur:22,delay:-14,alpha:.16},
+ {left:'18%',top:'74%',size:30,dur:20,delay:-13,alpha:.14},{left:'64%',top:'77%',size:22,dur:17,delay:-7,alpha:.13},
+ {left:'40%',top:'84%',size:26,dur:23,delay:-15,alpha:.12},{left:'90%',top:'86%',size:24,dur:19,delay:-9,alpha:.14}
+] as const;
+const seasonalDecorIcons:Record<Exclude<SeasonalTheme,undefined>,string[]>={
+ DEFAULT:[],
+ HALLOWEEN:['🎃','💀','🕯️','⚰️','🪦','🦇','🍬','🕸️'],
+ NEW_YEAR:['❄️','🎄','✨','🎁','🌟','☃️','🧣','🔔'],
+ EASTER:['🥚','🐣','🐇','🌸','🪻','🧺','✨','🌼']
+};
 const applyTheme=(theme?:Session['theme'])=>{
  const root=document.documentElement;
  root.style.setProperty('--h1',theme?.fontH1||'clamp(1.7rem,7vw,2.35rem)');
@@ -64,7 +81,7 @@ export function App(){
  if(!session)return <StateScreen title="Chameleon Detailing" text={startup.error||t('errors.startup')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
  if(session.blocked)return <StateScreen title={t('blacklist.title')} text={session.blockedReason||t('blacklist.text')} action={()=>openBot()} actionLabel={t('common.support')}/>;
  if(session.maintenance&&session.user.role!=='OWNER')return <StateScreen title={t('maintenance.title')} text={t('maintenance.text')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
- return <div className="app">
+ return <div className="app"><SeasonalDecor theme={session.theme?.seasonalTheme}/>
   <header><div className="brand"><img className="logo" src="/brand/chameleon-logo.webp" alt="Chameleon Detailing"/><div><b>Chameleon Detailing</b><span>{t('common.miniApp')}</span></div></div><button className="pill" aria-label={t('profile.language')} onClick={()=>setLocale(locale==='uk'?'pl':locale==='pl'?'en':'uk')}><Globe2 size={16}/>{localeLabels[locale]}</button></header>
   <main>
    {!session.schedule.isOpen&&<HolidayBanner t={t} schedule={session.schedule} locale={locale}/>}
@@ -78,6 +95,11 @@ export function App(){
   <nav aria-label="Primary">{([['home',Home,t('nav.home')],['services',Sparkles,t('nav.services')],['calculator',Calculator,t('nav.calculator')],['vip',Crown,t('nav.vip')],['profile',UserRound,t('nav.profile')]] as any).map(([id,I,label]:any)=><button className={tab===id?'active':''} onClick={()=>goto(id)} key={id}><I/><span>{label}</span></button>)}</nav>
  </div>
 }
+function SeasonalDecor({theme}:{theme?:SeasonalTheme}){
+ const key=((theme||'DEFAULT').toUpperCase()) as Exclude<SeasonalTheme,undefined>;
+ const icons=seasonalDecorIcons[key]||[];
+ if(!icons.length)return null;
+ return <div className={`seasonal-decor seasonal-${key.toLowerCase().replace(/_/g,'-')}`} aria-hidden="true">{seasonalDecorPlacements.map((p,idx)=><span key={idx} className="seasonal-decor-item" style={{left:p.left,top:p.top,fontSize:`${p.size}px`,animationDuration:`${p.dur}s`,animationDelay:`${p.delay}s`,opacity:p.alpha}}>{icons[idx%icons.length]}</span>)}</div>}
 function StartupSplash({locale,startup,onRetry,t}:any){const stageKey:{[k:string]:TranslationKey}={INIT:'loading.init',AUTH:'loading.auth',PROFILE:'loading.profile',CONFIG:'loading.config',READY:'loading.ready'};return <div className={`startup-splash ${startup.stage==='READY'?'ready':''}`}><div className="splash-glow"/><img src="/brand/chameleon-logo.webp" className="splash-logo" alt=""/><h1>Chameleon Detailing</h1><div className="startup-progress"><i style={{width:`${startup.progress}%`}}/></div><b className="startup-stage">{t(stageKey[startup.stage]||'loading.init')}</b><p>{splashSlogan[locale as Locale]||splashSlogan.en}</p>{startup.error&&<div className="startup-error"><TriangleAlert/><span>{startup.error}</span><button onClick={onRetry}>{t('common.retry')}</button></div>}</div>}
 function StateScreen({title,text,action,actionLabel}:any){return <div className="state-screen"><img src="/brand/chameleon-logo.webp" className="logo xl" alt=""/><h1>{title}</h1><p>{text}</p>{action&&<button className="primary" onClick={action}>{actionLabel}</button>}</div>}
 function HolidayBanner({t,schedule,locale}:any){return <div className="holiday-banner"><Clock3/><div><b>{t('holiday.title')}</b><span>{t('holiday.text')}{schedule.nextWorkingAt?` · ${new Date(schedule.nextWorkingAt).toLocaleString(locale==='uk'?'uk-UA':locale==='pl'?'pl-PL':'en-US')}`:''}</span></div></div>}

@@ -1,4 +1,10 @@
 # ChameleonDetailing
+## v1.1.32 — seasonal decorations moved behind content
+
+- Seasonal floating icons now render on a dedicated background layer behind the main cards/tiles instead of sitting on top of the interface.
+- Added a denser ambient seasonal field for Halloween, New Year and Easter so more themed icons drift softly between the background and the UI.
+- Main navigation, header and content remain visually clean and fully readable while the seasonal mood stays visible.
+
 ## v1.1.13 — clearer schedule, client request status/delete, vehicle icons
 
 - Working schedule in Bot Panel is now day-by-day: each weekday has an explicit ON/OFF toggle and its own hours.
@@ -252,8 +258,3 @@ The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. C
 - Owner-only Hidden Audit panel for Admin/Manager with NORMAL / CRITICAL_ONLY / HIDDEN modes.
 - Critical/security actions remain auditable even when ordinary staff actions are hidden.
 - Calculator extra options now support description, price, enable/disable, ordering and deletion from Owner/Admin Bot Panel.
-
-## v1.1.31 — client phone visibility
-- Client cards now show the stored phone number, whether it was shared through Telegram, and the share timestamp.
-- Staff client cards include a **Contact for call** action that sends a native Telegram contact card, so staff can tap the phone number and call.
-- Users, VIP, Orders, and Business Excel reports now include phone number, Telegram-share status, and phone-share timestamp.
