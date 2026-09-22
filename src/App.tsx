@@ -16,10 +16,17 @@ const applyTheme=(theme?:Session['theme'])=>{
  root.style.setProperty('--h2',theme?.fontH2||'clamp(1.25rem,5.4vw,1.6rem)');
  root.style.setProperty('--body',theme?.fontBody||'clamp(.94rem,3.8vw,1rem)');
  root.style.setProperty('--small',theme?.fontSmall||'clamp(.78rem,3.2vw,.875rem)');
- const color=/^#[0-9a-f]{6}$/i.test(theme?.neonColor||'')?(theme?.neonColor as string):'#a4ff00';
- root.style.setProperty('--neon-color',color);
- root.classList.toggle('theme-rainbow',theme?.neonMode==='RAINBOW');
- root.classList.toggle('theme-static',theme?.neonMode!=='RAINBOW');
+ const seasonal=(theme?.seasonalTheme||'DEFAULT').toUpperCase();
+ const seasonalColors:Record<string,string>={HALLOWEEN:'#ff8a00',NEW_YEAR:'#4de8ff',EASTER:'#ff86d8'};
+ const base=/^#[0-9a-f]{6}$/i.test(theme?.neonColor||'')?(theme?.neonColor as string):'#a4ff00';
+ root.style.setProperty('--neon-color',seasonalColors[seasonal]||base);
+ for(const cls of ['theme-halloween','theme-new-year','theme-easter'])root.classList.remove(cls);
+ if(seasonal==='HALLOWEEN')root.classList.add('theme-halloween');
+ if(seasonal==='NEW_YEAR')root.classList.add('theme-new-year');
+ if(seasonal==='EASTER')root.classList.add('theme-easter');
+ const rainbow=seasonal==='DEFAULT'&&theme?.neonMode==='RAINBOW';
+ root.classList.toggle('theme-rainbow',rainbow);
+ root.classList.toggle('theme-static',!rainbow);
 };
 
 export function App(){
@@ -32,7 +39,7 @@ export function App(){
  const setLocale=(next:Locale)=>{localStorage.setItem('chameleon.locale',next);setLocaleState(next)};
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
- useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor]);
+ useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor,session?.theme?.seasonalMode,session?.theme?.seasonalTheme]);
  useEffect(()=>{initTelegram();(async()=>{const started=Date.now();try{
    setStartup({stage:'AUTH',progress:35,error:''});
    const s=await api.session();
@@ -88,7 +95,7 @@ function CalculatorPage({t,services,options,currency,schedule}:any){
  {step===1&&<div className="choice-list">{services.map((s:any)=><Choice key={s.slug} on={()=>setService(s.slug)} active={service===s.slug} title={s.title} sub={s.description}/>)}</div>}
  {step===2&&<div className="choice-list vehicle-choice-list">{vehicles.map(([id,key,image])=><Choice key={id} on={()=>setVehicle(id)} active={vehicle===id} title={t(key)} icon={<img className="vehicle-choice-image" src={image} alt={t(key)}/>}/>)}</div>}
  {step===3&&<div className="choice-list">{conditions.map(([id,key])=><Choice key={id} on={()=>setCondition(id)} active={condition===id} title={t(key)}/>)}</div>}
- {step===4&&<div className="choice-list">{(options||[]).map((opt:ServiceOption)=><Choice key={opt.slug} on={()=>setExtra(extra.includes(opt.slug)?extra.filter(x=>x!==opt.slug):[...extra,opt.slug])} active={extra.includes(opt.slug)} title={opt.title} sub={`+ ${money(opt.price,opt.currency||currency)}`}/>)}</div>}
+ {step===4&&<div className="choice-list">{(options||[]).map((opt:ServiceOption)=><Choice key={opt.slug} on={()=>setExtra(extra.includes(opt.slug)?extra.filter(x=>x!==opt.slug):[...extra,opt.slug])} active={extra.includes(opt.slug)} title={opt.title} sub={`${opt.description?opt.description+' · ':''}+ ${money(opt.price,opt.currency||currency)}`}/>)}</div>}
  <div className="calc-actions">{step>1&&<button className="secondary" aria-label={t('common.back')} onClick={()=>setStep(step-1)}><ArrowLeft/></button>}<button className="primary grow" onClick={next} disabled={busy}>{busy?<Loader2 className="spin"/>:<span>{step===4?t('home.calculate'):t('common.continue')}</span>}<ChevronRight/></button></div>
  {processing&&<ProcessingOverlay t={t} status={status}/>} {quote&&<ResultModal t={t} q={quote} sent={sent} busy={busy} error={error} schedule={schedule} onClose={()=>setQuote(null)} onEdit={()=>{setQuote(null);setStep(1)}} onSend={send}/>} {error&&!quote&&!processing&&<div className="inline-error"><TriangleAlert/>{error}</div>}
  </section>}

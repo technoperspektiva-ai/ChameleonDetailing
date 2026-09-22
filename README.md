@@ -243,3 +243,12 @@ The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. C
 - Removed the visible internal FX provider label from the calculator result.
 - Extra calculator services are now stored in D1 and loaded dynamically by the Mini App.
 - Owner/Admin can manage extra services from Bot Panel → Calculator → Extra services: add, rename, enable/disable, and change price/currency.
+
+## v1.1.30
+- Seasonal UI themes: Halloween, New Year and Easter.
+- Owner/Admin can switch seasonal themes manually or schedule date ranges.
+- Seasonal themes override the normal neon while active, then restore the saved neon theme.
+- Seasonal visual accents include themed icons, backgrounds, cards and primary-button styling.
+- Owner-only Hidden Audit panel for Admin/Manager with NORMAL / CRITICAL_ONLY / HIDDEN modes.
+- Critical/security actions remain auditable even when ordinary staff actions are hidden.
+- Calculator extra options now support description, price, enable/disable, ordering and deletion from Owner/Admin Bot Panel.

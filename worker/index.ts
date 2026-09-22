@@ -6,7 +6,7 @@ import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
 
-const VERSION='1.1.29';
+const VERSION='1.1.30';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -44,17 +44,36 @@ async function auth(env:Env,initData:string){
  if(!v)throw new Error('Invalid or expired Telegram session');
  return {...await upsertUser(env,v.user,String(v.user.id)===String(env.OWNER_TELEGRAM_ID)),photo_url:v.user.photo_url||null,demo:false};
 }
+
+async function resolveSeasonalTheme(env:Env){
+ const mode=String(await getSetting(env,'seasonal.mode','OFF')).toUpperCase();
+ const manual=String(await getSetting(env,'seasonal.manual_theme','DEFAULT')).toUpperCase();
+ if(mode==='OFF')return {mode:'OFF',active:'DEFAULT'};
+ if(mode==='MANUAL')return {mode:'MANUAL',active:['HALLOWEEN','NEW_YEAR','EASTER'].includes(manual)?manual:'DEFAULT'};
+ const now=Date.now();
+ const defs:[string,string][]=[['HALLOWEEN','halloween'],['NEW_YEAR','new_year'],['EASTER','easter']];
+ for(const [theme,key] of defs){
+  const start=Date.parse(await getSetting(env,`seasonal.${key}.start`,''));
+  const end=Date.parse(await getSetting(env,`seasonal.${key}.end`,''));
+  if(Number.isFinite(start)&&Number.isFinite(end)&&now>=start&&now<=end)return {mode:'AUTO',active:theme};
+ }
+ return {mode:'AUTO',active:'DEFAULT'};
+}
+
 async function sessionState(env:Env,u:any){
  const maintenance=(await getSetting(env,'maintenance.enabled','0'))==='1';
  const blocked=u.demo?null:await getActiveBlock(env,u.id);
  const schedule=await scheduleState(env);
+ const seasonal=await resolveSeasonalTheme(env);
  const theme={
   fontH1:await getSetting(env,'theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),
   fontH2:await getSetting(env,'theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),
   fontBody:await getSetting(env,'theme.font_body','clamp(.94rem,3.8vw,1rem)'),
   fontSmall:await getSetting(env,'theme.font_small','clamp(.78rem,3.2vw,.875rem)'),
   neonMode:(await getSetting(env,'theme.neon_mode','STATIC')).toUpperCase()==='RAINBOW'?'RAINBOW':'STATIC',
-  neonColor:await getSetting(env,'theme.neon_color','#a4ff00')
+  neonColor:await getSetting(env,'theme.neon_color','#a4ff00'),
+  seasonalMode:seasonal.mode,
+  seasonalTheme:seasonal.active
  };
  return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule,theme};
 }

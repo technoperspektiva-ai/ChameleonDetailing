@@ -104,3 +104,24 @@ html.theme-rainbow .app::before{background:conic-gradient(from 210deg at 50% 35%
 .calc-top{background:linear-gradient(180deg,color-mix(in srgb,var(--neon-color) 6%,rgba(7,11,7,.68)),rgba(7,11,7,.28));backdrop-filter:blur(14px) saturate(1.08);-webkit-backdrop-filter:blur(14px) saturate(1.08);border:1px solid color-mix(in srgb,var(--neon-color) 14%,transparent);border-radius:18px;padding:12px 12px 14px;margin:0 0 12px;box-shadow:0 14px 36px rgba(0,0,0,.16)}
 .theme-rainbow .calc-top{background:linear-gradient(135deg,hsla(var(--rainbow-hue),85%,10%,.58),rgba(7,11,7,.38));border-color:hsla(var(--rainbow-hue),100%,55%,.22)}
 .order-extra-services{display:grid;gap:6px;margin-top:10px}.order-extra-services span{padding:8px 10px;border-radius:12px;background:color-mix(in srgb,var(--neon-color) 5%,transparent);border:1px solid color-mix(in srgb,var(--neon-color) 12%,transparent);font-size:var(--small);color:#c6d1c2}
+
+/* v1.1.30 — seasonal interface themes */
+html.theme-halloween{--seasonal-accent:#ff8a00;--seasonal-accent-2:#8b3dff;--seasonal-surface:#1a0b08}
+html.theme-new-year{--seasonal-accent:#4de8ff;--seasonal-accent-2:#d8fbff;--seasonal-surface:#06131b}
+html.theme-easter{--seasonal-accent:#ff86d8;--seasonal-accent-2:#ffe06b;--seasonal-surface:#160b18}
+html.theme-halloween body{background:radial-gradient(circle at 18% 5%,rgba(255,138,0,.30),transparent 28%),radial-gradient(circle at 90% 20%,rgba(139,61,255,.20),transparent 32%),linear-gradient(180deg,#190b06,#080707 70%)}
+html.theme-new-year body{background:radial-gradient(circle at 18% 4%,rgba(77,232,255,.28),transparent 30%),radial-gradient(circle at 88% 24%,rgba(216,251,255,.16),transparent 34%),linear-gradient(180deg,#05131b,#05090d 70%)}
+html.theme-easter body{background:radial-gradient(circle at 15% 5%,rgba(255,134,216,.24),transparent 30%),radial-gradient(circle at 88% 22%,rgba(255,224,107,.16),transparent 34%),linear-gradient(180deg,#160b18,#080708 70%)}
+html.theme-halloween header,html.theme-halloween nav,html.theme-new-year header,html.theme-new-year nav,html.theme-easter header,html.theme-easter nav{background:color-mix(in srgb,var(--seasonal-surface) 86%,rgba(5,7,5,.96));border-color:color-mix(in srgb,var(--neon-color) 26%,#2a2a2a)}
+html.theme-halloween .service-card,html.theme-halloween .list-card,html.theme-halloween .choice,html.theme-halloween .settings-card,html.theme-halloween .profile-card,
+html.theme-new-year .service-card,html.theme-new-year .list-card,html.theme-new-year .choice,html.theme-new-year .settings-card,html.theme-new-year .profile-card,
+html.theme-easter .service-card,html.theme-easter .list-card,html.theme-easter .choice,html.theme-easter .settings-card,html.theme-easter .profile-card{background:linear-gradient(155deg,color-mix(in srgb,var(--seasonal-surface) 86%,#121912),color-mix(in srgb,var(--neon-color) 4%,#0a0d0a));border-color:color-mix(in srgb,var(--neon-color) 24%,#263026)}
+html.theme-halloween .app::after,html.theme-new-year .app::after,html.theme-easter .app::after{position:fixed;right:16px;top:calc(88px + env(safe-area-inset-top));z-index:20;pointer-events:none;font-size:24px;letter-spacing:7px;filter:drop-shadow(0 0 12px color-mix(in srgb,var(--neon-color) 60%,transparent));animation:seasonalFloat 3.8s ease-in-out infinite}
+html.theme-halloween .app::after{content:"🎃 👻 🕸️"}
+html.theme-new-year .app::after{content:"❄️ 🎄 ✨"}
+html.theme-easter .app::after{content:"🐣 🥚 🌸"}
+html.theme-halloween .primary{background:linear-gradient(180deg,#ffba35,#ff8700)}
+html.theme-new-year .primary{background:linear-gradient(180deg,#c8fbff,#42dff5)}
+html.theme-easter .primary{background:linear-gradient(180deg,#ffd0ef,#ff78ce)}
+@keyframes seasonalFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(6px)}}
+@media (prefers-reduced-motion:reduce){html.theme-halloween .app::after,html.theme-new-year .app::after,html.theme-easter .app::after{animation:none}}
