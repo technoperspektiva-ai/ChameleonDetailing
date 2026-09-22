@@ -184,3 +184,8 @@ OWNER / ADMIN can also connect a Telegram group/chat for shared order alerts:
 4. Send `/disconnectorders` to disconnect the shared chat.
 
 Each new-order alert contains client/order details and an `Open request` button.
+
+
+## Clean single-panel bot UI (v1.1.18)
+
+Private bot interactions now keep one active UI panel. User commands and staff text inputs are deleted after processing, callback navigation edits the existing panel, and old tracked panels are replaced automatically. Excel report documents are intentionally preserved in chat. Shared order-notification chats are not cleaned.
