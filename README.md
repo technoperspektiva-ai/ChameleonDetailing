@@ -238,3 +238,8 @@ The existing `*/30 * * * *` Worker cron runs the automatic reactivation check. C
 - Personal client offers: Owner/Admin/Manager can build a ready service package and final price; Manager offers can require Admin/Owner approval; client accepts in Telegram and a confirmed request is created and assigned to the offer creator.
 - Manager access control: Owner/Admin can enable selected management blocks for Manager with backend permission checks.
 - Existing requests can add/remove additional services from the live service catalog while retaining manual final-price editing.
+
+## v1.1.29
+- Removed the visible internal FX provider label from the calculator result.
+- Extra calculator services are now stored in D1 and loaded dynamically by the Mini App.
+- Owner/Admin can manage extra services from Bot Panel → Calculator → Extra services: add, rename, enable/disable, and change price/currency.

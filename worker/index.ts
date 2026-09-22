@@ -1,12 +1,12 @@
 import type {Env} from './lib/types';
 import {validateInitData,tgApi} from './lib/telegram';
-import {ensureDb,event,getActiveBlock,getServices,getSetting,setSetting,upsertUser} from './lib/db';
+import {ensureDb,event,getActiveBlock,getServices,getServiceOptions,getSetting,setSetting,upsertUser} from './lib/db';
 import {quote,serviceDisplayPrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
 
-const VERSION='1.1.25';
+const VERSION='1.1.29';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -162,6 +162,11 @@ export default {
     const list=await getServices(env,locale,currency);let tier='STANDARD';try{if(initData){const u=await auth(env,initData);tier=u.client_tier||'STANDARD'}}catch{}
     for(const item of list){const baseCurrency=String(item.currency||currency||'PLN');const eff=await serviceDisplayPrice(env,Number(item.id),Number(item.basePrice||0),baseCurrency,tier);if(eff.mode!=='STANDARD'){(item as any).standardBasePrice=item.basePrice;(item as any).basePrice=Math.round(eff.price*100)/100;(item as any).vipPricingMode=eff.mode;(item as any).clientTier=tier;(item as any).promotion=eff.promotion||null}}
     return json({services:list,tier});
+   }
+   if(url.pathname==='/api/options'&&request.method==='GET'){
+    const locale=url.searchParams.get('locale')||'en',currency=url.searchParams.get('currency')||'PLN';
+    const options=await getServiceOptions(env,locale,currency);
+    return json({options});
    }
    if(url.pathname==='/api/content'&&request.method==='GET'){
     const locale=(url.searchParams.get('locale')||'en').toLowerCase().startsWith('uk')?'uk':(url.searchParams.get('locale')||'en').toLowerCase().startsWith('pl')?'pl':'en';

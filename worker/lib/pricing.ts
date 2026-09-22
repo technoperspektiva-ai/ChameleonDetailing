@@ -1,11 +1,10 @@
 import type {Env} from './types';
-import {getServices} from './db';
+import {getServices,getServiceOptions} from './db';
 import {convertCurrency,normalizeCurrency} from './currency';
 
 const fx:Record<string,Record<string,number>>={PLN:{PLN:1,USD:.26,UAH:11.1},USD:{USD:1,PLN:3.85,UAH:42.7},UAH:{UAH:1,PLN:.09,USD:.0234}};
 const vehicle:Record<string,number>={sedan:1,hatchback:1,suv:1.15,'large-suv':1.25,van:1.35};
 const condition:Record<string,number>={light:.9,normal:1,dirty:1.2,'very-dirty':1.4};
-const extras:Record<string,number>={'pet-hair':30,'ceramic-spray':40,odor:25};
 const round=(n:number)=>Math.round(n*100)/100;
 
 async function vipRule(env:Env,serviceId:number,tier:string){
@@ -33,7 +32,7 @@ export async function vipBasePrice(env:Env,serviceId:number,basePrice:number,bas
 
 export async function quote(env:Env,input:any,tier='STANDARD',emergencyMultiplier=1,userId=0){
  const services=await getServices(env,'en'),s=services.find(x=>x.slug===input.service);if(!s)throw new Error('Unknown service');
- const serviceId=Number((s as any).id||0),vm=vehicle[input.vehicle]||1,cm=condition[input.condition]||1;const opts=(input.options||[]).filter((x:string)=>x in extras);const optionsBase=opts.reduce((n:number,x:string)=>n+extras[x],0);
+ const serviceId=Number((s as any).id||0),vm=vehicle[input.vehicle]||1,cm=condition[input.condition]||1;const optionCatalog=await getServiceOptions(env,'en',String(s.currency||'PLN'));const optionMap=new Map(optionCatalog.map((x:any)=>[String(x.slug),Number(x.price||0)]));const opts=(input.options||[]).filter((x:string)=>optionMap.has(String(x)));const optionsBase=opts.reduce((n:number,x:string)=>n+Number(optionMap.get(String(x))||0),0);
  const standardBase=Number(s.basePrice||0),standardSubtotal=standardBase*vm*cm+optionsBase;let subtotal=standardSubtotal,pricingMode='STANDARD',appliedRule:any=null,discountSource='NONE';
  const [personal,promo]=await Promise.all([activePersonalDiscount(env,userId),activePromotion(env,serviceId)]);
  if(personal){
@@ -51,5 +50,5 @@ export async function quote(env:Env,input:any,tier='STANDARD',emergencyMultiplie
   }
  }
  const discount=Math.max(0,standardSubtotal-subtotal),target=normalizeCurrency(input.currency||s.currency),rate=fx[normalizeCurrency(s.currency)]?.[target]||1,emergencySurcharge=Math.max(0,subtotal*(emergencyMultiplier-1));
- return {service:s.slug,standardBasePrice:round(standardBase*rate),basePrice:round((subtotal-optionsBase)*rate/(vm*cm||1)),standardTotal:round(standardSubtotal*rate),discountedSubtotal:round(subtotal*rate),vehicleMultiplier:vm,conditionMultiplier:cm,optionsTotal:round(optionsBase*rate),discount:round(discount*rate),discountSource,promotion:promo?{id:promo.id,percentDiscount:Number(promo.percent_discount||0),label:promo.label||null,endsAt:promo.ends_at}:null,personalDiscount:personal?{id:personal.id,percentDiscount:Number(personal.percent_discount||0),greeting:personal.greeting||null,expiresAt:personal.expires_at}:null,vipPricing:{tier,mode:discountSource==='VIP'?pricingMode:(discountSource==='NONE'?'STANDARD':'SUPPRESSED'),rule:discountSource==='VIP'&&appliedRule?{percentDiscount:appliedRule.percent_discount,multiplier:appliedRule.multiplier,fixedPrice:appliedRule.fixed_price,currency:appliedRule.currency}:null},emergencyMultiplier,emergencySurcharge:round(emergencySurcharge*rate),finalPrice:round((subtotal+emergencySurcharge)*rate),currency:target,fxRate:rate,fxProvider:'FALLBACK_STATIC',fxTimestamp:new Date().toISOString(),options:opts};
+ return {service:s.slug,standardBasePrice:round(standardBase*rate),basePrice:round((subtotal-optionsBase)*rate/(vm*cm||1)),standardTotal:round(standardSubtotal*rate),discountedSubtotal:round(subtotal*rate),vehicleMultiplier:vm,conditionMultiplier:cm,optionsTotal:round(optionsBase*rate),discount:round(discount*rate),discountSource,promotion:promo?{id:promo.id,percentDiscount:Number(promo.percent_discount||0),label:promo.label||null,endsAt:promo.ends_at}:null,personalDiscount:personal?{id:personal.id,percentDiscount:Number(personal.percent_discount||0),greeting:personal.greeting||null,expiresAt:personal.expires_at}:null,vipPricing:{tier,mode:discountSource==='VIP'?pricingMode:(discountSource==='NONE'?'STANDARD':'SUPPRESSED'),rule:discountSource==='VIP'&&appliedRule?{percentDiscount:appliedRule.percent_discount,multiplier:appliedRule.multiplier,fixedPrice:appliedRule.fixed_price,currency:appliedRule.currency}:null},emergencyMultiplier,emergencySurcharge:round(emergencySurcharge*rate),finalPrice:round((subtotal+emergencySurcharge)*rate),currency:target,fxRate:rate,fxProvider:'INTERNAL_RATE',fxTimestamp:new Date().toISOString(),options:opts};
 }

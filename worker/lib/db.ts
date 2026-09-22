@@ -24,7 +24,8 @@ CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_pr
 CREATE TABLE IF NOT EXISTS vip_pricing_rules(service_id INTEGER NOT NULL,tier TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'PERCENT',percent_discount REAL,multiplier REAL,fixed_price REAL,currency TEXT,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(service_id,tier));
 CREATE TABLE IF NOT EXISTS vehicle_types(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS condition_levels(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL,price REAL NOT NULL DEFAULT 0,pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS service_option_translations(option_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,PRIMARY KEY(option_id,locale));
 CREATE TABLE IF NOT EXISTS calculator_sessions(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,service_id INTEGER,vehicle_type_id INTEGER,condition_level_id INTEGER,base_price_snapshot REAL,vehicle_multiplier_snapshot REAL,condition_multiplier_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,currency TEXT NOT NULL,pricing_version TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_requests(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,calculation_id INTEGER,assigned_manager_id INTEGER,status TEXT NOT NULL DEFAULT 'REQUESTED',is_test INTEGER NOT NULL DEFAULT 0,service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,completed_at TEXT,payment_status TEXT NOT NULL DEFAULT 'PENDING',updated_at TEXT);
 CREATE TABLE IF NOT EXISTS payments(id INTEGER PRIMARY KEY AUTOINCREMENT,service_request_id INTEGER,user_id INTEGER,amount REAL NOT NULL,currency TEXT NOT NULL,reporting_amount REAL,reporting_currency TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,method TEXT NOT NULL DEFAULT 'MANUAL',provider TEXT,provider_payment_id TEXT,status TEXT NOT NULL DEFAULT 'PENDING',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,paid_at TEXT,marked_by INTEGER,metadata_json TEXT);
@@ -63,6 +64,10 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE users ADD COLUMN photo_url TEXT");
  await safeAlter(env,"ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN is_popular INTEGER NOT NULL DEFAULT 0");
+ await safeAlter(env,"ALTER TABLE service_options ADD COLUMN base_currency TEXT NOT NULL DEFAULT 'PLN'");
+ await safeAlter(env,"ALTER TABLE service_options ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
+ await safeAlter(env,"ALTER TABLE service_options ADD COLUMN created_at TEXT");
+ await safeAlter(env,"ALTER TABLE service_options ADD COLUMN updated_at TEXT");
  // client_profiles was smaller in early production builds. Keep runtime upgrades
  // exhaustive so reports, VIP and retention never depend on a manual D1 reset.
  await safeAlter(env,"ALTER TABLE client_profiles ADD COLUMN phone_number TEXT");
@@ -117,6 +122,16 @@ async function seed(env:Env){
    await env.DB.prepare(`INSERT INTO service_translations(service_id,locale,title,description) VALUES(?,?,?,?) ON CONFLICT(service_id,locale) DO UPDATE SET title=excluded.title,description=excluded.description`).bind(row.id,locale,tr.title,tr.description).run();
   }
   await env.DB.prepare(`INSERT INTO service_prices(service_id,base_price,base_currency) VALUES(?,?,?) ON CONFLICT(service_id) DO NOTHING`).bind(row.id,service.basePrice,service.currency).run();
+ }
+ const optionSeeds=[
+  ['pet-hair',30,'PLN',10,{uk:'Шерсть тварин',pl:'Sierść zwierząt',en:'Pet hair'}],
+  ['ceramic-spray',40,'PLN',20,{uk:'Керамічний спрей',pl:'Spray ceramiczny',en:'Ceramic spray'}],
+  ['odor',25,'PLN',30,{uk:'Видалення запаху',pl:'Usuwanie zapachu',en:'Odor removal'}]
+ ] as const;
+ for(const [slug,price,currency,sort,titles] of optionSeeds){
+  let orow=await env.DB.prepare('SELECT id FROM service_options WHERE slug=? ORDER BY id LIMIT 1').bind(slug).first<any>();
+  if(!orow?.id){const ins=await env.DB.prepare(`INSERT INTO service_options(slug,price,base_currency,pricing_type,enabled,sort_order) VALUES(?,?,?,'FIXED',1,?)`).bind(slug,price,currency,sort).run();orow={id:Number(ins.meta.last_row_id)}}
+  if(orow?.id)for(const loc of ['uk','pl','en'] as const)await env.DB.prepare(`INSERT OR IGNORE INTO service_option_translations(option_id,locale,title) VALUES(?,?,?)`).bind(orow.id,loc,titles[loc]).run();
  }
  const popularInit=await env.DB.prepare("SELECT value FROM settings WHERE key='popular_services_initialized'").first<any>();
  if(!popularInit){await env.DB.prepare(`UPDATE services SET is_popular=1 WHERE slug IN ('exterior-detailing','interior-detailing','full-detailing','ceramic-coating')`).run();await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES('popular_services_initialized','1',CURRENT_TIMESTAMP)").run()}
@@ -181,6 +196,17 @@ export async function getServices(env:Env,locale='en',targetCurrency?:string|nul
  const items=r.results.length?r.results:fallbackServicesFor(normalized);
  return items.map(convertItem).map(({usdOverride,uahOverride,plnOverride,...item}:any)=>item); // imageUrl/iconKey preserved
 }
+export async function getServiceOptions(env:Env,locale='en',targetCurrency='PLN'){
+ const normalized=normalizeServiceLocale(locale),target=normalizeCurrency(targetCurrency);
+ if(!env.DB){
+  const fallback:any[]=[{id:1,slug:'pet-hair',title:normalized==='uk'?'Шерсть тварин':normalized==='pl'?'Sierść zwierząt':'Pet hair',price:30,currency:'PLN'},{id:2,slug:'ceramic-spray',title:normalized==='uk'?'Керамічний спрей':normalized==='pl'?'Spray ceramiczny':'Ceramic spray',price:40,currency:'PLN'},{id:3,slug:'odor',title:normalized==='uk'?'Видалення запаху':normalized==='pl'?'Usuwanie zapachu':'Odor removal',price:25,currency:'PLN'}];
+  return fallback.map(x=>({...x,price:convertCurrency(x.price,'PLN',target),currency:target}));
+ }
+ await ensureDb(env);
+ const r=await env.DB.prepare(`SELECT o.id,o.slug,COALESCE(t.title,o.slug) title,o.price,o.base_currency currency,o.enabled,o.sort_order FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale=? WHERE o.enabled=1 ORDER BY o.sort_order,o.id`).bind(normalized).all<any>();
+ return (r.results||[]).map((x:any)=>({...x,price:convertCurrency(Number(x.price||0),normalizeCurrency(x.currency||'PLN'),target),currency:target}));
+}
+
 export async function event(env:Env,userId:number|undefined,type:string,meta:any={}){if(!env.DB)return;await ensureDb(env);await env.DB.prepare('INSERT INTO analytics_events(user_id,event_type,metadata_json) VALUES(?,?,?)').bind(userId||null,type,JSON.stringify(meta)).run()}
 export async function getSetting(env:Env,key:string,fallback:string):Promise<string>{if(!env.DB)return fallback;await ensureDb(env);const r=await env.DB.prepare('SELECT value FROM settings WHERE key=?').bind(key).first<{value?:unknown}>();return String(r?.value??fallback)}
 export async function setSetting(env:Env,key:string,value:string){if(!env.DB)return;await ensureDb(env);await env.DB.prepare(`INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=CURRENT_TIMESTAMP`).bind(key,value).run()}
