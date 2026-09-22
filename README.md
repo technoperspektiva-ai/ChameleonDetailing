@@ -1,4 +1,11 @@
 # ChameleonDetailing
+## v1.1.39 — human-readable analytics and content labels
+
+- Analytics now shows plain-language labels instead of internal event codes.
+- Content editor now shows human-readable names instead of technical content keys.
+- Owner and Admin can export/send analytics for Today / 7 days / 30 days as a readable .txt file directly from the Analytics panel.
+- The internal event/content keys remain unchanged in the backend, so existing data and logic stay compatible.
+
 ## v1.1.38 — Menu Builder registry sync + pagination
 
 - Fixed missing newly registered menu modules in the Owner menu editor.
