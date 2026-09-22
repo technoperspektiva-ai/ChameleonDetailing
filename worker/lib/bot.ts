@@ -76,6 +76,11 @@ type PanelCopy=typeof panelCopy.en;
 const panelLocaleOf=(staff:any,from?:TgFrom):BotLocale=>{const v=String(staff?.u?.management_language||'').toLowerCase();return v==='uk'||v==='pl'||v==='en'?v as BotLocale:localeOf(from)};
 const pcopy=(locale:BotLocale):PanelCopy=>panelCopy[locale] as unknown as PanelCopy;
 const languageName=(locale:BotLocale)=>locale==='uk'?'Українська':locale==='pl'?'Polski':'English';
+const startCommandLabel=(locale:BotLocale)=>l3(locale,'Відкрити меню','Otwórz menu','Open menu');
+async function syncStartCommand(env:Env,telegramUserId:number,locale:BotLocale){
+ if(!env.BOT_TOKEN||!telegramUserId)return;
+ await tgApi(env,'setMyCommands',{commands:[{command:'start',description:startCommandLabel(locale)}],scope:{type:'chat',chat_id:telegramUserId}}).catch(e=>console.error('setMyCommands /start failed',telegramUserId,e));
+}
 
 export const telegramWebhookSecret=(env:Env)=>{const v=String(env.TELEGRAM_WEBHOOK_SECRET||'').trim();return /^[A-Za-z0-9_-]{1,256}$/.test(v)?v:''};
 function appUrl(env:Env,origin?:string){const live=(origin||'').trim();if(/^https:\/\//i.test(live))return live.replace(/\/$/,'');return String(env.APP_URL||'').replace(/\/$/,'')}
@@ -362,7 +367,7 @@ async function showUser(env:Env,msg:TgMessage,from:TgFrom,userId:number){
 }
 
 async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
- if(!msg.from)return;const u=await registerUser(env,msg.from),locale=botLocaleFromUser(u,msg.from),c=copy[locale];
+ if(!msg.from)return;const u=await registerUser(env,msg.from),locale=botLocaleFromUser(u,msg.from),c=copy[locale];await syncStartCommand(env,msg.from.id,locale);
  if(startPayload.startsWith('staff_'))await claimStaffInvite(env,msg.from,startPayload.slice(6));
  if(startPayload.startsWith('ref_')&&env.DB){
   const code=startPayload.slice(4).trim();
@@ -1037,7 +1042,7 @@ ${text}`,mainKeyboard(env,origin,locale,role));return}
 Wybierz wygodny język. Zostanie zapamiętany dla kolejnych wiadomości.`,`🌐 <b>Bot language</b>
 
 Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[[{text:'🇺🇦 Українська',callback_data:'botlang:uk'}],[{text:'🇵🇱 Polski',callback_data:'botlang:pl'}],[{text:'🇬🇧 English',callback_data:'botlang:en'}],[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'client:settings'}]]});return}
-  const botLang=(cb.data||'').match(/^botlang:(uk|pl|en)$/);if(botLang){const {u}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
+  const botLang=(cb.data||'').match(/^botlang:(uk|pl|en)$/);if(botLang){const {u}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;await syncStartCommand(env,cb.from.id,locale);const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
 
 ${text}`,await clientSettingsKeyboard(env,u.id,locale));return}
   const giftActivate=(cb.data||'').match(/^gift:activate:(\d+)$/);if(giftActivate){const {u}=await getRole(env,cb.from);if(!env.DB)return;await ensureDb(env);const id=Number(giftActivate[1]);const row=await env.DB.prepare(`SELECT * FROM personal_discounts WHERE id=? AND user_id=? LIMIT 1`).bind(id,u.id).first<any>();const loc=botLocaleFromUser(u,cb.from);if(!row){await safeEdit(env,cb.message,l3(loc,'⚠️ Цю знижку не знайдено.','⚠️ Nie znaleziono tego rabatu.','⚠️ This discount was not found.'));return}if(row.status==='USED'){await safeEdit(env,cb.message,l3(loc,'✅ Цю знижку вже використано.','✅ Ten rabat został już wykorzystany.','✅ This discount has already been used.'));return}if(row.expires_at&&Date.parse(row.expires_at)<=Date.now()){await env.DB.prepare("UPDATE personal_discounts SET status='EXPIRED' WHERE id=?").bind(id).run();await safeEdit(env,cb.message,l3(loc,'⌛ Термін дії подарункової знижки завершився.','⌛ Rabat prezentowy wygasł.','⌛ This gift discount has expired.'));return}await env.DB.prepare("UPDATE personal_discounts SET status='ACTIVATED',activated_at=COALESCE(activated_at,CURRENT_TIMESTAMP) WHERE id=? AND user_id=? AND status IN ('OFFERED','ACTIVATED')").bind(id,u.id).run();await event(env,u.id,'personal_discount_activated',{discountId:id,percent:row.percent_discount});await safeEdit(env,cb.message,`🎁 <b>${l3(loc,'Знижку активовано!','Rabat aktywowany!','Discount activated!')}</b>
