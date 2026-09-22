@@ -199,3 +199,10 @@ Private bot interactions now keep one active UI panel. User commands and staff t
 ## v1.1.22 — Dynamic neon theme
 
 Owner/Admin can switch the Mini App neon theme from Bot Panel → Settings → Neon theme. Supports preset colors, custom HEX, default green and animated Rainbow Flow. Theme state is persisted in D1 and Mini App refreshes it automatically.
+
+
+## v1.1.23 — Client bot settings
+- Client bot menu now keeps Open Mini App + Settings (staff also gets Management Panel).
+- Client Settings contains request-status notification toggle, bot language, Help, and voluntary phone sharing.
+- Client notification preference is persisted in D1 and status-change messages respect it.
+- Owner/Admin can edit the Settings copy for UA/PL/EN in the client bot menu editor.

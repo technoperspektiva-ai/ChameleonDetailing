@@ -13,7 +13,7 @@ export async function ensureDb(env:Env){
  if(!env.DB)return false;
  if(ready)return true;
  await env.DB.exec(`
-CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT);
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT,notifications_enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -49,6 +49,7 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  // Backward-compatible upgrades for D1 databases created by older builds.
  await safeAlter(env,"ALTER TABLE users ADD COLUMN management_language TEXT");
  await safeAlter(env,"ALTER TABLE users ADD COLUMN photo_url TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN is_popular INTEGER NOT NULL DEFAULT 0");
  // client_profiles was smaller in early production builds. Keep runtime upgrades
  // exhaustive so reports, VIP and retention never depend on a manual D1 reset.
@@ -106,7 +107,7 @@ async function seed(env:Env){
  const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
  for(const [slug,mult,sort] of conditions)await env.DB.prepare(`INSERT INTO condition_levels(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
  await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO'),('bot.owner_contact_url',''),('order_notifications.chat_enabled','0'),('order_notifications.chat_id',''),('order_notifications.chat_title',''),('order_notifications.chat_locale','uk'),('request_cooldown_enabled','1'),('theme.neon_mode','STATIC'),('theme.neon_color','#a4ff00')").run().catch(()=>{});
- const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','bot.client_menu_text','bot.help_text','calculator.result.note','vip.description','referral.description','contact.description'];
+ const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','bot.client_menu_text','bot.client_settings_text','bot.help_text','calculator.result.note','vip.description','referral.description','contact.description'];
  for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
  const weeklyCount=await env.DB.prepare('SELECT COUNT(*) n FROM business_weekly_schedule').first<any>();
  if(!Number(weeklyCount?.n||0)){
