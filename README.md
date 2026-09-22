@@ -206,3 +206,8 @@ Owner/Admin can switch the Mini App neon theme from Bot Panel → Settings → N
 - Client Settings contains request-status notification toggle, bot language, Help, and voluntary phone sharing.
 - Client notification preference is persisted in D1 and status-change messages respect it.
 - Owner/Admin can edit the Settings copy for UA/PL/EN in the client bot menu editor.
+
+## v1.1.24
+- Client bot Settings keeps notification toggle, language and Help in one place.
+- Owner/Admin Settings now includes a global client status-notification switch.
+- Global notification switch is enforced before sending request-status updates.
