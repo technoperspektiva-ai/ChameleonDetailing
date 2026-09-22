@@ -1,4 +1,13 @@
 # ChameleonDetailing
+## v1.1.44 — request chat isolation
+
+- Management navigation is now blocked in every non-private Telegram chat, not only the configured notification chat ID.
+- Manager/Admin/Owner cannot jump from a request card into the management menu inside the shared request chat.
+- Old/stale `panel:*` buttons in previously sent request messages are blocked too.
+- Request cards in groups/channels never render the “Back to requests” management button.
+- `/panel`, `/owner`, `/services`, `/maintenance`, `/schedule` and `/reports` do not open management UI in group/channel chats.
+- Request-specific actions remain available according to role permissions.
+
 ## v1.1.41 — analytics download + safe reset
 
 - Renamed analytics export from “Send statistics” to “Download statistics”.
