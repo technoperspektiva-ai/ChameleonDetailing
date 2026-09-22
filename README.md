@@ -1,4 +1,10 @@
 # ChameleonDetailing
+## v1.1.41 — analytics download + safe reset
+
+- Renamed analytics export from “Send statistics” to “Download statistics”.
+- Owner and Admin can now reset analytics counters from the Analytics panel.
+- Reset requires explicit confirmation and clears only `analytics_events`; users, requests, payments, VIP data and audit log stay intact.
+
 ## v1.1.40 — scrollable calculator confirmation modal
 
 - Fixed the calculator result/confirmation popup on iPhone and other short mobile viewports.
