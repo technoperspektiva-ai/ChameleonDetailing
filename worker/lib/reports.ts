@@ -1,7 +1,7 @@
 import type {Env} from './types';
 import {ensureDb} from './db';
 
-export type ReportType='users'|'vip'|'orders'|'payments'|'revenue'|'referrals'|'retention'|'blacklist'|'whitelist'|'staff'|'business';
+export type ReportType='users'|'vip'|'orders'|'payments'|'revenue'|'referrals'|'retention'|'blacklist'|'whitelist'|'staff'|'reviews'|'suggestions'|'business';
 type Col={header:string;key:string};
 type Sheet={name:string;columns:Col[];rows:any[]};
 type ReportLocale='uk'|'pl'|'en';
@@ -127,12 +127,21 @@ const reportText:Record<string,[string,string,string]>={
  'Whitelist report':['Звіт білого списку','Raport białej listy','Whitelist report'],
  'Staff report':['Звіт активності персоналу','Raport aktywności personelu','Staff report'],
  'Cash':['Готівка','Gotówka','Cash'],
- 'Card':['Картка','Karta','Card']
+ 'Card':['Картка','Karta','Card'],
+ 'Reviews':['Відгуки','Opinie','Reviews'],
+ 'Suggestions':['Пропозиції','Sugestie','Suggestions'],
+ 'Reviews report':['Звіт відгуків','Raport opinii','Reviews report'],
+ 'Suggestions report':['Звіт пропозицій','Raport sugestii','Suggestions report'],
+ 'Feedback ID':['ID відгуку','ID opinii','Feedback ID'],
+ 'Feedback text':['Текст','Treść','Feedback text'],
+ 'Photo attached':['Фото додано','Zdjęcie dodane','Photo attached'],
+ 'Telegram photo file ID':['Telegram photo file ID','Telegram photo file ID','Telegram photo file ID'],
+ 'Language':['Мова','Język','Language']
 };
 const reportLabel=(locale:ReportLocale,key:string)=>{const v=reportText[key];return v?(locale==='uk'?v[0]:locale==='pl'?v[1]:v[2]):key};
 const reportLocaleFrom=(v:unknown,fallback:unknown='en'):ReportLocale=>{const a=String(v||'').toLowerCase(),b=String(fallback||'').toLowerCase();return a==='uk'||a==='pl'||a==='en'?a as ReportLocale:b==='uk'||b==='pl'||b==='en'?b as ReportLocale:'en'};
 const reportTypeLabel=(locale:ReportLocale,type:ReportType)=>reportLabel(locale,({
- users:'Users report',vip:'VIP report',orders:'Orders report',payments:'Payments report',revenue:'Revenue report',referrals:'Referrals report',retention:'Retention report',blacklist:'Blacklist report',whitelist:'Whitelist report',staff:'Staff report',business:'Business report'
+ users:'Users report',vip:'VIP report',orders:'Orders report',payments:'Payments report',revenue:'Revenue report',referrals:'Referrals report',retention:'Retention report',blacklist:'Blacklist report',whitelist:'Whitelist report',staff:'Staff report',reviews:'Reviews report',suggestions:'Suggestions report',business:'Business report'
 } as Record<ReportType,string>)[type]);
 const reportRangeLabel=(locale:ReportLocale,days:number)=>days>0?String(days)+' '+reportLabel(locale,'days'):reportLabel(locale,'All period');
 const reportMessageControls=(locale:ReportLocale)=>({inline_keyboard:[[
@@ -219,6 +228,8 @@ export async function buildReport(env:Env,type:ReportType,days=30,locale:ReportL
  if(type==='whitelist'||type==='business')addSheet(wb,'Whitelist',[{header:'User ID',key:'user_id'},{header:'User',key:'first_name'},{header:'Username',key:'username'},{header:'Created at',key:'created_at'},{header:'Created by',key:'created_by'}],await rows(env,`SELECT w.user_id,u.username,u.first_name,w.created_at,w.created_by FROM whitelist w LEFT JOIN users u ON u.id=w.user_id ORDER BY w.created_at DESC`));
  if(type==='staff'||type==='business')addSheet(wb,'Staff Activity',[{header:'ID',key:'id'},{header:'Staff',key:'first_name'},{header:'Username',key:'username'},{header:'Action',key:'action'},{header:'Entity type',key:'entity_type'},{header:'Entity ID',key:'entity_id'},{header:'Created',key:'created_at'}],await rows(env,`SELECT a.id,a.action,a.entity_type,a.entity_id,a.created_at,u.username,u.first_name FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id WHERE u.role IN ('OWNER','ADMIN','MANAGER') AND ${daysClause(days,'a.')} ORDER BY a.id DESC`));
  if(type==='retention'||type==='business')addSheet(wb,'Retention',[{header:'User ID',key:'id'},{header:'User',key:'first_name'},{header:'Username',key:'username'},{header:'Paid jobs',key:'paid_jobs_count'},{header:'First paid job',key:'first_paid_job_at'},{header:'Last paid job',key:'last_paid_job_at'},{header:'Lifetime value',key:'lifetime_value'}],await rows(env,`SELECT u.id,u.username,u.first_name,p.paid_jobs_count,p.first_paid_job_at,p.last_paid_job_at,p.lifetime_value FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id ORDER BY COALESCE(p.paid_jobs_count,0) DESC`));
+ if(type==='reviews'||type==='business')addSheet(wb,'Reviews',[{header:'Feedback ID',key:'id'},{header:'User ID',key:'user_id'},{header:'User',key:'first_name'},{header:'Username',key:'username'},{header:'Feedback text',key:'text'},{header:'Photo attached',key:'photo_attached'},{header:'Telegram photo file ID',key:'photo_file_id'},{header:'Language',key:'language'},{header:'Status',key:'status'},{header:'Created at',key:'created_at'}],await rows(env,`SELECT f.id,f.user_id,u.first_name,u.username,f.text,CASE WHEN COALESCE(f.photo_file_id,'')<>'' THEN 'YES' ELSE 'NO' END photo_attached,COALESCE(f.photo_file_id,'') photo_file_id,f.language,f.status,f.created_at FROM client_feedback f LEFT JOIN users u ON u.id=f.user_id WHERE f.kind='REVIEW' AND ${daysClause(days,'f.')} ORDER BY f.id DESC`));
+ if(type==='suggestions'||type==='business')addSheet(wb,'Suggestions',[{header:'Feedback ID',key:'id'},{header:'User ID',key:'user_id'},{header:'User',key:'first_name'},{header:'Username',key:'username'},{header:'Feedback text',key:'text'},{header:'Photo attached',key:'photo_attached'},{header:'Telegram photo file ID',key:'photo_file_id'},{header:'Language',key:'language'},{header:'Status',key:'status'},{header:'Created at',key:'created_at'}],await rows(env,`SELECT f.id,f.user_id,u.first_name,u.username,f.text,CASE WHEN COALESCE(f.photo_file_id,'')<>'' THEN 'YES' ELSE 'NO' END photo_attached,COALESCE(f.photo_file_id,'') photo_file_id,f.language,f.status,f.created_at FROM client_feedback f LEFT JOIN users u ON u.id=f.user_id WHERE f.kind='SUGGESTION' AND ${daysClause(days,'f.')} ORDER BY f.id DESC`));
  if(type==='business')filename=`business_report_${monthStamp()}.xlsx`;return {filename,buffer:buildXlsx(wb,locale)}
 }
 
