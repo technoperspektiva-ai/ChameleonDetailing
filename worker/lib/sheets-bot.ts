@@ -36,6 +36,7 @@ async function render(env:SheetsEnv,msg:TgMessage,from:TgFrom,notice=''){
  ];
  if(state.sheetUrl)rows.push([{text:l3(locale,'🔗 Відкрити таблицю','🔗 Otwórz arkusz','🔗 Open Sheet'),url:state.sheetUrl}]);
  rows.push([{text:l3(locale,'📥 Звичайні Excel-звіти','📥 Zwykłe raporty Excel','📥 Standard Excel reports'),callback_data:'panel:reports'}]);
+ rows.push([{text:l3(locale,'✅ Дія завершена','✅ Zakończono','✅ Done'),callback_data:'sheets:done'}]);
  try{await editMessage(env,msg.chat.id,msg.message_id,body,{inline_keyboard:rows})}catch{await sendMessage(env,msg.chat.id,body,{inline_keyboard:rows})}
 }
 
@@ -57,7 +58,8 @@ export async function handleGoogleSheetsTelegramUpdate(env:SheetsEnv,update:TgUp
  if(!access){await sendMessage(env,msg.chat.id,l3(localeFrom(from.language_code),'⛔ Доступ лише для Owner / Admin.','⛔ Dostęp tylko dla Owner / Admin.','⛔ Owner / Admin only.')).catch(()=>{});return true}
  const locale=access.locale,data=String(update.callback_query?.data||'');
  if(!data){await render(env,msg,from);return true}
- if(data==='sheets:sync'){
+ if(data==='sheets:done'){await tgApi(env,'deleteMessage',{chat_id:msg.chat.id,message_id:msg.message_id}).catch(()=>{});return true}
+  if(data==='sheets:sync'){
   try{const result=await syncGoogleSheets(env,'manual');const total=Object.values(result.rowCounts||{}).reduce((a:any,b:any)=>Number(a)+Number(b),0);await render(env,msg,from,l3(locale,`✅ Синхронізовано. Рядків у звітах: <b>${total}</b>.`,`✅ Zsynchronizowano. Wierszy raportów: <b>${total}</b>.`,`✅ Synced. Report rows: <b>${total}</b>.`))}catch(e:any){await render(env,msg,from,`⚠️ ${esc(e?.message||e)}`)}return true;
  }
  if(data==='sheets:health'){
