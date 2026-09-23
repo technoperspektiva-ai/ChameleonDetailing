@@ -741,11 +741,11 @@ async function resetCollectedProjectData(env:Env,actorUserId:number){
   'DELETE FROM service_request_extras','DELETE FROM delivery_requests','DELETE FROM payments','DELETE FROM service_requests',
   'DELETE FROM calculator_session_options','DELETE FROM calculator_sessions','DELETE FROM personal_offer_services','DELETE FROM personal_offers',
   'DELETE FROM personal_discounts','DELETE FROM referrals','DELETE FROM campaign_deliveries','DELETE FROM broadcast_campaigns',
-  'DELETE FROM analytics_events','DELETE FROM vip_history','DELETE FROM whitelist','DELETE FROM blacklist','DELETE FROM client_profiles',
+  'DELETE FROM analytics_events','DELETE FROM client_feedback','DELETE FROM vip_history','DELETE FROM whitelist','DELETE FROM blacklist','DELETE FROM client_profiles',
   'DELETE FROM bot_state',"DELETE FROM users WHERE role='CLIENT'",'DELETE FROM audit_log'
  ];
  for(const q of sql)await env.DB.prepare(q).run().catch(()=>{});
- await env.DB.prepare("DELETE FROM sqlite_sequence WHERE name IN ('service_requests','service_request_extras','delivery_requests','payments','calculator_sessions','vip_history','whitelist','blacklist','referrals','analytics_events','broadcast_campaigns','campaign_deliveries','personal_discounts','personal_offers','personal_offer_services')").run().catch(()=>{});
+ await env.DB.prepare("DELETE FROM sqlite_sequence WHERE name IN ('service_requests','service_request_extras','delivery_requests','payments','calculator_sessions','vip_history','whitelist','blacklist','referrals','analytics_events','client_feedback','broadcast_campaigns','campaign_deliveries','personal_discounts','personal_offers','personal_offer_services')").run().catch(()=>{});
  await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) SELECT id FROM users WHERE role IN (\'OWNER\',\'ADMIN\',\'MANAGER\')').run().catch(()=>{});
  await env.DB.prepare('INSERT INTO audit_log(actor_user_id,action,entity_type,entity_id,old_data_json,new_data_json) VALUES(?,?,?,?,?,?)').bind(actorUserId,'project.data.reset','system','project',JSON.stringify(before),JSON.stringify({preserved:'settings, services, pricing, themes, schedules, menu layout, staff roles'})).run();
  return before;
