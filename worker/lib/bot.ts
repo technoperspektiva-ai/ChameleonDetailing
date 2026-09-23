@@ -373,6 +373,19 @@ async function audit(env:Env,actorId:number,action:string,entityType?:string,ent
 }
 async function setBotState(env:Env,userId:number,state:string|null,payload:any={}){if(!env.DB)return;await ensureDb(env);if(!state){await env.DB.prepare('DELETE FROM bot_state WHERE user_id=?').bind(userId).run();return}await env.DB.prepare(`INSERT INTO bot_state(user_id,state,payload_json) VALUES(?,?,?) ON CONFLICT(user_id) DO UPDATE SET state=excluded.state,payload_json=excluded.payload_json,updated_at=CURRENT_TIMESTAMP`).bind(userId,state,JSON.stringify(payload)).run()}
 async function getBotState(env:Env,userId:number):Promise<BotState|null>{if(!env.DB)return null;await ensureDb(env);return env.DB.prepare('SELECT state,payload_json FROM bot_state WHERE user_id=?').bind(userId).first<BotState>()}
+async function saveClientFeedback(env:Env,userId:number,kind:'REVIEW'|'SUGGESTION',text:string,photoFileId:string|null,locale:BotLocale){
+ if(!env.DB)throw new Error('D1 unavailable');await ensureDb(env);
+ const r:any=await env.DB.prepare("INSERT INTO client_feedback(user_id,kind,text,photo_file_id,language) VALUES(?,?,?,?,?)").bind(userId,kind,text,photoFileId||null,locale).run();
+ await event(env,userId,kind==='REVIEW'?'client_review_submitted':'client_suggestion_submitted',{feedbackId:Number(r?.meta?.last_row_id||0),hasPhoto:Boolean(photoFileId)});
+ return Number(r?.meta?.last_row_id||0);
+}
+const feedbackKindLabel=(locale:BotLocale,kind:string)=>kind==='REVIEW'?l3(locale,'відгук','opinię','review'):l3(locale,'пропозицію','sugestię','suggestion');
+async function completeFeedbackPanel(env:Env,origin:string,msg:TgMessage,from:TgFrom,u:any,role:Role,kind:'REVIEW'|'SUGGESTION',text:string,photoFileId:string|null){
+ const locale=botLocaleFromUser(u,from);await saveClientFeedback(env,u.id,kind,text,photoFileId,locale);await setBotState(env,u.id,null);
+ const title=kind==='REVIEW'?l3(locale,'⭐ Дякуємо за відгук!','⭐ Dziękujemy za opinię!','⭐ Thanks for your review!'):l3(locale,'💡 Дякуємо за пропозицію!','💡 Dziękujemy za sugestię!','💡 Thanks for your suggestion!');
+ const body=l3(locale,'Ми зберегли повідомлення та передали його в звіти Chameleon Detailing.','Wiadomość została zapisana i dodana do raportów Chameleon Detailing.','Your message was saved and added to Chameleon Detailing reports.');
+ await safeEdit(env,msg,`${title}\n\n${body}${photoFileId?'\n\n📷 '+l3(locale,'Фото додано.','Zdjęcie dodane.','Photo attached.'):''}`,mainKeyboard(env,origin,locale,role));
+}
 async function requireStaff(env:Env,from:TgFrom,permission?:Permission){const {u,role}=await getRole(env,from);if(role==='CLIENT')return null;if(permission&&!(await canStaff(env,role,permission)))return null;return {u,role}}
 async function userBySelector(env:Env,raw:string){if(!env.DB)return null;await ensureDb(env);const s=raw.trim();if(/^@/.test(s))return env.DB.prepare('SELECT u.*,COALESCE(p.client_tier,\'STANDARD\') client_tier,p.notes FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE lower(u.username)=lower(?) LIMIT 1').bind(s.slice(1)).first<any>();if(/^\d+$/.test(s))return env.DB.prepare('SELECT u.*,COALESCE(p.client_tier,\'STANDARD\') client_tier,p.notes FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.telegram_user_id=? OR u.id=? LIMIT 1').bind(Number(s),Number(s)).first<any>();return null}
 async function userFlags(env:Env,userId:number){if(!env.DB)return {whitelist:false,blacklist:false};const [w,b]=await Promise.all([env.DB.prepare('SELECT 1 ok FROM whitelist WHERE user_id=? LIMIT 1').bind(userId).first<any>(),env.DB.prepare('SELECT 1 ok FROM blacklist WHERE user_id=? AND is_active=1 LIMIT 1').bind(userId).first<any>()]);return {whitelist:!!w,blacklist:!!b}}
