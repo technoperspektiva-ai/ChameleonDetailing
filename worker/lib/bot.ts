@@ -228,6 +228,8 @@ const menuActions:MenuAction[]=[
  {id:'reports_payments',callback:'reportpick:payments',labels:['💳 Payments Excel','💳 Payments Excel','💳 Payments Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_revenue',callback:'reportpick:revenue',labels:['💰 Revenue Excel','💰 Revenue Excel','💰 Revenue Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_referrals',callback:'reportpick:referrals',labels:['🔗 Referrals Excel','🔗 Referrals Excel','🔗 Referrals Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
+ {id:'reports_reviews',callback:'reportpick:reviews',labels:['⭐ Відгуки Excel','⭐ Opinie Excel','⭐ Reviews Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
+ {id:'reports_suggestions',callback:'reportpick:suggestions',labels:['💡 Пропозиції Excel','💡 Sugestie Excel','💡 Suggestions Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_retention',callback:'report:retention:0',labels:['📈 Retention Excel','📈 Retention Excel','📈 Retention Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_staff',callback:'reportpick:staff',labels:['🧑‍💼 Staff Activity Excel','🧑‍💼 Staff Activity Excel','🧑‍💼 Staff Activity Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
  {id:'reports_blacklist',callback:'report:blacklist:0',labels:['⛔ Blacklist Excel','⛔ Blacklist Excel','⛔ Blacklist Excel'],roles:['OWNER','ADMIN'],defaultParent:'reports'},
