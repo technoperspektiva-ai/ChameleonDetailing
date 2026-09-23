@@ -66,8 +66,8 @@ export async function handleGoogleSheetsTelegramUpdate(env:SheetsEnv,update:TgUp
   try{const result=await syncGoogleSheets(env,'manual');const total=Object.values(result.rowCounts||{}).reduce((a:any,b:any)=>Number(a)+Number(b),0);await render(env,msg,from,l3(locale,`✅ Синхронізовано. Рядків у звітах: <b>${total}</b>.`,`✅ Zsynchronizowano. Wierszy raportów: <b>${total}</b>.`,`✅ Synced. Report rows: <b>${total}</b>.`),originMessageId)}catch(e:any){await render(env,msg,from,`⚠️ ${esc(e?.message||e)}`,originMessageId)}return true;
  }
  if(data.startsWith('sheets:health')){
-  try{const health=await checkGoogleSheetsHealth(env);await render(env,msg,from,l3(locale,`✅ Apps Script відповідає. Таблиця: <b>${esc(health.title||'OK')}</b>.`,`✅ Apps Script odpowiada. Arkusz: <b>${esc(health.title||'OK')}</b>.`,`✅ Apps Script is responding. Sheet: <b>${esc(health.title||'OK')}</b>.`),originMessageId)}catch(e:any){await render(env,msg,from,`⚠️ ${esc(e?.message||e)}`)}return true;
+  try{const health=await checkGoogleSheetsHealth(env);await render(env,msg,from,l3(locale,`✅ Apps Script відповідає. Таблиця: <b>${esc(health.title||'OK')}</b>.`,`✅ Apps Script odpowiada. Arkusz: <b>${esc(health.title||'OK')}</b>.`,`✅ Apps Script is responding. Sheet: <b>${esc(health.title||'OK')}</b>.`),originMessageId)}catch(e:any){await render(env,msg,from,`⚠️ ${esc(e?.message||e)}`,originMessageId)}return true;
  }
- const interval=data.match(/^sheets:interval:(OFF|1h|6h|24h)(?::\d+)?$/);if(interval){await setGoogleSheetsInterval(env,interval[1] as SheetsInterval);await render(env,msg,from,l3(locale,'✅ Період синхронізації змінено.','✅ Zmieniono okres synchronizacji.','✅ Sync interval updated.'));return true}
+ const interval=data.match(/^sheets:interval:(OFF|1h|6h|24h)(?::\d+)?$/);if(interval){await setGoogleSheetsInterval(env,interval[1] as SheetsInterval);await render(env,msg,from,l3(locale,'✅ Період синхронізації змінено.','✅ Zmieniono okres synchronizacji.','✅ Sync interval updated.'),originMessageId);return true}
  await render(env,msg,from,'',originMessageId);return true;
 }
