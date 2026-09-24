@@ -193,11 +193,14 @@ export default {
     return json({options});
    }
    if(url.pathname==='/api/content'&&request.method==='GET'){
-    const locale=(url.searchParams.get('locale')||'en').toLowerCase().startsWith('uk')?'uk':(url.searchParams.get('locale')||'en').toLowerCase().startsWith('pl')?'pl':'en';
+    const rawLocale=(url.searchParams.get('locale')||'en').toLowerCase();
+    const locale=rawLocale.startsWith('uk')?'uk':rawLocale.startsWith('pl')?'pl':rawLocale.startsWith('de')?'de':rawLocale.startsWith('fr')?'fr':'en';
     const defaults:any={
      uk:{'referral.title':'Запроси друга в Chameleon','referral.subtitle':'Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.','referral.share_text':'Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'},
      pl:{'referral.title':'Zaproś znajomego do Chameleon','referral.subtitle':'Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.','referral.share_text':'Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'},
-     en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'}
+     en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'},
+     de:{'referral.title':'Freund zu Chameleon einladen','referral.subtitle':'Empfiehl einen Service, dem du vertraust. Dein Freund erhält schnellen Zugang zu Chameleon Detailing in Telegram.','referral.share_text':'Ich empfehle Chameleon Detailing 🦎 Leistung wählen, Preis prüfen und direkt in Telegram anfragen.'},
+     fr:{'referral.title':'Inviter un ami chez Chameleon','referral.subtitle':'Partagez un service de confiance. Votre ami accède rapidement à Chameleon Detailing dans Telegram.','referral.share_text':'Je recommande Chameleon Detailing 🦎 Choisissez un service, consultez le prix et envoyez une demande dans Telegram.'}
     };
     const content={...defaults[locale]};
     if(env.DB){await ensureDb(env);const r=await env.DB.prepare("SELECT key,value FROM content_blocks WHERE locale=? AND value<>''").bind(locale).all<any>();for(const row of r.results||[])content[row.key]=row.value}
