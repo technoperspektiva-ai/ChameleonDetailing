@@ -1,4 +1,4 @@
-export type ServiceLocale='uk'|'pl'|'en';
+export type ServiceLocale='uk'|'pl'|'en'|'de'|'fr';
 export type ServiceCatalogItem={
   id:number;
   slug:string;
@@ -24,7 +24,9 @@ export const serviceCatalog:ServiceCatalogItem[]=[
     translations:{
       uk:{title:'Детейлінг екстер’єру',description:'Глибоке очищення, деконтамінація та тривалий блиск.'},
       pl:{title:'Detailing zewnętrzny',description:'Dokładne czyszczenie, dekontaminacja i długotrwały połysk.'},
-      en:{title:'Exterior Detailing',description:'Deep clean, decontamination and lasting shine.'}
+      en:{title:'Exterior Detailing',description:'Deep clean, decontamination and lasting shine.'},
+      de:{title:'Außen-Detailing',description:'Tiefenreinigung, Dekontamination und langanhaltender Glanz.'},
+      fr:{title:'Detailing extérieur',description:'Nettoyage en profondeur, décontamination et brillance durable.'}
     }
   },
   {
@@ -32,7 +34,9 @@ export const serviceCatalog:ServiceCatalogItem[]=[
     translations:{
       uk:{title:'Детейлінг інтер’єру',description:'Свіжий, чистий і комфортний салон.'},
       pl:{title:'Detailing wnętrza',description:'Świeże, czyste i komfortowe wnętrze.'},
-      en:{title:'Interior Detailing',description:'Fresh, clean and comfortable interior.'}
+      en:{title:'Interior Detailing',description:'Fresh, clean and comfortable interior.'},
+      de:{title:'Innenraum-Detailing',description:'Frischer, sauberer und komfortabler Innenraum.'},
+      fr:{title:'Detailing intérieur',description:'Un intérieur frais, propre et confortable.'}
     }
   },
   {
@@ -40,7 +44,9 @@ export const serviceCatalog:ServiceCatalogItem[]=[
     translations:{
       uk:{title:'Повний детейлінг',description:'Комплексне оновлення авто всередині та зовні.'},
       pl:{title:'Pełny detailing',description:'Kompleksowe odświeżenie auta wewnątrz i na zewnątrz.'},
-      en:{title:'Full Detailing',description:'Complete inside & out showroom refresh.'}
+      en:{title:'Full Detailing',description:'Complete inside & out showroom refresh.'},
+      de:{title:'Komplett-Detailing',description:'Komplette Aufbereitung innen und außen für Showroom-Glanz.'},
+      fr:{title:'Detailing complet',description:'Rénovation complète intérieur et extérieur, finition showroom.'}
     }
   },
   {
@@ -48,7 +54,9 @@ export const serviceCatalog:ServiceCatalogItem[]=[
     translations:{
       uk:{title:'Керамічне покриття',description:'Довготривалий захист лакофарбового покриття та глибокий блиск.'},
       pl:{title:'Powłoka ceramiczna',description:'Długotrwała ochrona lakieru i głęboki połysk.'},
-      en:{title:'Ceramic Coating',description:'Long-term paint protection and gloss.'}
+      en:{title:'Ceramic Coating',description:'Long-term paint protection and gloss.'},
+      de:{title:'Keramikversiegelung',description:'Langfristiger Lackschutz und tiefer Glanz.'},
+      fr:{title:'Protection céramique',description:'Protection longue durée de la peinture et brillance profonde.'}
     }
   }
 ];
@@ -57,6 +65,8 @@ export const normalizeServiceLocale=(locale?:string|null):ServiceLocale=>{
   const v=(locale||'').toLowerCase();
   if(v.startsWith('uk')||v.startsWith('ua'))return 'uk';
   if(v.startsWith('pl'))return 'pl';
+  if(v.startsWith('de'))return 'de';
+  if(v.startsWith('fr'))return 'fr';
   return 'en';
 };
 
