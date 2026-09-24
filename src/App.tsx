@@ -56,6 +56,7 @@ export function App(){
  const [startup,setStartup]=useState({stage:'INIT',progress:15,error:''}),[splash,setSplash]=useState(true),[directWebBlocked,setDirectWebBlocked]=useState(false);
  const t=useMemo(()=>createTranslator(locale),[locale]);
  const setLocale=(next:Locale)=>{localStorage.setItem('chameleon.locale',next);setLocaleState(next)};
+ const cycleLocale=()=>{const i=supportedLocales.indexOf(locale);setLocale(supportedLocales[(i+1)%supportedLocales.length]||'en')};
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
  useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor,session?.theme?.seasonalMode,session?.theme?.seasonalTheme]);
