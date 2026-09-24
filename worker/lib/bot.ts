@@ -10,20 +10,20 @@ type TgFrom={id:number;first_name?:string;last_name?:string;username?:string;lan
 type TgMessage={message_id:number;chat:{id:number;type:string;title?:string;username?:string};from?:TgFrom;text?:string;caption?:string;photo?:Array<{file_id:string;width?:number;height?:number}>;contact?:{phone_number:string;user_id?:number;first_name?:string;last_name?:string}};
 type TgCallback={id:string;from:TgFrom;message?:TgMessage;data?:string};
 type TgUpdate={update_id:number;message?:TgMessage;callback_query?:TgCallback};
-type BotLocale='uk'|'pl'|'en';
+type BotLocale='uk'|'pl'|'en'|'de'|'fr';
 type Role='OWNER'|'ADMIN'|'MANAGER'|'CLIENT';
 type BotState={state:string;payload_json?:string|null};
 
 const LOCKED_OWNER_ID='375938798';
 const asUser=(u:TgFrom):TelegramUser=>({id:u.id,first_name:u.first_name||'Telegram user',last_name:u.last_name,username:u.username,language_code:u.language_code});
 const esc=(s:unknown)=>String(s??'').replace(/[&<>]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':'&gt;');
-const localeOf=(u?:TgFrom):BotLocale=>{const v=(u?.language_code||'').toLowerCase();return v.startsWith('uk')||v.startsWith('ua')?'uk':v.startsWith('pl')?'pl':'en'};
+const localeOf=(u?:TgFrom):BotLocale=>{const v=(u?.language_code||'').toLowerCase();return v.startsWith('uk')||v.startsWith('ua')?'uk':v.startsWith('pl')?'pl':v.startsWith('de')?'de':v.startsWith('fr')?'fr':'en'};
 const isOwner=(env:Env,id:number|string|undefined)=>String(id??'')===String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID);
 const num=(v:unknown)=>Number(v||0);
 const yes=(v:unknown)=>String(v)==='1'||v===true;
 const fmtDate=(v:unknown)=>v?esc(String(v).slice(0,16).replace('T',' ')):'—';
 const parsePayload=(s?:string|null)=>{try{return s?JSON.parse(s):{}}catch{return {}}};
-const dayName=(locale:BotLocale,d:number)=>({uk:['','Пн','Вт','Ср','Чт','Пт','Сб','Нд'],pl:['','Pon','Wt','Śr','Czw','Pt','Sob','Nd'],en:['','Mon','Tue','Wed','Thu','Fri','Sat','Sun']}[locale] as string[])[d]||String(d);
+const dayName=(locale:BotLocale,d:number)=>({uk:['','Пн','Вт','Ср','Чт','Пт','Сб','Нд'],pl:['','Pon','Wt','Śr','Czw','Pt','Sob','Nd'],en:['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'],de:['','Mo','Di','Mi','Do','Fr','Sa','So'],fr:['','Lun','Mar','Mer','Jeu','Ven','Sam','Dim']}[locale] as string[])[d]||String(d);
 const validHours=(v:string)=>{const m=v.trim().match(/^(\d{2}):(\d{2})-(\d{2}):(\d{2})$/);if(!m)return null;const a=Number(m[1])*60+Number(m[2]),b=Number(m[3])*60+Number(m[4]);if(Number(m[1])>23||Number(m[3])>23||Number(m[2])>59||Number(m[4])>59||a>=b)return null;return {open:`${m[1]}:${m[2]}`,close:`${m[3]}:${m[4]}`}};
 const validWebUrl=(v:string)=>{try{const u=new URL(String(v||'').trim());return u.protocol==='http:'||u.protocol==='https:'}catch{return false}};
 const socialTypes=['instagram','facebook','tiktok','youtube','telegram','whatsapp','website'] as const;
@@ -75,7 +75,9 @@ async function sendAnalyticsSnapshot(env:Env,chatId:number,actorUserId:number,lo
 const copy={
  uk:{open:'🦎 Відкрити Chameleon Detailing',calculator:'🧮 Калькулятор',orders:'📋 Мої заявки',settings:'⚙️ Налаштування',help:'💬 Допомога',hello:'Привіт',body:'Преміальний догляд за авто, розрахунок вартості та заявки — прямо в Telegram.',tap:'Натисніть кнопку нижче, щоб відкрити Mini App.',owner:'👑 Ви увійшли як Owner. Панель керування доступна нижче.',choose:'Оберіть дію нижче 👇',saved:'✅ Номер телефону збережено. Дякуємо.',own:'Будь ласка, поділіться власним контактом Telegram.',helpText:'<b>Chameleon Detailing — Допомога</b>\n\n/start — головне меню\n/panel — панель керування (staff)\n/reports — Excel-звіти (staff)\n/help — допомога',menu:'Відкрити застосунок',panel:'👑 Панель Owner'},
  pl:{open:'🦎 Otwórz Chameleon Detailing',calculator:'🧮 Kalkulator',orders:'📋 Moje zlecenia',settings:'⚙️ Ustawienia',help:'💬 Pomoc',hello:'Cześć',body:'Pielęgnacja auta premium, wyceny i zlecenia — bezpośrednio w Telegramie.',tap:'Naciśnij przycisk poniżej, aby otworzyć Mini App.',owner:'👑 Jesteś zalogowany jako Owner. Panel zarządzania jest dostępny poniżej.',choose:'Wybierz działanie poniżej 👇',saved:'✅ Numer telefonu został zapisany. Dziękujemy.',own:'Udostępnij proszę swój własny kontakt Telegram.',helpText:'<b>Chameleon Detailing — Pomoc</b>\n\n/start — menu główne\n/panel — panel zarządzania (staff)\n/reports — raporty Excel (staff)\n/help — pomoc',menu:'Otwórz aplikację',panel:'👑 Panel Owner'},
- en:{open:'🦎 Open Chameleon Detailing',calculator:'🧮 Calculator',orders:'📋 My requests',settings:'⚙️ Settings',help:'💬 Help',hello:'Hi',body:'Premium car care, estimates and requests — directly in Telegram.',tap:'Tap the button below to open the Mini App.',owner:'👑 You are signed in as Owner. The management panel is available below.',choose:'Choose an action below 👇',saved:'✅ Phone number saved. Thank you.',own:'Please share your own Telegram contact.',helpText:'<b>Chameleon Detailing — Help</b>\n\n/start — main menu\n/panel — staff management panel\n/reports — Excel reports (staff)\n/help — help',menu:'Open app',panel:'👑 Owner Panel'}
+ en:{open:'🦎 Open Chameleon Detailing',calculator:'🧮 Calculator',orders:'📋 My requests',settings:'⚙️ Settings',help:'💬 Help',hello:'Hi',body:'Premium car care, estimates and requests — directly in Telegram.',tap:'Tap the button below to open the Mini App.',owner:'👑 You are signed in as Owner. The management panel is available below.',choose:'Choose an action below 👇',saved:'✅ Phone number saved. Thank you.',own:'Please share your own Telegram contact.',helpText:'<b>Chameleon Detailing — Help</b>\n\n/start — main menu\n/panel — staff management panel\n/reports — Excel reports (staff)\n/help — help',menu:'Open app',panel:'👑 Owner Panel'},
+ de:{open:'🦎 Chameleon Detailing öffnen',calculator:'🧮 Kalkulator',orders:'📋 Meine Anfragen',settings:'⚙️ Einstellungen',help:'💬 Hilfe',hello:'Hallo',body:'Premium-Fahrzeugpflege, Kalkulationen und Anfragen — direkt in Telegram.',tap:'Tippe auf die Schaltfläche unten, um die Mini App zu öffnen.',owner:'👑 Du bist als Owner angemeldet. Das Management-Panel ist unten verfügbar.',choose:'Wähle unten eine Aktion 👇',saved:'✅ Telefonnummer gespeichert. Danke.',own:'Bitte teile deinen eigenen Telegram-Kontakt.',helpText:'<b>Chameleon Detailing — Hilfe</b>\n\n/start — Hauptmenü\n/panel — Management-Panel (Staff)\n/reports — Excel-Berichte (Staff)\n/help — Hilfe',menu:'App öffnen',panel:'👑 Owner Panel'},
+ fr:{open:'🦎 Ouvrir Chameleon Detailing',calculator:'🧮 Calculateur',orders:'📋 Mes demandes',settings:'⚙️ Paramètres',help:'💬 Aide',hello:'Bonjour',body:'Entretien auto premium, estimations et demandes — directement dans Telegram.',tap:'Appuyez sur le bouton ci-dessous pour ouvrir la Mini App.',owner:'👑 Vous êtes connecté comme Owner. Le panneau de gestion est disponible ci-dessous.',choose:'Choisissez une action ci-dessous 👇',saved:'✅ Numéro de téléphone enregistré. Merci.',own:'Veuillez partager votre propre contact Telegram.',helpText:'<b>Chameleon Detailing — Aide</b>\n\n/start — menu principal\n/panel — panneau de gestion (staff)\n/reports — rapports Excel (staff)\n/help — aide',menu:'Ouvrir l’app',panel:'👑 Owner Panel'}
 } as const;
 
 
@@ -86,15 +88,15 @@ const panelCopy={
 } as const;
 
 type PanelCopy=typeof panelCopy.en;
-const panelLocaleOf=(staff:any,from?:TgFrom):BotLocale=>{const v=String(staff?.u?.management_language||'').toLowerCase();return v==='uk'||v==='pl'||v==='en'?v as BotLocale:localeOf(from)};
+const panelLocaleOf=(staff:any,from?:TgFrom):BotLocale=>{const v=String(staff?.u?.management_language||'').toLowerCase();if(v==='uk'||v==='pl'||v==='en')return v as BotLocale;const detected=localeOf(from);return detected==='uk'||detected==='pl'?detected:'en'};
 const pcopy=(locale:BotLocale):PanelCopy=>panelCopy[locale] as unknown as PanelCopy;
-const languageName=(locale:BotLocale)=>locale==='uk'?'Українська':locale==='pl'?'Polski':'English';
-const startCommandLabel=(locale:BotLocale)=>l3(locale,'Відкрити меню','Otwórz menu','Open menu');
+const languageName=(locale:BotLocale)=>locale==='uk'?'Українська':locale==='pl'?'Polski':locale==='de'?'Deutsch':locale==='fr'?'Français':'English';
+const startCommandLabel=(locale:BotLocale)=>locale==='de'?'Menü öffnen':locale==='fr'?'Ouvrir le menu':l3(locale,'Відкрити меню','Otwórz menu','Open menu');
 async function syncStartCommand(env:Env,telegramUserId:number,locale:BotLocale){
  if(!env.BOT_TOKEN||!telegramUserId)return;
  await tgApi(env,'setMyCommands',{commands:[{command:'start',description:startCommandLabel(locale)}],scope:{type:'chat',chat_id:telegramUserId}}).catch(e=>console.error('setMyCommands /start failed',telegramUserId,e));
 }
-const persistentMenuLabel=(locale:BotLocale)=>l3(locale,'🦎 Відкрити меню','🦎 Otwórz menu','🦎 Open menu');
+const persistentMenuLabel=(locale:BotLocale)=>locale==='de'?'🦎 Menü öffnen':locale==='fr'?'🦎 Ouvrir le menu':l3(locale,'🦎 Відкрити меню','🦎 Otwórz menu','🦎 Open menu');
 const persistentMenuKeyboard=(locale:BotLocale)=>({keyboard:[[{text:persistentMenuLabel(locale)}]],resize_keyboard:true,is_persistent:true,input_field_placeholder:startCommandLabel(locale)});
 async function showPersistentMenuKeyboard(env:Env,chatId:number,locale:BotLocale){
  if(!env.BOT_TOKEN||!chatId)return;
@@ -125,7 +127,7 @@ Zarządzaj powiadomieniami o statusie zleceń, językiem bota i szybkim dostępe
 
 Manage request-status notifications, bot language and quick access to help.`))}
 async function botContent(env:Env,key:string,locale:BotLocale,fallback:string){if(!env.DB)return fallback;await ensureDb(env);const row=await env.DB.prepare('SELECT value FROM content_blocks WHERE key=? AND locale=?').bind(key,locale).first<any>();const value=String(row?.value||'').trim();return value||fallback}
-const botLocaleFromUser=(u:any,from?:TgFrom):BotLocale=>{const v=String(u?.language||'').toLowerCase();return v==='uk'||v==='pl'||v==='en'?v as BotLocale:localeOf(from)};
+const botLocaleFromUser=(u:any,from?:TgFrom):BotLocale=>{const v=String(u?.language||'').toLowerCase();return ['uk','pl','en','de','fr'].includes(v)?v as BotLocale:localeOf(from)};
 async function helpKeyboard(env:Env,locale:BotLocale){const contact=String(await getSetting(env,'bot.owner_contact_url','')).trim()||`tg://user?id=${String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID)}`;return {inline_keyboard:[[{text:l3(locale,'✍️ Написати власнику Детейлінгу','✍️ Napisz do właściciela','✍️ Message the detailing owner'),url:contact}],[{text:l3(locale,'📱 Добровільно поділитися номером','📱 Dobrowolnie udostępnij numer','📱 Voluntarily share phone number'),callback_data:'client:phone'}],[{text:l3(locale,'🌐 Змінити мову','🌐 Zmień język','🌐 Change language'),callback_data:'botlang:menu'}],[{text:l3(locale,'⬅️ Головне меню','⬅️ Menu główne','⬅️ Main menu'),callback_data:'client:menu'}]]}}
 
 
@@ -1118,8 +1120,8 @@ ${text}`,mainKeyboard(env,origin,locale,role));return}
 
 Wybierz wygodny język. Zostanie zapamiętany dla kolejnych wiadomości.`,`🌐 <b>Bot language</b>
 
-Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[[{text:'🇺🇦 Українська',callback_data:'botlang:uk'}],[{text:'🇵🇱 Polski',callback_data:'botlang:pl'}],[{text:'🇬🇧 English',callback_data:'botlang:en'}],[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'client:settings'}]]});return}
-  const botLang=(cb.data||'').match(/^botlang:(uk|pl|en)$/);if(botLang){const {u}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;await syncStartCommand(env,cb.from.id,locale);if(cb.message.chat.type==='private')await showPersistentMenuKeyboard(env,cb.message.chat.id,locale);const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
+Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[[{text:'🇺🇦 Українська',callback_data:'botlang:uk'}],[{text:'🇵🇱 Polski',callback_data:'botlang:pl'}],[{text:'🇬🇧 English',callback_data:'botlang:en'}],[{text:'🇩🇪 Deutsch',callback_data:'botlang:de'}],[{text:'🇫🇷 Français',callback_data:'botlang:fr'}],[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'client:settings'}]]});return}
+  const botLang=(cb.data||'').match(/^botlang:(uk|pl|en|de|fr)$/);if(botLang){const {u}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;await syncStartCommand(env,cb.from.id,locale);if(cb.message.chat.type==='private')await showPersistentMenuKeyboard(env,cb.message.chat.id,locale);const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
 
 ${text}`,await clientSettingsKeyboard(env,u.id,locale));return}
   const giftActivate=(cb.data||'').match(/^gift:activate:(\d+)$/);if(giftActivate){const {u}=await getRole(env,cb.from);if(!env.DB)return;await ensureDb(env);const id=Number(giftActivate[1]);const row=await env.DB.prepare(`SELECT * FROM personal_discounts WHERE id=? AND user_id=? LIMIT 1`).bind(id,u.id).first<any>();const loc=botLocaleFromUser(u,cb.from);if(!row){await safeEdit(env,cb.message,l3(loc,'⚠️ Цю знижку не знайдено.','⚠️ Nie znaleziono tego rabatu.','⚠️ This discount was not found.'));return}if(row.status==='USED'){await safeEdit(env,cb.message,l3(loc,'✅ Цю знижку вже використано.','✅ Ten rabat został już wykorzystany.','✅ This discount has already been used.'));return}if(row.expires_at&&Date.parse(row.expires_at)<=Date.now()){await env.DB.prepare("UPDATE personal_discounts SET status='EXPIRED' WHERE id=?").bind(id).run();await safeEdit(env,cb.message,l3(loc,'⌛ Термін дії подарункової знижки завершився.','⌛ Rabat prezentowy wygasł.','⌛ This gift discount has expired.'));return}await env.DB.prepare("UPDATE personal_discounts SET status='ACTIVATED',activated_at=COALESCE(activated_at,CURRENT_TIMESTAMP) WHERE id=? AND user_id=? AND status IN ('OFFERED','ACTIVATED')").bind(id,u.id).run();await event(env,u.id,'personal_discount_activated',{discountId:id,percent:row.percent_discount});await safeEdit(env,cb.message,`🎁 <b>${l3(loc,'Знижку активовано!','Rabat aktywowany!','Discount activated!')}</b>
