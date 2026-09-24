@@ -89,7 +89,7 @@ const panelCopy={
 
 type PanelCopy=typeof panelCopy.en;
 const panelLocaleOf=(staff:any,from?:TgFrom):BotLocale=>{const v=String(staff?.u?.management_language||'').toLowerCase();if(v==='uk'||v==='pl'||v==='en')return v as BotLocale;const detected=localeOf(from);return detected==='uk'||detected==='pl'?detected:'en'};
-const pcopy=(locale:BotLocale):PanelCopy=>panelCopy[locale] as unknown as PanelCopy;
+const pcopy=(locale:BotLocale):PanelCopy=>panelCopy[locale==='uk'||locale==='pl'?locale:'en'] as unknown as PanelCopy;
 const languageName=(locale:BotLocale)=>locale==='uk'?'Українська':locale==='pl'?'Polski':locale==='de'?'Deutsch':locale==='fr'?'Français':'English';
 const startCommandLabel=(locale:BotLocale)=>locale==='de'?'Menü öffnen':locale==='fr'?'Ouvrir le menu':l3(locale,'Відкрити меню','Otwórz menu','Open menu');
 async function syncStartCommand(env:Env,telegramUserId:number,locale:BotLocale){
