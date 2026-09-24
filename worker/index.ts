@@ -6,7 +6,7 @@ import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
 
-const VERSION='1.1.55';
+const VERSION='1.1.56';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
