@@ -11,13 +11,16 @@ type TgMessage={message_id:number;chat:{id:number;type:string;title?:string;user
 type TgCallback={id:string;from:TgFrom;message?:TgMessage;data?:string};
 type TgUpdate={update_id:number;message?:TgMessage;callback_query?:TgCallback};
 type BotLocale='uk'|'pl'|'en'|'de'|'fr';
+const clientBotLocales:BotLocale[]=['uk','pl','en','de','fr'];
+const botLocaleLabels:Record<BotLocale,string>={uk:'🇺🇦 Українська',pl:'🇵🇱 Polski',en:'🇬🇧 English',de:'🇩🇪 Deutsch',fr:'🇫🇷 Français'};
+const botLanguageRows=()=>clientBotLocales.map(locale=>[{text:botLocaleLabels[locale],callback_data:`botlang:${locale}`}]);
 type Role='OWNER'|'ADMIN'|'MANAGER'|'CLIENT';
 type BotState={state:string;payload_json?:string|null};
 
 const LOCKED_OWNER_ID='375938798';
 const asUser=(u:TgFrom):TelegramUser=>({id:u.id,first_name:u.first_name||'Telegram user',last_name:u.last_name,username:u.username,language_code:u.language_code});
 const esc=(s:unknown)=>String(s??'').replace(/[&<>]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':'&gt;');
-const localeOf=(u?:TgFrom):BotLocale=>{const v=(u?.language_code||'').toLowerCase();return v.startsWith('uk')||v.startsWith('ua')?'uk':v.startsWith('pl')?'pl':v.startsWith('de')?'de':v.startsWith('fr')?'fr':'en'};
+const localeOf=(u?:TgFrom):BotLocale=>{const v=(u?.language_code||'').toLowerCase();const detected:BotLocale=v.startsWith('uk')||v.startsWith('ua')?'uk':v.startsWith('pl')?'pl':v.startsWith('de')?'de':v.startsWith('fr')?'fr':'en';return clientBotLocales.includes(detected)?detected:'en'};
 const isOwner=(env:Env,id:number|string|undefined)=>String(id??'')===String(env.OWNER_TELEGRAM_ID||LOCKED_OWNER_ID);
 const num=(v:unknown)=>Number(v||0);
 const yes=(v:unknown)=>String(v)==='1'||v===true;
@@ -1120,7 +1123,7 @@ ${text}`,mainKeyboard(env,origin,locale,role));return}
 
 Wybierz wygodny język. Zostanie zapamiętany dla kolejnych wiadomości.`,`🌐 <b>Bot language</b>
 
-Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[[{text:'🇺🇦 Українська',callback_data:'botlang:uk'}],[{text:'🇵🇱 Polski',callback_data:'botlang:pl'}],[{text:'🇬🇧 English',callback_data:'botlang:en'}],[{text:'🇩🇪 Deutsch',callback_data:'botlang:de'}],[{text:'🇫🇷 Français',callback_data:'botlang:fr'}],[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'client:settings'}]]});return}
+Choose your preferred language. It will be saved for future messages.`),{inline_keyboard:[...botLanguageRows(),[{text:l3(locale,'⬅️ Назад','⬅️ Wstecz','⬅️ Back'),callback_data:'client:settings'}]]});return}
   const botLang=(cb.data||'').match(/^botlang:(uk|pl|en|de|fr)$/);if(botLang){const {u}=await getRole(env,cb.from);if(env.DB&&u.id)await env.DB.prepare('UPDATE users SET language=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(botLang[1],u.id).run();const locale=botLang[1] as BotLocale;await syncStartCommand(env,cb.from.id,locale);if(cb.message.chat.type==='private')await showPersistentMenuKeyboard(env,cb.message.chat.id,locale);const text=await clientSettingsText(env,locale);await safeEdit(env,cb.message,`✅ ${l3(locale,'Мову змінено.','Język został zmieniony.','Language changed.')}
 
 ${text}`,await clientSettingsKeyboard(env,u.id,locale));return}
