@@ -123,21 +123,21 @@ async function seed(env:Env){
   await env.DB.prepare(`INSERT INTO services(slug,sort_order,category,duration_min,enabled,archived,image_url,icon_key,is_popular) VALUES(?,?,?,?,1,0,?,?,1) ON CONFLICT(slug) DO UPDATE SET sort_order=excluded.sort_order,category=excluded.category,duration_min=excluded.duration_min,image_url=COALESCE(services.image_url,excluded.image_url),icon_key=COALESCE(services.icon_key,excluded.icon_key)`).bind(service.slug,service.id*10,service.category,service.durationMin,service.defaultImageUrl||null,service.defaultIconKey||service.slug).run();
   const row=await env.DB.prepare('SELECT id FROM services WHERE slug=?').bind(service.slug).first<{id:number}>();
   if(!row?.id)continue;
-  for(const locale of ['uk','pl','en'] as const){
+  for(const locale of ['uk','pl','en','de','fr'] as const){
    const tr=service.translations[locale];
    await env.DB.prepare(`INSERT INTO service_translations(service_id,locale,title,description) VALUES(?,?,?,?) ON CONFLICT(service_id,locale) DO UPDATE SET title=excluded.title,description=excluded.description`).bind(row.id,locale,tr.title,tr.description).run();
   }
   await env.DB.prepare(`INSERT INTO service_prices(service_id,base_price,base_currency) VALUES(?,?,?) ON CONFLICT(service_id) DO NOTHING`).bind(row.id,service.basePrice,service.currency).run();
  }
  const optionSeeds=[
-  ['pet-hair',30,'PLN',10,{uk:'Шерсть тварин',pl:'Sierść zwierząt',en:'Pet hair'}],
-  ['ceramic-spray',40,'PLN',20,{uk:'Керамічний спрей',pl:'Spray ceramiczny',en:'Ceramic spray'}],
-  ['odor',25,'PLN',30,{uk:'Видалення запаху',pl:'Usuwanie zapachu',en:'Odor removal'}]
+  ['pet-hair',30,'PLN',10,{uk:'Шерсть тварин',pl:'Sierść zwierząt',en:'Pet hair',de:'Tierhaare',fr:'Poils d’animaux'}],
+  ['ceramic-spray',40,'PLN',20,{uk:'Керамічний спрей',pl:'Spray ceramiczny',en:'Ceramic spray',de:'Keramikspray',fr:'Spray céramique'}],
+  ['odor',25,'PLN',30,{uk:'Видалення запаху',pl:'Usuwanie zapachu',en:'Odor removal',de:'Geruchsentfernung',fr:'Élimination des odeurs'}]
  ] as const;
  for(const [slug,price,currency,sort,titles] of optionSeeds){
   let orow=await env.DB.prepare('SELECT id FROM service_options WHERE slug=? ORDER BY id LIMIT 1').bind(slug).first<any>();
   if(!orow?.id){const ins=await env.DB.prepare(`INSERT INTO service_options(slug,price,base_currency,pricing_type,enabled,sort_order) VALUES(?,?,?,'FIXED',1,?)`).bind(slug,price,currency,sort).run();orow={id:Number(ins.meta.last_row_id)}}
-  if(orow?.id)for(const loc of ['uk','pl','en'] as const)await env.DB.prepare(`INSERT OR IGNORE INTO service_option_translations(option_id,locale,title) VALUES(?,?,?)`).bind(orow.id,loc,titles[loc]).run();
+  if(orow?.id)for(const loc of ['uk','pl','en','de','fr'] as const)await env.DB.prepare(`INSERT OR IGNORE INTO service_option_translations(option_id,locale,title) VALUES(?,?,?)`).bind(orow.id,loc,titles[loc]).run();
  }
  const popularInit=await env.DB.prepare("SELECT value FROM settings WHERE key='popular_services_initialized'").first<any>();
  if(!popularInit){await env.DB.prepare(`UPDATE services SET is_popular=1 WHERE slug IN ('exterior-detailing','interior-detailing','full-detailing','ceramic-coating')`).run();await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES('popular_services_initialized','1',CURRENT_TIMESTAMP)").run()}
@@ -145,9 +145,9 @@ async function seed(env:Env){
  for(const [slug,mult,sort] of vehicles)await env.DB.prepare(`INSERT INTO vehicle_types(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
  const conditions=[['light',1,10],['medium',1.15,20],['heavy',1.35,30]];
  for(const [slug,mult,sort] of conditions)await env.DB.prepare(`INSERT INTO condition_levels(slug,multiplier,sort_order) VALUES(?,?,?) ON CONFLICT(slug) DO NOTHING`).bind(slug,mult,sort).run();
- await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO'),('bot.owner_contact_url',''),('order_notifications.chat_enabled','0'),('order_notifications.chat_id',''),('order_notifications.chat_title',''),('order_notifications.chat_locale','uk'),('request_cooldown_enabled','1'),('client_status_notifications_enabled','1'),('theme.neon_mode','STATIC'),('theme.neon_color','#a4ff00'),('reactivation.enabled','0'),('reactivation.days','90'),('reactivation.time','11:00'),('reactivation.message','Ми давно не бачились 🦎 Якщо авто знову потребує уваги — Chameleon Detailing поруч. Відкрийте Mini App, щоб переглянути послуги та залишити заявку.'),('reactivation.photo_file_id',''),('manager_offer_requires_approval','1'),('seasonal.mode','OFF'),('seasonal.manual_theme','DEFAULT'),('seasonal.halloween.start','2026-10-25T00:00:00.000Z'),('seasonal.halloween.end','2026-11-02T23:59:59.000Z'),('seasonal.new_year.start','2026-12-15T00:00:00.000Z'),('seasonal.new_year.end','2027-01-10T23:59:59.000Z'),('seasonal.easter.start','2027-03-20T00:00:00.000Z'),('seasonal.easter.end','2027-04-10T23:59:59.000Z'),('web_direct_access_enabled','0')").run().catch(()=>{});
+ await env.DB.prepare("INSERT OR IGNORE INTO settings(key,value) VALUES('maintenance.enabled','0'),('maintenance.message',''),('maintenance.eta',''),('business_timezone','Europe/Warsaw'),('working_days','1,2,3,4,5'),('working_hours','09:00-18:00'),('emergency_enabled','0'),('emergency_multiplier','1.5'),('reporting_currency','PLN'),('default_locale','en'),('available_locales','uk,pl,en,de,fr'),('referral_enabled','1'),('calculator_enabled','1'),('vip_enabled','1'),('brand_name','Chameleon Detailing'),('contact_phone',''),('theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),('theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),('theme.font_body','clamp(.94rem,3.8vw,1rem)'),('theme.font_small','clamp(.78rem,3.2vw,.875rem)'),('business_status_override','AUTO'),('bot.owner_contact_url',''),('order_notifications.chat_enabled','0'),('order_notifications.chat_id',''),('order_notifications.chat_title',''),('order_notifications.chat_locale','uk'),('request_cooldown_enabled','1'),('client_status_notifications_enabled','1'),('theme.neon_mode','STATIC'),('theme.neon_color','#a4ff00'),('reactivation.enabled','0'),('reactivation.days','90'),('reactivation.time','11:00'),('reactivation.message','Ми давно не бачились 🦎 Якщо авто знову потребує уваги — Chameleon Detailing поруч. Відкрийте Mini App, щоб переглянути послуги та залишити заявку.'),('reactivation.photo_file_id',''),('manager_offer_requires_approval','1'),('seasonal.mode','OFF'),('seasonal.manual_theme','DEFAULT'),('seasonal.halloween.start','2026-10-25T00:00:00.000Z'),('seasonal.halloween.end','2026-11-02T23:59:59.000Z'),('seasonal.new_year.start','2026-12-15T00:00:00.000Z'),('seasonal.new_year.end','2027-01-10T23:59:59.000Z'),('seasonal.easter.start','2027-03-20T00:00:00.000Z'),('seasonal.easter.end','2027-04-10T23:59:59.000Z'),('web_direct_access_enabled','0')").run().catch(()=>{});
  const contentKeys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','bot.client_menu_text','bot.client_settings_text','bot.help_text','calculator.result.note','vip.description','referral.description','contact.description'];
- for(const key of contentKeys)for(const locale of ['uk','pl','en'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
+ for(const key of contentKeys)for(const locale of ['uk','pl','en','de','fr'])await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,'').run();
  const managerDefaults:Record<string,number>={users:1,vip:1,whitelist:1,blacklist:1,orders:1,analytics:1,reports:1,services:0,pricing:0,calculator:0,content:0,languages:0,referrals:0,audit:0,settings:0,campaigns:0,discounts:0,offers:1};
  for(const [key,enabled] of Object.entries(managerDefaults))await env.DB.prepare('INSERT OR IGNORE INTO manager_permissions(permission_key,enabled) VALUES(?,?)').bind(key,enabled).run();
  const weeklyCount=await env.DB.prepare('SELECT COUNT(*) n FROM business_weekly_schedule').first<any>();
@@ -160,9 +160,11 @@ async function seed(env:Env){
  const referralCopy={
   uk:{'referral.title':'Запроси друга в Chameleon','referral.subtitle':'Поділися сервісом, якому довіряєш. Друг отримає зручний доступ до Chameleon Detailing, а ми подбаємо про його авто так само уважно.','referral.share_text':'Рекомендую Chameleon Detailing 🦎 Тут зручно підібрати послугу, розрахувати вартість і залишити заявку прямо в Telegram.'},
   pl:{'referral.title':'Zaproś znajomego do Chameleon','referral.subtitle':'Poleć miejsce, któremu ufasz. Znajomy szybko otworzy Chameleon Detailing w Telegramie, a my zadbamy o jego auto z taką samą uwagą.','referral.share_text':'Polecam Chameleon Detailing 🦎 W Telegramie możesz wygodnie wybrać usługę, sprawdzić cenę i wysłać zgłoszenie.'},
-  en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'}
+  en:{'referral.title':'Invite a friend to Chameleon','referral.subtitle':'Share a service you trust. Your friend gets quick access to Chameleon Detailing in Telegram, and we will care for their car with the same attention.','referral.share_text':'I recommend Chameleon Detailing 🦎 Choose a service, check the estimate and send a request directly in Telegram.'},
+  de:{'referral.title':'Freund zu Chameleon einladen','referral.subtitle':'Empfiehl einen Service, dem du vertraust. Dein Freund erhält schnellen Zugang zu Chameleon Detailing in Telegram.','referral.share_text':'Ich empfehle Chameleon Detailing 🦎 Leistung wählen, Preis prüfen und direkt in Telegram anfragen.'},
+  fr:{'referral.title':'Inviter un ami chez Chameleon','referral.subtitle':'Partagez un service de confiance. Votre ami accède rapidement à Chameleon Detailing dans Telegram.','referral.share_text':'Je recommande Chameleon Detailing 🦎 Choisissez un service, consultez le prix et envoyez une demande dans Telegram.'}
  } as const;
- for(const locale of ['uk','pl','en'] as const)for(const [key,value] of Object.entries(referralCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
+ for(const locale of ['uk','pl','en','de','fr'] as const)for(const [key,value] of Object.entries(referralCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
 
  const botMenuCopy={
   uk:{'bot.client_menu_text':`Ласкаво просимо до Chameleon Detailing 🦎
@@ -179,13 +181,23 @@ Napisz do właściciela Chameleon Detailing lub zmień język bota — wybierz o
 
 Services, estimates and requests are all inside the Mini App. If you need help, we are here for you.`,'bot.help_text':`💚 <b>Need a hand?</b>
 
-Message the owner of Chameleon Detailing or change the bot language — choose an option below.`}
+Message the owner of Chameleon Detailing or change the bot language — choose an option below.`},
+  de:{'bot.client_menu_text':`Willkommen bei Chameleon Detailing 🦎
+
+Leistungen, Kalkulationen und Anfragen findest du in der Mini App. Wenn du Hilfe brauchst, sind wir für dich da.`,'bot.help_text':`💚 <b>Brauchst du Hilfe?</b>
+
+Schreibe dem Inhaber von Chameleon Detailing oder ändere die Bot-Sprache — wähle unten eine Option.`},
+  fr:{'bot.client_menu_text':`Bienvenue chez Chameleon Detailing 🦎
+
+Services, estimations et demandes sont réunis dans la Mini App. Si vous avez besoin d’aide, nous sommes là.`,'bot.help_text':`💚 <b>Besoin d’aide ?</b>
+
+Contactez le propriétaire de Chameleon Detailing ou changez la langue du bot — choisissez une option ci-dessous.`}
  } as const;
- for(const locale of ['uk','pl','en'] as const)for(const [key,value] of Object.entries(botMenuCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
+ for(const locale of ['uk','pl','en','de','fr'] as const)for(const [key,value] of Object.entries(botMenuCopy[locale]))await env.DB.prepare(`INSERT OR IGNORE INTO content_blocks(key,locale,value) VALUES(?,?,?)`).bind(key,locale,value).run();
 }
 
 export async function upsertUser(env:Env,u:TelegramUser,owner=false){
- const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':'en';
+ const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':u.language_code?.startsWith('de')?'de':u.language_code?.startsWith('fr')?'fr':'en';
  if(!env.DB)return {id:0,telegram_user_id:u.id,first_name:u.first_name,username:u.username,language:lang,preferred_currency:env.DEFAULT_CURRENCY,role:owner?'OWNER':'CLIENT',client_tier:'STANDARD',phone_number:null};
  await ensureDb(env);
  await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role,photo_url) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,photo_url=COALESCE(excluded.photo_url,users.photo_url),last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT',u.photo_url||null).run();
@@ -205,7 +217,7 @@ export async function getServices(env:Env,locale='en',targetCurrency?:string|nul
 export async function getServiceOptions(env:Env,locale='en',targetCurrency='PLN'){
  const normalized=normalizeServiceLocale(locale),target=normalizeCurrency(targetCurrency);
  if(!env.DB){
-  const fallback:any[]=[{id:1,slug:'pet-hair',title:normalized==='uk'?'Шерсть тварин':normalized==='pl'?'Sierść zwierząt':'Pet hair',price:30,currency:'PLN'},{id:2,slug:'ceramic-spray',title:normalized==='uk'?'Керамічний спрей':normalized==='pl'?'Spray ceramiczny':'Ceramic spray',price:40,currency:'PLN'},{id:3,slug:'odor',title:normalized==='uk'?'Видалення запаху':normalized==='pl'?'Usuwanie zapachu':'Odor removal',price:25,currency:'PLN'}];
+  const fallback:any[]=[{id:1,slug:'pet-hair',title:normalized==='uk'?'Шерсть тварин':normalized==='pl'?'Sierść zwierząt':normalized==='de'?'Tierhaare':normalized==='fr'?'Poils d’animaux':'Pet hair',price:30,currency:'PLN'},{id:2,slug:'ceramic-spray',title:normalized==='uk'?'Керамічний спрей':normalized==='pl'?'Spray ceramiczny':normalized==='de'?'Keramikspray':normalized==='fr'?'Spray céramique':'Ceramic spray',price:40,currency:'PLN'},{id:3,slug:'odor',title:normalized==='uk'?'Видалення запаху':normalized==='pl'?'Usuwanie zapachu':normalized==='de'?'Geruchsentfernung':normalized==='fr'?'Élimination des odeurs':'Odor removal',price:25,currency:'PLN'}];
   return fallback.map(x=>({...x,price:convertCurrency(x.price,'PLN',target),currency:target}));
  }
  await ensureDb(env);
