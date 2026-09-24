@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 const dir=path.resolve('src/locales');
-const codes=['en','uk','pl'];
+const codes=['en','uk','pl','de','fr'];
 const data=Object.fromEntries(codes.map(code=>[code,JSON.parse(fs.readFileSync(path.join(dir,`${code}.json`),'utf8'))]));
 const base=new Set(Object.keys(data.en));
 let failed=false;
