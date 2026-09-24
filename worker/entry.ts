@@ -4,7 +4,7 @@ import {getGoogleSheetsState,runGoogleSheetsAutoSync,syncGoogleSheets} from './l
 import {handleGoogleSheetsTelegramUpdate,isGoogleSheetsUpdate} from './lib/sheets-bot';
 import {telegramWebhookSecret} from './lib/bot';
 
-const VERSION='1.1.55';
+const VERSION='1.1.56';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 
 export default {
