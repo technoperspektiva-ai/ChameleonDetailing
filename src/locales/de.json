@@ -139,5 +139,13 @@
   "calculator.emergencyExtra": "Dringlichkeitszuschlag",
   "calculator.emergencyTotal": "Dringlichkeits-Gesamtpreis",
   "calculator.emergencyMultiplier": "Dringlichkeitsfaktor",
-  "calculator.emergencyHint": "Prioritätsanfrage außerhalb der regulären Arbeitszeiten."
+  "calculator.emergencyHint": "Prioritätsanfrage außerhalb der regulären Arbeitszeiten.",
+  "orders.type.standard": "Standard",
+  "orders.type.deferred": "Nächster Arbeitstag",
+  "orders.type.emergency": "Dringend",
+  "orders.payment.pending": "Zahlung ausstehend",
+  "orders.payment.paid": "Bezahlt",
+  "orders.payment.unpaid": "Unbezahlt",
+  "orders.payment.refunded": "Erstattet",
+  "orders.payment.failed": "Zahlung fehlgeschlagen"
 }
