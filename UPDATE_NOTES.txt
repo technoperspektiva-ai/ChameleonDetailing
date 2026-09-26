@@ -1,14 +1,11 @@
-ChameleonDetailing v1.2.2 — Garage & Saved Car UX
+ChameleonDetailing v1.2.3 — Garage Polish & Service Recency
 
-• Added a dedicated My Garage tab directly after Home in the bottom navigation.
-• Saved cars now store and expose a canonical body/vehicle type.
-• Selecting a saved car in the calculator automatically applies its vehicle type.
-• When the car already defines the vehicle type, the calculator skips the redundant vehicle-type step.
-• Car creation/editing now uses a clear body-type selector instead of free-form text.
-• Added a brand selector with compact brand badges shown in the garage and calculator car picker.
-• Garage cards show brand/model/modification, body type, plate, ceramic status and visit count.
-• Each car now has a dedicated Completed Work view.
-• Completed Work shows all main services, selected options, staff-added services, completion date and final amount.
-• Car history endpoint now returns completed work only and includes staff-added extras.
-• Existing car package logic remains available and can still be applied from the calculator.
-• GitHub production build verified successfully.
+• Bottom navigation is now icon-first and visually lighter; labels stay accessible but are hidden from the compact UI.
+• Garage action buttons use restrained Lucide icons and shorter labels instead of emoji-heavy controls.
+• Completed-work view now shows the last completion date for each service on a saved car.
+• Cars not serviced for roughly 90+ days receive a subtle, friendly maintenance reminder.
+• Added a structured car brand/model catalog for the vehicle form, plus an Other Model fallback.
+• The catalog includes mainstream, premium and performance brands used across Europe and international markets.
+• Added future-ready model icon lookup: /car-models/<brand-model>.webp automatically displays when an original model asset exists, otherwise the brand badge is used.
+• Existing automatic body-type selection in the calculator remains active.
+• Production build verified successfully before release.
