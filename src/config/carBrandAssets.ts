@@ -97,4 +97,4 @@ export const carBrandSpriteStyle=(brand?:string)=>{
   backgroundPosition:`${col*(100/7)}% ${row*(100/6)}%`,
   backgroundRepeat:'no-repeat'
  } as const;
-};mport c0 from './carBrandSpriteChunks/chunk0';
+};
