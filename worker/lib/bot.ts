@@ -808,6 +808,25 @@ async function orderPaymentMethodPicker(env:Env,msg:TgMessage,from:TgFrom,id:num
  const amount=Number((r.final_job_price??r.calculated_price)??0).toFixed(2);
  await safeEdit(env,msg,'✅ <b>'+l3(locale,'Позначити як оплачено','Oznacz jako opłacone','Mark as paid')+'</b>\n\n'+l3(locale,'Сума','Kwota','Amount')+': <b>'+amount+' '+esc(r.currency||'PLN')+'</b>\n\n'+l3(locale,'Оберіть спосіб оплати:','Wybierz metodę płatności:','Choose payment method:'),{inline_keyboard:[[{text:l3(locale,'💵 Готівка','💵 Gotówka','💵 Cash'),callback_data:'order:'+id+':paycash'},{text:l3(locale,'💳 Картка','💳 Karta','💳 Card'),callback_data:'order:'+id+':paycard'}],[{text:pcopy(locale).cancel,callback_data:'order:'+id+':payment'}]]});
 }
+async function grantReferralRewardsIfEligible(env:Env,requestId:number,eventType:'COMPLETED'|'PAID'){
+ if(!env.DB)return;await ensureDb(env);
+ const expected=String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase();
+ if(expected!==eventType)return;
+ const req=await env.DB.prepare('SELECT id,user_id FROM service_requests WHERE id=?').bind(requestId).first<any>();if(!req)return;
+ const ref=await env.DB.prepare('SELECT id,referrer_user_id,referred_user_id FROM referrals WHERE referred_user_id=? ORDER BY id LIMIT 1').bind(req.user_id).first<any>();if(!ref?.id||!ref.referrer_user_id)return;
+ const exists=await env.DB.prepare('SELECT COUNT(*) n FROM referral_rewards WHERE referral_id=?').bind(ref.id).first<any>();if(Number(exists?.n||0)>0)return;
+ const type=String(await getSetting(env,'referral_referrer_bonus_type','PERCENT')).toUpperCase();
+ const value=Number(await getSetting(env,'referral_referrer_bonus_value','10'))||0;
+ const currency=String(await getSetting(env,'referral_referrer_bonus_currency','PLN')).toUpperCase();
+ const friendServiceId=Number(await getSetting(env,'referral_friend_service_id',''))||0;
+ if(value>0&&['PERCENT','FIXED'].includes(type))await env.DB.prepare('INSERT INTO referral_rewards(referral_id,user_id,beneficiary,reward_type,reward_value,reward_currency,status) VALUES(?,?,?,?,?,?,\'AVAILABLE\')').bind(ref.id,ref.referrer_user_id,'REFERRER',type,value,currency).run();
+ if(friendServiceId>0)await env.DB.prepare("INSERT INTO referral_rewards(referral_id,user_id,beneficiary,reward_type,reward_service_id,status) VALUES(?,?,?,'FREE_SERVICE',?,'AVAILABLE')").bind(ref.id,req.user_id,'FRIEND',friendServiceId).run();
+ if(eventType==='PAID')await env.DB.prepare('UPDATE referrals SET first_paid_job_at=COALESCE(first_paid_job_at,CURRENT_TIMESTAMP) WHERE id=?').bind(ref.id).run().catch(()=>{});
+ const people=await env.DB.prepare('SELECT id,telegram_user_id,language,first_name FROM users WHERE id IN (?,?)').bind(ref.referrer_user_id,req.user_id).all<any>();
+ for(const person of people.results||[]){const loc=(['uk','pl','en'].includes(String(person.language))?person.language:'en') as BotLocale;const isReferrer=Number(person.id)===Number(ref.referrer_user_id);const msg=isReferrer?l3(loc,'🎁 <b>Реферальний бонус активовано!</b>\n\nДруг успішно скористався Chameleon Detailing. Ваш бонус вже доступний і автоматично застосовується до наступного відповідного розрахунку.','🎁 <b>Bonus polecający aktywowany!</b>\n\nZnajomy skorzystał z Chameleon Detailing. Bonus jest już dostępny i zastosuje się automatycznie do kolejnej pasującej wyceny.','🎁 <b>Referral reward activated!</b>\n\nYour friend successfully used Chameleon Detailing. The reward is now available and will apply automatically to the next eligible quote.'):l3(loc,'🎁 <b>Бонус за запрошення активовано!</b>\n\nЯкщо для вас налаштована безкоштовна послуга, вона автоматично застосовується до відповідного розрахунку.','🎁 <b>Bonus za polecenie aktywowany!</b>\n\nJeśli skonfigurowano dla Ciebie darmową usługę, zastosuje się automatycznie do odpowiedniej wyceny.','🎁 <b>Invitation reward activated!</b>\n\nIf a free service is configured for you, it will apply automatically to the matching quote.');await sendMessage(env,Number(person.telegram_user_id),msg).catch(()=>{})}
+ await event(env,req.user_id,'referral_rewards_granted',{referralId:ref.id,requestId,eventType});
+}
+
 async function markOrderPaid(env:Env,msg:TgMessage,from:TgFrom,id:number,method:'CASH'|'CARD'){
  const staff=await requireStaff(env,from,'orders.manage');if(!staff||!env.DB)return;await ensureDb(env);
  const r=await env.DB.prepare("SELECT id,user_id,status,payment_status,calculated_price,final_job_price,currency FROM service_requests WHERE id=? AND staff_deleted_at IS NULL").bind(id).first<any>();
