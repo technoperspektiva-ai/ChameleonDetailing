@@ -5,7 +5,7 @@ import {haptic,initTelegram,notify,openBot,openExternal,shareTelegramLink,telegr
 import {createTranslator,Locale,localeLabels,localeNames,normalizeLocale,splashSlogan,supportedLocales,TranslationKey} from './locales';
 import {motion} from './config/motion';
 import {carBrands,modelsForBrand} from './config/carCatalog';
-import {carBrandSpriteStyle} from './config/carBrandAssets';
+import {carBrandSpriteStyle,carBrandStandaloneIconSrc} from './config/carBrandAssets';
 import {hasApprovedIcon} from './config/serviceIconAssets';
 import {ApprovedServiceIcon} from './components/ApprovedServiceIcon';
 import {PremiumMainServiceIcon} from './components/PremiumMainServiceIcon';
@@ -19,7 +19,7 @@ const canonicalBodyTypes=['sedan','hatchback','suv','large-suv','van'] as const;
 const mainServiceSlugs=new Set(['exterior-detailing','interior-detailing','full-detailing','ceramic-coating']);
 const bodyTypeLabel=(locale:Locale,type:string)=>({sedan:ui3(locale,'Седан','Sedan','Sedan'),hatchback:ui3(locale,'Хетчбек / універсал','Hatchback / kombi','Hatchback / wagon'),suv:'SUV','large-suv':ui3(locale,'Великий SUV','Duży SUV','Large SUV'),van:ui3(locale,'Вен / бус','Van / bus','Van / bus')} as Record<string,string>)[type]||type;
 const carVehicleType=(bodyType?:string)=>{const v=String(bodyType||'').trim().toLowerCase();if(['sedan','saloon','coupe','coupé','convertible','roadster','купе','кабріолет','кабриолет'].includes(v))return 'sedan';if(['hatchback','wagon','estate','touring','kombi','універсал','универсал','shooting-brake'].includes(v))return 'hatchback';if(['suv','crossover','кросовер','кроссовер'].includes(v))return 'suv';if(['large-suv','large suv','full-size suv'].includes(v))return 'large-suv';if(['van','minivan','bus','вен','бус'].includes(v))return 'van';return ''};
-function BrandBadge({brand}:{brand?:string}){return <span className="brand-badge approved-brand-icon" aria-label={brand||'Car'} style={carBrandSpriteStyle(brand)}/>}
+function BrandBadge({brand}:{brand?:string}){const src=carBrandStandaloneIconSrc(brand);return src?<span className="brand-badge approved-brand-icon standalone-brand-icon" aria-label={brand||'Car'}><img src={src} alt="" aria-hidden="true"/></span>:<span className="brand-badge approved-brand-icon" aria-label={brand||'Car'} style={carBrandSpriteStyle(brand)}/>}
 function CarIdentityIcon({brand}:{brand?:string;model?:string}){return <BrandBadge brand={brand}/>} 
 
 const wait=(ms:number)=>new Promise(r=>setTimeout(r,ms));
