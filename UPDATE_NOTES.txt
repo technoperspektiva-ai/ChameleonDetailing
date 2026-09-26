@@ -1,18 +1,14 @@
-ChameleonDetailing v1.2.0 — Multi-service, Cars, Dynamic Add-ons & Referral Rewards
+ChameleonDetailing v1.2.2 — Garage & Saved Car UX
 
-• Calculator now supports multiple main services in one request.
-• Service-specific logic controls whether vehicle, condition and extras are required.
-• Add-ons are linked to specific main services and filtered dynamically.
-• Added expanded detailing add-on catalog with a unified lime-green icon system.
-• Added My Cars: name, brand, model, modification, body type, plate, ceramic flag and owner phone.
-• A saved car can keep a default work package and be reused in the calculator.
-• Added per-car service history.
-• Requests store all selected services, options and selected car snapshot.
-• Owner/Admin service panel now controls condition/vehicle/options and linked add-ons.
-• Referral rewards can be configured for referrer + invited friend and granted on COMPLETED or PAID.
-• Referral rewards are automatically applied to eligible quotes and consumed on submitted order.
-• Telegram order cards show localized service names, options and saved car details.
-• Google Sheets / Excel reports now include cars, car packages, multi-service orders and referral rewards.
-• Reviews and Suggestions continue to sync into Google Sheets.
-• Project reset clears new client operational data while preserving business configuration.
-• GitHub CI and Cloudflare production build verified successfully before release.
+• Added a dedicated My Garage tab directly after Home in the bottom navigation.
+• Saved cars now store and expose a canonical body/vehicle type.
+• Selecting a saved car in the calculator automatically applies its vehicle type.
+• When the car already defines the vehicle type, the calculator skips the redundant vehicle-type step.
+• Car creation/editing now uses a clear body-type selector instead of free-form text.
+• Added a brand selector with compact brand badges shown in the garage and calculator car picker.
+• Garage cards show brand/model/modification, body type, plate, ceramic status and visit count.
+• Each car now has a dedicated Completed Work view.
+• Completed Work shows all main services, selected options, staff-added services, completion date and final amount.
+• Car history endpoint now returns completed work only and includes staff-added extras.
+• Existing car package logic remains available and can still be applied from the calculator.
+• GitHub production build verified successfully.
