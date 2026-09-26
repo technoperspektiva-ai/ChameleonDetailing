@@ -1,30 +1,18 @@
-ChameleonDetailing v1.1.54 UPDATE — Client Reviews & Suggestions
+ChameleonDetailing v1.2.0 — Multi-service, Cars, Dynamic Add-ons & Referral Rewards
 
-1. Added two client-menu actions in the Telegram bot:
-   - ⭐ Leave a review
-   - 💡 Suggest an idea
-   Labels follow UA / PL / EN.
-2. Client flow:
-   - enter review/suggestion text;
-   - optionally attach one photo;
-   - or submit without a photo;
-   - cancel is available at every step.
-3. Feedback is stored in D1 table client_feedback with:
-   - user ID,
-   - type (REVIEW / SUGGESTION),
-   - text,
-   - optional Telegram photo file_id,
-   - user language,
-   - status,
-   - creation time.
-4. Reports & Excel for Owner/Admin now includes:
-   - ⭐ Reviews Excel
-   - 💡 Suggestions Excel
-   Each report supports 7 / 30 / 90 days / All.
-5. Full Business Report now also contains separate Reviews and Suggestions sheets.
-6. Export includes client identity, text, photo presence, Telegram photo file ID, language, status and created timestamp.
-7. The report buttons are registered in the Owner menu editor under Reports.
-8. Full project data reset also clears reviews and suggestions.
-9. Existing payments, localized reports, social links, specialists and chat cleanup controls remain unchanged.
-
-Redeploy the Cloudflare Worker after updating the repository.
+• Calculator now supports multiple main services in one request.
+• Service-specific logic controls whether vehicle, condition and extras are required.
+• Add-ons are linked to specific main services and filtered dynamically.
+• Added expanded detailing add-on catalog with a unified lime-green icon system.
+• Added My Cars: name, brand, model, modification, body type, plate, ceramic flag and owner phone.
+• A saved car can keep a default work package and be reused in the calculator.
+• Added per-car service history.
+• Requests store all selected services, options and selected car snapshot.
+• Owner/Admin service panel now controls condition/vehicle/options and linked add-ons.
+• Referral rewards can be configured for referrer + invited friend and granted on COMPLETED or PAID.
+• Referral rewards are automatically applied to eligible quotes and consumed on submitted order.
+• Telegram order cards show localized service names, options and saved car details.
+• Google Sheets / Excel reports now include cars, car packages, multi-service orders and referral rewards.
+• Reviews and Suggestions continue to sync into Google Sheets.
+• Project reset clears new client operational data while preserving business configuration.
+• GitHub CI and Cloudflare production build verified successfully before release.
