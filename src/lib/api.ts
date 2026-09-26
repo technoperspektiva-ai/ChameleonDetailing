@@ -1,6 +1,7 @@
 import { tg } from './telegram';
 export type Service={id:number;slug:string;title:string;description:string;basePrice:number;currency:string;durationMin:number;category:string;standardBasePrice?:number;vipPricingMode?:string;clientTier?:string;imageUrl?:string;iconKey?:string;isPopular?:number|boolean};
-export type ServiceOption={id:number;slug:string;title:string;description?:string;price:number;currency:string};
+export type ServiceOption={id:number;slug:string;title:string;description?:string;price:number;currency:string;iconKey?:string;serviceSlugs?:string[]};
+export type ClientCar={id:number;name:string;brand?:string;model?:string;modification?:string;bodyType?:string;plate?:string;hasCeramic?:boolean;ownerPhone?:string;package?:{mainServices:string[];options:string[];vehicle?:string;condition?:string}|null;lastServiceAt?:string|null;visits?:number};
 export type ScheduleState={isOpen:boolean;isWorkingDay:boolean;nextWorkingAt?:string|null;emergencyEnabled:boolean;emergencyMultiplier:number;timezone:string;workingHours?:string;override?:'AUTO'|'OPEN'|'CLOSED'};
 export type Session={user:{telegramId:number;firstName:string;username?:string;locale:string;currency:string;tier:string;role:string;phoneShared?:boolean;photoUrl?:string|null};maintenance?:boolean;blocked?:boolean;blockedReason?:string|null;schedule:ScheduleState;theme?:{fontH1?:string;fontH2?:string;fontBody?:string;fontSmall?:string;neonMode?:'STATIC'|'RAINBOW';neonColor?:string;seasonalMode?:'OFF'|'AUTO'|'MANUAL';seasonalTheme?:'DEFAULT'|'HALLOWEEN'|'NEW_YEAR'|'EASTER'};demo?:boolean};
 const initData=()=>tg()?.initData||'';
@@ -17,6 +18,12 @@ export const api={
  deleteOrder:(id:number)=>json<any>(`/api/orders/${id}`,{method:'DELETE',body:JSON.stringify({initData:initData()})}),
  socials:()=>json<any>('/api/socials'),
  specialists:()=>json<any>('/api/specialists'),
+ cars:()=>json<{cars:ClientCar[]}>('/api/cars?initData='+encodeURIComponent(initData())),
+ saveCar:(body:any)=>json<any>('/api/cars',{method:'POST',body:JSON.stringify({...body,initData:initData()})}),
+ updateCar:(id:number,body:any)=>json<any>(`/api/cars/${id}`,{method:'PUT',body:JSON.stringify({...body,initData:initData()})}),
+ deleteCar:(id:number)=>json<any>(`/api/cars/${id}`,{method:'DELETE',body:JSON.stringify({initData:initData()})}),
+ saveCarPackage:(id:number,body:any)=>json<any>(`/api/cars/${id}/package`,{method:'PUT',body:JSON.stringify({...body,initData:initData()})}),
+ carHistory:(id:number)=>json<any>(`/api/cars/${id}/history?initData=${encodeURIComponent(initData())}`),
  status:()=>json<any>('/api/system/status'),
  profilePhotoUrl:()=>`/api/profile/photo?initData=${encodeURIComponent(initData())}`,
  referral:()=>json<{ok:boolean;code:string;url:string}>('/api/referrals/create',{method:'POST',body:JSON.stringify({initData:initData()})})
