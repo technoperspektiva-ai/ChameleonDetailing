@@ -204,3 +204,31 @@ nav button.active::after{content:"";position:absolute;bottom:2px;width:18px;heig
 .last-service-summary-head{display:flex;align-items:center;gap:7px;color:#aeb9ac;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}.last-service-summary-head svg{width:15px;height:15px;color:var(--neon-color);stroke-width:1.7}
 .last-service-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:7px;border-top:1px solid rgba(255,255,255,.055)}.last-service-row b{font-size:.78rem;font-weight:720}.last-service-row time{font-size:.7rem;color:var(--muted);white-space:nowrap}
 @media(max-width:420px){.car-actions{grid-template-columns:repeat(3,minmax(0,1fr)) 38px}.car-actions button{font-size:.62rem;padding-inline:6px}.car-actions button svg{width:14px;height:14px}}
+
+
+/* v1.2.4 — approved icons, expandable car cards, labels restored */
+nav{padding-top:7px}
+nav button{min-height:58px;gap:3px}
+nav button .nav-label{position:static!important;width:auto!important;height:auto!important;padding:0!important;margin:0!important;overflow:visible!important;clip:auto!important;white-space:nowrap!important;border:0!important;font-size:.58rem!important;line-height:1!important;color:inherit!important}
+nav button svg{width:20px;height:20px}
+nav button.active::after{bottom:1px}
+.approved-option-icon{width:54px;height:54px;display:block;object-fit:contain;filter:drop-shadow(0 0 9px rgba(164,255,0,.18))}
+.choice-icon .approved-option-icon{width:54px;height:54px}
+.client-car-card{padding:0;overflow:hidden}
+.client-car-summary{width:100%;min-height:88px;display:grid;grid-template-columns:58px minmax(0,1fr) 22px;align-items:center;gap:12px;padding:14px;border:0;background:transparent;color:inherit;text-align:left}
+.client-car-summary .client-car-icon{width:54px;height:54px}
+.client-car-summary .grow{min-width:0}
+.car-expand-chevron{width:18px;height:18px;color:#8e998b;transition:transform .2s ease}
+.client-car-card.expanded .car-expand-chevron{transform:rotate(90deg);color:var(--neon-color)}
+.car-dropdown{padding:0 14px 14px;border-top:1px solid color-mix(in srgb,var(--neon-color) 8%,var(--line));animation:carDropdownIn .18s ease both}
+@keyframes carDropdownIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.car-quick-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
+.car-quick-actions button{width:40px;height:40px;display:grid;place-items:center;border-radius:11px;border:1px solid color-mix(in srgb,var(--neon-color) 12%,var(--line));background:#121713;color:#c7d0c5}
+.car-quick-actions button svg{width:17px;height:17px;stroke-width:1.8}
+.car-quick-actions button:active{transform:scale(.97);border-color:color-mix(in srgb,var(--neon-color) 36%,var(--line));color:var(--neon-color)}
+.car-quick-actions button.danger{color:#b98d8d}
+.completed-orders-btn{width:100%;min-height:44px;margin-top:10px;display:grid;grid-template-columns:20px 1fr 18px;align-items:center;gap:9px;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--neon-color) 13%,var(--line));background:rgba(17,23,18,.74);color:#e7eee4;text-align:left;font-size:.74rem;font-weight:760}
+.completed-orders-btn svg{width:17px;height:17px;stroke-width:1.8;color:#aeb9ac}
+.completed-orders-btn svg:last-child{justify-self:end}
+.client-car-card:not(.expanded) .car-package-summary,.client-car-card:not(.expanded) .car-reminder{display:none}
+@media(max-width:420px){nav button .nav-label{font-size:.53rem!important}.client-car-summary{grid-template-columns:52px minmax(0,1fr) 20px;padding:12px}.approved-option-icon,.choice-icon .approved-option-icon{width:48px;height:48px}}
