@@ -232,3 +232,10 @@ nav button.active::after{bottom:1px}
 .completed-orders-btn svg:last-child{justify-self:end}
 .client-car-card:not(.expanded) .car-package-summary,.client-car-card:not(.expanded) .car-reminder{display:none}
 @media(max-width:420px){nav button .nav-label{font-size:.53rem!important}.client-car-summary{grid-template-columns:52px minmax(0,1fr) 20px;padding:12px}.approved-option-icon,.choice-icon .approved-option-icon{width:48px;height:48px}}
+
+
+/* v1.2.4 — approved uploaded detailing icon pack */
+.approved-service-icon{display:block;width:100%;height:100%;background-repeat:no-repeat;background-color:transparent;flex:0 0 auto}
+.service-art .approved-service-icon{width:100%;height:100%}
+.choice-icon .approved-service-icon{width:54px;height:54px;border-radius:12px;filter:drop-shadow(0 0 8px rgba(164,255,0,.14))}
+@media(max-width:420px){.choice-icon .approved-service-icon{width:48px;height:48px}}
