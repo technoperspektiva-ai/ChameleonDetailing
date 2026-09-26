@@ -1,12 +1,12 @@
 import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {Home,Sparkles,Calculator,Crown,UserRound,ChevronRight,Car,ShieldCheck,Droplets,Gem,Gift,Globe2,Check,ArrowLeft,Loader2,MessageCircle,Clock3,X,TriangleAlert,ClipboardList,RefreshCw,Trash2} from 'lucide-react';
-import {api,Service,ServiceOption,Session} from './lib/api';
+import {api,Service,ServiceOption,Session,ClientCar} from './lib/api';
 import {haptic,initTelegram,notify,openBot,openExternal,shareTelegramLink,telegramLanguage} from './lib/telegram';
 import {createTranslator,Locale,localeLabels,localeNames,normalizeLocale,splashSlogan,supportedLocales,TranslationKey} from './locales';
 import {motion} from './config/motion';
 import {DetailingIcon} from './components/DetailingIcon';
 
-type Tab='home'|'services'|'calculator'|'vip'|'profile'|'orders';
+type Tab='home'|'services'|'calculator'|'vip'|'profile'|'orders'|'cars';
 type SocialLink={type:string;url:string};
 type Specialist={id:number;name:string;roleTitle?:string;portfolioUrl?:string;contactUrl?:string;contactLabel?:string;photoUrl?:string};
 const vehicles=[['sedan','vehicle.sedan','/vehicle-types/sedan.webp'],['hatchback','vehicle.hatchback','/vehicle-types/hatchback.webp'],['suv','vehicle.suv','/vehicle-types/suv.webp'],['large-suv','vehicle.largeSuv','/vehicle-types/large-suv.webp'],['van','vehicle.van','/vehicle-types/van.webp']] as const;
@@ -50,8 +50,8 @@ const applyTheme=(theme?:Session['theme'])=>{
 };
 
 export function App(){
- const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return v==='calculator'||v==='orders'?v:'home'},[]);
- const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[serviceOptions,setServiceOptions]=useState<ServiceOption[]>([]),[content,setContent]=useState<Record<string,string>>({}),[socials,setSocials]=useState<SocialLink[]>([]),[specialists,setSpecialists]=useState<Specialist[]>([]),[tab,setTab]=useState<Tab>(initialTab);
+ const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return v==='calculator'||v==='orders'||v==='cars'?v:'home'},[]);
+ const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[serviceOptions,setServiceOptions]=useState<ServiceOption[]>([]),[content,setContent]=useState<Record<string,string>>({}),[socials,setSocials]=useState<SocialLink[]>([]),[specialists,setSpecialists]=useState<Specialist[]>([]),[cars,setCars]=useState<ClientCar[]>([]),[tab,setTab]=useState<Tab>(initialTab);
  const initialLocale=useMemo(()=>normalizeLocale(localStorage.getItem('chameleon.locale')||telegramLanguage()||navigator.language),[]);
  const [locale,setLocaleState]=useState<Locale>(initialLocale),[currency,setCurrency]=useState('PLN');
  const [startup,setStartup]=useState({stage:'INIT',progress:15,error:''}),[splash,setSplash]=useState(true),[directWebBlocked,setDirectWebBlocked]=useState(false);
@@ -70,8 +70,8 @@ export function App(){
    const resolvedCurrency=(s.user.currency||'PLN').toUpperCase();
    setLocale(resolved);setCurrency(resolvedCurrency);setSession(s);
    setStartup({stage:'CONFIG',progress:80,error:''});
-   const [sv,opt,ct,sc,sp]=await Promise.all([api.services(resolved,resolvedCurrency),api.options(resolved,resolvedCurrency),api.content(resolved),api.socials(),api.specialists()]);
-   setServices(sv.services);setServiceOptions(opt.options||[]);setContent(ct.content||{});setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[]);
+   const [sv,opt,ct,sc,sp,cr]=await Promise.all([api.services(resolved,resolvedCurrency),api.options(resolved,resolvedCurrency),api.content(resolved),api.socials(),api.specialists(),api.cars()]);
+   setServices(sv.services);setServiceOptions(opt.options||[]);setContent(ct.content||{});setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[]);setCars(Array.isArray(cr.cars)?cr.cars:[]);
    setStartup({stage:'READY',progress:100,error:''});
    const elapsed=Date.now()-started;if(elapsed<motion.splashMin)await wait(motion.splashMin-elapsed);await wait(160);setSplash(false);
   }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
@@ -93,10 +93,11 @@ export function App(){
    {!session.schedule.isOpen&&<HolidayBanner t={t} schedule={session.schedule} locale={locale}/>}
    {tab==='home'&&<HomePage t={t} services={services} goto={goto} currency={currency} content={content} socials={socials} specialists={specialists} locale={locale}/>}
    {tab==='services'&&<ServicesPage t={t} services={services} goto={goto} currency={currency}/>}
-   {tab==='calculator'&&<CalculatorPage t={t} services={services} options={serviceOptions} currency={currency} schedule={session.schedule}/>}
+   {tab==='calculator'&&<CalculatorPage t={t} services={services} options={serviceOptions} currency={currency} schedule={session.schedule} cars={cars} refreshCars={()=>api.cars().then(x=>setCars(x.cars||[]))} locale={locale}/>}
    {tab==='vip'&&<VipPage t={t} tier={session.user.tier}/>}
    {tab==='profile'&&<ProfilePage t={t} session={session} locale={locale} setLocale={setLocale} currency={currency} setCurrency={setCurrency} goto={goto}/>}
-   {tab==='orders'&&<OrdersPage t={t} currency={currency}/>}
+   {tab==='orders'&&<OrdersPage t={t} currency={currency}/>} 
+   {tab==='cars'&&<CarsPage locale={locale} cars={cars} services={services} goto={goto} refresh={()=>api.cars().then(x=>setCars(x.cars||[]))}/>}
   </main>
   <nav aria-label="Primary">{([['home',Home,t('nav.home')],['services',Sparkles,t('nav.services')],['calculator',Calculator,t('nav.calculator')],['vip',Crown,t('nav.vip')],['profile',UserRound,t('nav.profile')]] as any).map(([id,I,label]:any)=><button className={tab===id?'active':''} onClick={()=>goto(id)} key={id}><I/><span>{label}</span></button>)}</nav>
  </div>
