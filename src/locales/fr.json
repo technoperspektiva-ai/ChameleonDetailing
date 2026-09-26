@@ -139,5 +139,13 @@
   "calculator.emergencyExtra": "Supplément urgence",
   "calculator.emergencyTotal": "Total urgence",
   "calculator.emergencyMultiplier": "Coefficient d’urgence",
-  "calculator.emergencyHint": "Demande prioritaire en dehors des heures d’ouverture."
+  "calculator.emergencyHint": "Demande prioritaire en dehors des heures d’ouverture.",
+  "orders.type.standard": "Standard",
+  "orders.type.deferred": "Prochain jour ouvrable",
+  "orders.type.emergency": "Urgent",
+  "orders.payment.pending": "Paiement en attente",
+  "orders.payment.paid": "Payé",
+  "orders.payment.unpaid": "Non payé",
+  "orders.payment.refunded": "Remboursé",
+  "orders.payment.failed": "Échec du paiement"
 }
