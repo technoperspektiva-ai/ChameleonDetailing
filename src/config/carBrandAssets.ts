@@ -102,5 +102,5 @@ export const carBrandSpriteStyle=(brand?:string)=>{
 const standaloneCarBrandIcons=new Set(['audi']);
 export const carBrandStandaloneIconSrc=(brand?:string)=>{
  const key=normalizeBrandAssetKey(brand);
- return standaloneCarBrandIcons.has(key)?`/car-brand-icons/${key}.png`:null;
+ return standaloneCarBrandIcons.has(key)?`/car-brand-icons/${key}.svg`:null;
 };
