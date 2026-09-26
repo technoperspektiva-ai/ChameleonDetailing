@@ -1,12 +1,14 @@
-ChameleonDetailing v1.2.4 — Approved Icons & Garage Interaction
+ChameleonDetailing v1.2.5 — Approved Service & Car Brand Icons
 
-• Integrated the user-provided approved ChameleonDetailing icon pack for base services and supported add-ons.
-• Approved icons are packaged as one optimized transparent sprite to keep their visual style consistent and avoid missing binary assets.
-• Admin-provided custom service images still take priority; approved icons are used for the standard catalog.
-• Saved car cards are now collapsed by default.
-• Tapping a car opens a compact action panel instead of showing all controls permanently.
-• Edit and delete are compact icon actions inside the expanded car panel.
-• Estimate remains available as a compact action.
-• A separate full-width Completed Orders button sits at the bottom of the expanded car panel.
-• Bottom navigation labels have been restored under the icons.
-• Existing garage history, service recency, reminders, automatic vehicle type and model catalog remain intact.
+• Replaced the disliked generated calculator/service glyphs with the approved ChameleonDetailing service icon pack.
+• The approved pack is used for the four main services and all matching detailing add-ons.
+• Related add-ons (wheel tar/metal fallout, fabric/carpet ceramic, leather cleaning, rain repellent, etc.) reuse the closest approved icon instead of falling back to inconsistent generated artwork.
+• Unknown/custom services now use a restrained generic Sparkles fallback instead of the previous car/detailing glyph generator.
+• Integrated the supplied automobile brand icon pack as an optimized sprite with brand mapping and fallback.
+• Garage cards, car selector, car form and completed-work header now use the supplied brand artwork instead of text/letter badges.
+• Saved car cards remain collapsed by default; tapping the car expands the compact action area.
+• Expanded car actions are now only Edit and Delete icon buttons.
+• Completed Orders stays as a separate full-width button below those actions.
+• Bottom navigation labels are restored under all six icons.
+• Existing automatic body-type selection, model catalog, service history, recency dates and friendly return reminders remain intact.
+• GitHub production build is verified through CI before deployment.
