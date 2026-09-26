@@ -182,3 +182,25 @@ html.theme-halloween .primary{background:linear-gradient(180deg,#ffba35,#ff8700)
 .car-form-grid select{width:100%;min-height:46px;border-radius:13px;border:1px solid var(--line);background:#111612;color:#f5faf2;padding:10px 34px 10px 12px;font:inherit;box-sizing:border-box}.car-form-grid select:focus{outline:none;border-color:color-mix(in srgb,var(--neon-color) 55%,var(--line));box-shadow:0 0 0 3px color-mix(in srgb,var(--neon-color) 7%,transparent)}.field-hint{font-size:.68rem;color:var(--muted);line-height:1.35}
 .car-history-title{display:flex;align-items:center;gap:11px;margin-bottom:16px}.car-history-title .brand-badge{width:48px;height:48px;border-radius:15px}.car-history-title h2,.car-history-title small{margin:0}.car-history-title small{color:var(--muted);font-size:.72rem}.completed-work-list{gap:10px}.completed-work-card{padding:12px;border-radius:16px;background:#111612;border:1px solid color-mix(in srgb,var(--neon-color) 12%,var(--line))}.completed-work-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;padding-bottom:9px;border-bottom:1px solid var(--line)}.completed-work-head>div{display:grid}.completed-work-head small{color:var(--muted);font-size:.68rem;margin-top:2px}.completed-work-head strong{color:var(--neon-color);font-size:.88rem}.completed-work-services{display:grid;gap:4px;padding-top:9px}.completed-work-services>span{color:var(--muted);font-size:.68rem;text-transform:uppercase;letter-spacing:.05em}.completed-work-services>b{font-size:.78rem;font-weight:750}.completed-work-services.extras>b{color:#c9d5c8}
 @media(max-width:420px){nav button{font-size:.52rem}nav svg{width:19px;height:19px}.garage-head p{font-size:.82rem}}
+
+
+/* v1.2.3 — restrained navigation and garage details */
+nav{padding-top:6px}
+nav button{position:relative;min-height:50px;gap:0}
+nav button .nav-label{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+nav button svg{width:22px;height:22px;stroke-width:1.7}
+nav button.active::after{content:"";position:absolute;bottom:2px;width:18px;height:2px;border-radius:999px;background:var(--neon-color);box-shadow:0 0 10px color-mix(in srgb,var(--neon-color) 45%,transparent)}
+.car-actions{grid-template-columns:repeat(3,minmax(0,1fr)) 40px;gap:6px}
+.car-actions button{min-height:40px;padding:8px 9px;display:flex;align-items:center;justify-content:center;gap:6px;border-radius:11px;background:rgba(17,23,18,.74);border-color:color-mix(in srgb,var(--neon-color) 10%,var(--line));font-size:.68rem;font-weight:760;letter-spacing:.01em}
+.car-actions button svg{width:15px;height:15px;stroke-width:1.8;color:#b9c4b7}
+.car-actions button:hover,.car-actions button:active{border-color:color-mix(in srgb,var(--neon-color) 26%,var(--line));background:color-mix(in srgb,var(--neon-color) 4%,#101510)}
+.car-actions button.icon-only{padding:0}.car-actions button.icon-only span{display:none}
+.car-actions button.danger svg{color:#c78989}
+.car-model-icon{width:100%;height:100%;object-fit:contain;display:block;filter:drop-shadow(0 0 8px color-mix(in srgb,var(--neon-color) 16%,transparent))}
+.client-car-icon .car-model-icon{padding:4px;box-sizing:border-box}
+.car-reminder{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;margin-top:10px;padding:10px 11px;border-radius:13px;background:color-mix(in srgb,var(--neon-color) 3%,#111612);border:1px solid color-mix(in srgb,var(--neon-color) 10%,var(--line));color:#aeb8ac;font-size:.72rem;line-height:1.45}
+.car-reminder svg{width:16px;height:16px;margin-top:1px;color:color-mix(in srgb,var(--neon-color) 60%,#9aa59a);stroke-width:1.7}
+.last-service-summary{display:grid;gap:7px;margin:4px 0 14px;padding:12px;border-radius:15px;background:#0f1410;border:1px solid color-mix(in srgb,var(--neon-color) 11%,var(--line))}
+.last-service-summary-head{display:flex;align-items:center;gap:7px;color:#aeb9ac;font-size:.7rem;text-transform:uppercase;letter-spacing:.06em}.last-service-summary-head svg{width:15px;height:15px;color:var(--neon-color);stroke-width:1.7}
+.last-service-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:7px;border-top:1px solid rgba(255,255,255,.055)}.last-service-row b{font-size:.78rem;font-weight:720}.last-service-row time{font-size:.7rem;color:var(--muted);white-space:nowrap}
+@media(max-width:420px){.car-actions{grid-template-columns:repeat(3,minmax(0,1fr)) 38px}.car-actions button{font-size:.62rem;padding-inline:6px}.car-actions button svg{width:14px;height:14px}}
