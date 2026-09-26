@@ -33,9 +33,25 @@ export const approvedIconIndex:Record<string,number>={
  'wax':17
 };
 
-export const hasApprovedIcon=(slug?:string)=>Object.prototype.hasOwnProperty.call(approvedIconIndex,String(slug||''));
+const approvedIconAlias:Record<string,string>={
+ 'wheel-bitumen-removal':'body-bitumen-removal',
+ 'wheel-metal-fallout-removal':'body-metal-fallout-removal',
+ 'carpet-ceramic':'ceramic-coating',
+ 'fabric-ceramic':'ceramic-coating',
+ 'leather-cleaning':'leather-protection',
+ 'paint-protection-film-care':'ceramic-coating',
+ 'ppf-maintenance':'ceramic-coating',
+ 'wheel-coating':'ceramic-coating',
+ 'rain-repellent':'anti-rain',
+ 'tar-removal':'body-bitumen-removal',
+ 'iron-remover':'body-metal-fallout-removal',
+ 'pet-hair-removal':'pet-hair',
+ 'odor-removal':'odor'
+};
+const approvedKey=(slug?:string)=>{const key=String(slug||'');return approvedIconAlias[key]||key};
+export const hasApprovedIcon=(slug?:string)=>Object.prototype.hasOwnProperty.call(approvedIconIndex,approvedKey(slug));
 export const approvedIconStyle=(slug?:string)=>{
- const index=approvedIconIndex[String(slug||'')];
+ const index=approvedIconIndex[approvedKey(slug)];
  if(index===undefined)return undefined;
  const col=index%5,row=Math.floor(index/5);
  return {
