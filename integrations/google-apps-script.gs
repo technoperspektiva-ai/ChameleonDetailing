@@ -1,5 +1,5 @@
 /**
- * ChameleonDetailing v1.1.46 — Google Sheets report receiver
+ * ChameleonDetailing v1.2.0 — Google Sheets report receiver
  * Bound spreadsheet:
  * https://docs.google.com/spreadsheets/d/1L8lF0A3SIQ06pmRDCq-7RwqNWvnRL9nomsMg0I7UxxM/edit
  *
@@ -23,6 +23,11 @@ const REPORT_SHEETS = [
   'Referrals',
   'Analytics',
   'Staff Activity',
+  'Client Cars',
+  'Car Packages',
+  'Referral Rewards',
+  'Reviews',
+  'Suggestions',
   'Business Report',
 ];
 
