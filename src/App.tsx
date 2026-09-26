@@ -122,7 +122,7 @@ function ServicesPage({t,services,goto,currency}:any){return <section><div class
 const ui3=(locale:Locale,uk:string,pl:string,en:string)=>locale==='uk'?uk:locale==='pl'?pl:en;
 function CalculatorPage({t,services,options,currency,schedule,cars,refreshCars,locale}:any){
  const [step,setStep]=useState(0),[selected,setSelected]=useState<string[]>(services[0]?.slug?[services[0].slug]:[]),[vehicle,setVehicle]=useState('sedan'),[condition,setCondition]=useState('normal'),[extra,setExtra]=useState<string[]>([]),[quote,setQuote]=useState<any>(null),[busy,setBusy]=useState(false),[sent,setSent]=useState(false),[processing,setProcessing]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[carId,setCarId]=useState<number|null>(null); const timers=useRef<any[]>([]);
- useEffect(()=>{if(!selected.length&&services[0])setSelected([services[0].slug])},[services]); useEffect(()=>()=>timers.current.forEach(clearTimeout),[]);
+ useEffect(()=>{if(!selected.length&&services[0])setSelected([services[0].slug])},[services]); useEffect(()=>{const saved=Number(sessionStorage.getItem('chameleon.carId')||0);if(saved&&(cars||[]).some((x:ClientCar)=>x.id===saved)){setCarId(saved);sessionStorage.removeItem('chameleon.carId')}},[(cars||[]).length]); useEffect(()=>()=>timers.current.forEach(clearTimeout),[]);
  const selectedServices=services.filter((x:Service)=>selected.includes(x.slug));
  const requiresVehicle=selectedServices.some((x:Service)=>x.requirements?.requireVehicle!==false);
  const requiresCondition=selectedServices.some((x:Service)=>x.requirements?.requireCondition!==false);
