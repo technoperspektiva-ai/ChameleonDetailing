@@ -37,7 +37,6 @@ export const carModelCatalog:Record<string,string[]>={
  'BYD':['Dolphin','Atto 3','Seal','Seal U','Tang'],
  'Geely':['Coolray','Atlas','Monjaro','Emgrand'],
  'Chery':['Tiggo 4','Tiggo 7','Tiggo 8','Arrizo 8'],
- 'Mazda':['Mazda2','Mazda3','Mazda6','CX-30','CX-5','CX-60','CX-80','MX-5','MX-30']
 };
 export const carBrands=Object.keys(carModelCatalog).sort((a,b)=>a.localeCompare(b));
 export const modelsForBrand=(brand:string)=>carModelCatalog[brand]||[];
