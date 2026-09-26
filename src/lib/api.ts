@@ -1,5 +1,5 @@
 import { tg } from './telegram';
-export type Service={id:number;slug:string;title:string;description:string;basePrice:number;currency:string;durationMin:number;category:string;standardBasePrice?:number;vipPricingMode?:string;clientTier?:string;imageUrl?:string;iconKey?:string;isPopular?:number|boolean};
+export type Service={id:number;slug:string;title:string;description:string;basePrice:number;currency:string;durationMin:number;category:string;standardBasePrice?:number;vipPricingMode?:string;clientTier?:string;imageUrl?:string;iconKey?:string;isPopular?:number|boolean;requirements?:{requireCondition:boolean;requireVehicle:boolean;allowOptions:boolean;allowMultipleOptions:boolean}};
 export type ServiceOption={id:number;slug:string;title:string;description?:string;price:number;currency:string;iconKey?:string;serviceSlugs?:string[]};
 export type ClientCar={id:number;name:string;brand?:string;model?:string;modification?:string;bodyType?:string;plate?:string;hasCeramic?:boolean;ownerPhone?:string;package?:{mainServices:string[];options:string[];vehicle?:string;condition?:string}|null;lastServiceAt?:string|null;visits?:number};
 export type ScheduleState={isOpen:boolean;isWorkingDay:boolean;nextWorkingAt?:string|null;emergencyEnabled:boolean;emergencyMultiplier:number;timezone:string;workingHours?:string;override?:'AUTO'|'OPEN'|'CLOSED'};
