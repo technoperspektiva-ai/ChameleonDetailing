@@ -8,7 +8,6 @@ import {carBrands,modelsForBrand} from './config/carCatalog';
 import {carBrandSpriteStyle} from './config/carBrandAssets';
 import {hasApprovedIcon} from './config/serviceIconAssets';
 import {ApprovedServiceIcon} from './components/ApprovedServiceIcon';
-import {DetailingIcon} from './components/DetailingIcon';
 
 type Tab='home'|'services'|'calculator'|'vip'|'profile'|'orders'|'cars';
 type SocialLink={type:string;url:string};
