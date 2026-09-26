@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_pr
 CREATE TABLE IF NOT EXISTS vip_pricing_rules(service_id INTEGER NOT NULL,tier TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'PERCENT',percent_discount REAL,multiplier REAL,fixed_price REAL,currency TEXT,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(service_id,tier));
 CREATE TABLE IF NOT EXISTS vehicle_types(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS condition_levels(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',icon_key TEXT,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_option_translations(option_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',PRIMARY KEY(option_id,locale));
 CREATE TABLE IF NOT EXISTS service_requirements(service_id INTEGER PRIMARY KEY,require_condition INTEGER NOT NULL DEFAULT 1,require_vehicle INTEGER NOT NULL DEFAULT 1,allow_options INTEGER NOT NULL DEFAULT 1,allow_multiple_options INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_option_links(service_id INTEGER NOT NULL,option_id INTEGER NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(service_id,option_id));
@@ -116,6 +116,7 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN personal_discount_id INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN offer_id INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN created_by_staff_id INTEGER");
+ await safeAlter(env,"ALTER TABLE service_options ADD COLUMN icon_key TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN services_json TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN car_id INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN car_name TEXT");
@@ -142,13 +143,29 @@ async function seed(env:Env){
   await env.DB.prepare(`INSERT INTO service_prices(service_id,base_price,base_currency) VALUES(?,?,?) ON CONFLICT(service_id) DO NOTHING`).bind(row.id,service.basePrice,service.currency).run();
  }
  const optionSeeds=[
-  ['pet-hair',30,'PLN',10,{uk:'Шерсть тварин',pl:'Sierść zwierząt',en:'Pet hair',de:'Tierhaare',fr:'Poils d’animaux'}],
-  ['ceramic-spray',40,'PLN',20,{uk:'Керамічний спрей',pl:'Spray ceramiczny',en:'Ceramic spray',de:'Keramikspray',fr:'Spray céramique'}],
-  ['odor',25,'PLN',30,{uk:'Видалення запаху',pl:'Usuwanie zapachu',en:'Odor removal',de:'Geruchsentfernung',fr:'Élimination des odeurs'}]
+  ['pet-hair',30,'PLN',10,'pet-hair',1,{uk:'Видалення шерсті',pl:'Usuwanie sierści',en:'Pet Hair Removal',de:'Tierhaarentfernung',fr:'Élimination des poils'}],
+  ['ceramic-spray',40,'PLN',20,'ceramic-coating',1,{uk:'Керамічний спрей',pl:'Spray ceramiczny',en:'Ceramic Spray',de:'Keramikspray',fr:'Spray céramique'}],
+  ['odor',25,'PLN',30,'odor-removal',1,{uk:'Видалення запаху',pl:'Usuwanie zapachu',en:'Odor Removal',de:'Geruchsentfernung',fr:'Élimination des odeurs'}],
+  ['anti-rain',0,'PLN',40,'rain-repellent',0,{uk:'Антидощ',pl:'Anti Rain',en:'Anti Rain',de:'Regenabweiser',fr:'Anti-pluie'}],
+  ['body-bitumen-removal',0,'PLN',50,'tar-removal',0,{uk:'Очистка кузова від бітуму',pl:'Usuwanie smoły z nadwozia',en:'Body Tar Removal',de:'Teerentfernung Karosserie',fr:'Retrait du goudron carrosserie'}],
+  ['body-metal-fallout-removal',0,'PLN',60,'iron-remover',0,{uk:'Очистка кузова від металевих вкраплень',pl:'Usuwanie osadów metalicznych z nadwozia',en:'Body Iron Fallout Removal',de:'Flugrostentfernung Karosserie',fr:'Décontamination ferreuse carrosserie'}],
+  ['hard-wax',0,'PLN',70,'hard-wax',0,{uk:'Твердий віск',pl:'Twardy wosk',en:'Hard Wax',de:'Hartwachs',fr:'Cire dure'}],
+  ['liquid-wax',0,'PLN',80,'liquid-wax',0,{uk:'Рідкий віск',pl:'Płynny wosk',en:'Liquid Wax',de:'Flüssigwachs',fr:'Cire liquide'}],
+  ['wheel-bitumen-removal',0,'PLN',90,'wheel-tar-removal',0,{uk:'Очистка дисків від бітуму',pl:'Usuwanie smoły z felg',en:'Wheel Tar Removal',de:'Teerentfernung Felgen',fr:'Retrait du goudron jantes'}],
+  ['wheel-metal-fallout-removal',0,'PLN',100,'wheel-iron-remover',0,{uk:'Очистка дисків від металевих вкраплень',pl:'Usuwanie osadów metalicznych z felg',en:'Wheel Iron Fallout Removal',de:'Flugrostentfernung Felgen',fr:'Décontamination ferreuse jantes'}],
+  ['carpet-ceramic',0,'PLN',110,'mat-cleaning',0,{uk:'Кераміка на коврики',pl:'Ceramika na dywaniki',en:'Carpet Ceramic',de:'Teppich-Keramikschutz',fr:'Céramique tapis'}],
+  ['fabric-ceramic',0,'PLN',120,'fabric-cleaning',0,{uk:'Кераміка на тканеві сидіння',pl:'Ceramika na tapicerkę materiałową',en:'Fabric Ceramic',de:'Textil-Keramikschutz',fr:'Céramique tissu'}],
+  ['leather-cleaning',0,'PLN',130,'leather-care',0,{uk:'Чистка шкіри',pl:'Czyszczenie skóry',en:'Leather Cleaning',de:'Lederreinigung',fr:'Nettoyage cuir'}],
+  ['leather-protection',0,'PLN',140,'leather-protection',0,{uk:'Консервація шкіри',pl:'Konserwacja skóry',en:'Leather Protection',de:'Lederpflege',fr:'Protection cuir'}],
+  ['seat-cleaning-1',0,'PLN',150,'seat-cleaning-1',0,{uk:'Хімчистка 1 сидіння',pl:'Pranie 1 fotela',en:'1 Seat Cleaning',de:'1 Sitz Reinigung',fr:'Nettoyage 1 siège'}],
+  ['seat-cleaning-2',0,'PLN',160,'seat-cleaning-2',0,{uk:'Хімчистка 2 сидінь',pl:'Pranie 2 foteli',en:'2 Seat Cleaning',de:'2 Sitze Reinigung',fr:'Nettoyage 2 sièges'}],
+  ['seat-cleaning-4',0,'PLN',170,'seat-cleaning-4',0,{uk:'Хімчистка 4 сидінь',pl:'Pranie 4 foteli',en:'4 Seat Cleaning',de:'4 Sitze Reinigung',fr:'Nettoyage 4 sièges'}],
+  ['plastic-restoration',0,'PLN',180,'plastic-trim-restoration',0,{uk:'Чорніння пластиків',pl:'Odświeżenie plastików',en:'Plastic Restoration',de:'Kunststoffauffrischung',fr:'Rénovation plastiques'}]
  ] as const;
- for(const [slug,price,currency,sort,titles] of optionSeeds){
+ for(const [slug,price,currency,sort,iconKey,enabled,titles] of optionSeeds){
   let orow=await env.DB.prepare('SELECT id FROM service_options WHERE slug=? ORDER BY id LIMIT 1').bind(slug).first<any>();
-  if(!orow?.id){const ins=await env.DB.prepare(`INSERT INTO service_options(slug,price,base_currency,pricing_type,enabled,sort_order) VALUES(?,?,?,'FIXED',1,?)`).bind(slug,price,currency,sort).run();orow={id:Number(ins.meta.last_row_id)}}
+  if(!orow?.id){const ins=await env.DB.prepare(`INSERT INTO service_options(slug,price,base_currency,pricing_type,icon_key,enabled,sort_order) VALUES(?,?,?,'FIXED',?,?,?)`).bind(slug,price,currency,iconKey,enabled,sort).run();orow={id:Number(ins.meta.last_row_id)}}
+  else await env.DB.prepare('UPDATE service_options SET icon_key=COALESCE(icon_key,?),sort_order=CASE WHEN sort_order=0 THEN ? ELSE sort_order END WHERE id=?').bind(iconKey,sort,orow.id).run();
   if(orow?.id)for(const loc of ['uk','pl','en','de','fr'] as const)await env.DB.prepare(`INSERT OR IGNORE INTO service_option_translations(option_id,locale,title) VALUES(?,?,?)`).bind(orow.id,loc,titles[loc]).run();
  }
  // Dynamic service behavior and option links. Existing catalogs stay intact; these defaults only initialize missing relations.
@@ -158,8 +175,8 @@ async function seed(env:Env){
   await env.DB.prepare("INSERT OR IGNORE INTO service_requirements(service_id,require_condition,require_vehicle,allow_options,allow_multiple_options) VALUES(?,?,1,1,1)").bind(sr.id,requireCondition).run();
  }
  const linkOption=async(serviceSlug:string,optionSlug:string,sort=0)=>{const sr=await env.DB!.prepare('SELECT id FROM services WHERE slug=?').bind(serviceSlug).first<any>();const op=await env.DB!.prepare('SELECT id FROM service_options WHERE slug=?').bind(optionSlug).first<any>();if(sr?.id&&op?.id)await env.DB!.prepare('INSERT OR IGNORE INTO service_option_links(service_id,option_id,sort_order) VALUES(?,?,?)').bind(sr.id,op.id,sort).run()};
- await linkOption('interior-detailing','pet-hair',10);await linkOption('interior-detailing','odor',20);await linkOption('exterior-detailing','ceramic-spray',10);
-
+ for(const slug of ['anti-rain','body-bitumen-removal','body-metal-fallout-removal','hard-wax','liquid-wax','wheel-bitumen-removal','wheel-metal-fallout-removal','ceramic-spray'])await linkOption('exterior-detailing',slug,10);
+ for(const slug of ['pet-hair','odor','carpet-ceramic','fabric-ceramic','leather-cleaning','leather-protection','seat-cleaning-1','seat-cleaning-2','seat-cleaning-4','plastic-restoration'])await linkOption('interior-detailing',slug,10);
  const popularInit=await env.DB.prepare("SELECT value FROM settings WHERE key='popular_services_initialized'").first<any>();
  if(!popularInit){await env.DB.prepare(`UPDATE services SET is_popular=1 WHERE slug IN ('exterior-detailing','interior-detailing','full-detailing','ceramic-coating')`).run();await env.DB.prepare("INSERT OR REPLACE INTO settings(key,value,updated_at) VALUES('popular_services_initialized','1',CURRENT_TIMESTAMP)").run()}
  const vehicles=[['car',1,10],['suv',1.15,20],['truck',1.3,30],['van',1.25,40]];
@@ -242,8 +259,8 @@ export async function getServiceOptions(env:Env,locale='en',targetCurrency='PLN'
   return fallback.map(x=>({...x,price:convertCurrency(x.price,'PLN',target),currency:target}));
  }
  await ensureDb(env);
- const r=await env.DB.prepare(`SELECT o.id,o.slug,COALESCE(t.title,o.slug) title,COALESCE(t.description,'') description,o.price,o.base_currency currency,o.enabled,o.sort_order FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale=? WHERE o.enabled=1 ORDER BY o.sort_order,o.id`).bind(normalized).all<any>();
- return (r.results||[]).map((x:any)=>({...x,price:convertCurrency(Number(x.price||0),normalizeCurrency(x.currency||'PLN'),target),currency:target}));
+ const r=await env.DB.prepare(`SELECT o.id,o.slug,COALESCE(t.title,o.slug) title,COALESCE(t.description,'') description,o.price,o.base_currency currency,o.icon_key,o.enabled,o.sort_order,GROUP_CONCAT(s.slug) service_slugs FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale=? LEFT JOIN service_option_links l ON l.option_id=o.id LEFT JOIN services s ON s.id=l.service_id WHERE o.enabled=1 GROUP BY o.id ORDER BY o.sort_order,o.id`).bind(normalized).all<any>();
+ return (r.results||[]).map((x:any)=>({...x,iconKey:x.icon_key||x.slug,serviceSlugs:String(x.service_slugs||'').split(',').filter(Boolean),price:convertCurrency(Number(x.price||0),normalizeCurrency(x.currency||'PLN'),target),currency:target}));
 }
 
 export async function event(env:Env,userId:number|undefined,type:string,meta:any={}){if(!env.DB)return;await ensureDb(env);await env.DB.prepare('INSERT INTO analytics_events(user_id,event_type,metadata_json) VALUES(?,?,?)').bind(userId||null,type,JSON.stringify(meta)).run()}
