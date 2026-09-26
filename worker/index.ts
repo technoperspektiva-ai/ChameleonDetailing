@@ -240,7 +240,9 @@ export default {
    }
    const historyMatch=url.pathname.match(/^\/api\/cars\/(\d+)\/history$/);
    if(historyMatch&&request.method==='GET'){
-    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const id=Number(historyMatch[1]);const car=await env.DB!.prepare('SELECT id FROM client_cars WHERE id=? AND user_id=?').bind(id,u.id).first<any>();if(!car)return json({error:'Car not found'},404);const r=await env.DB!.prepare('SELECT id,service_slug,services_json,options_json,status,calculated_price,final_job_price,currency,created_at,completed_at FROM service_requests WHERE car_id=? AND user_id=? AND staff_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(id,u.id).all<any>();return json({orders:r.results||[]});
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const id=Number(historyMatch[1]);const car=await env.DB!.prepare('SELECT id FROM client_cars WHERE id=? AND user_id=?').bind(id,u.id).first<any>();if(!car)return json({error:'Car not found'},404);
+    const r=await env.DB!.prepare("SELECT id,service_slug,services_json,options_json,status,calculated_price,final_job_price,currency,created_at,completed_at FROM service_requests WHERE car_id=? AND user_id=? AND staff_deleted_at IS NULL AND status IN ('COMPLETED','PAID','COMPLETED_UNPAID') ORDER BY COALESCE(completed_at,created_at) DESC,id DESC LIMIT 100").bind(id,u.id).all<any>();
+    const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
    if(url.pathname==='/api/referrals/create'&&request.method==='POST'){
     const b=await read(request),u=await auth(env,b.initData||'');
