@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS vip_pricing_rules (
 );
 CREATE TABLE IF NOT EXISTS vehicle_types (id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS condition_levels (id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
-CREATE TABLE IF NOT EXISTS service_options (id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS service_options (id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',icon_key TEXT,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_option_translations(option_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',PRIMARY KEY(option_id,locale));
 CREATE TABLE IF NOT EXISTS service_requirements (service_id INTEGER PRIMARY KEY,require_condition INTEGER NOT NULL DEFAULT 1,require_vehicle INTEGER NOT NULL DEFAULT 1,allow_options INTEGER NOT NULL DEFAULT 1,allow_multiple_options INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_option_links (service_id INTEGER NOT NULL,option_id INTEGER NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(service_id,option_id));
@@ -57,14 +57,14 @@ CREATE TABLE IF NOT EXISTS referral_rewards (id INTEGER PRIMARY KEY AUTOINCREMEN
 CREATE TABLE IF NOT EXISTS staff_audit_modes(user_id INTEGER PRIMARY KEY,mode TEXT NOT NULL DEFAULT 'NORMAL',updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 
 CREATE TABLE IF NOT EXISTS calculator_sessions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,service_id INTEGER,vehicle_type_id INTEGER,condition_level_id INTEGER,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,service_id INTEGER,services_json TEXT,vehicle_type_id INTEGER,condition_level_id INTEGER,
   base_price_snapshot REAL,vehicle_multiplier_snapshot REAL,condition_multiplier_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,
   calculated_price REAL NOT NULL,currency TEXT NOT NULL,pricing_version TEXT,fx_rate REAL,fx_provider TEXT,fx_timestamp TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS calculator_session_options (calculation_id INTEGER NOT NULL,option_id INTEGER NOT NULL,price_snapshot REAL NOT NULL,PRIMARY KEY(calculation_id,option_id));
 CREATE TABLE IF NOT EXISTS service_requests (
   id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,calculation_id INTEGER,assigned_manager_id INTEGER,status TEXT NOT NULL DEFAULT 'REQUESTED',is_test INTEGER NOT NULL DEFAULT 0,
-  service_slug TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,
+  service_slug TEXT,services_json TEXT,vehicle_slug TEXT,condition_slug TEXT,options_json TEXT,car_id INTEGER,car_name TEXT,car_plate TEXT,request_type TEXT NOT NULL DEFAULT 'STANDARD',scheduled_for TEXT,is_deferred INTEGER NOT NULL DEFAULT 0,
   base_price_snapshot REAL,options_total_snapshot REAL,discount_snapshot REAL,calculated_price REAL NOT NULL,final_job_price REAL,price_adjustment_reason TEXT,currency TEXT NOT NULL,
   emergency_multiplier REAL,emergency_surcharge REAL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,confirmed_at TEXT,confirmed_by INTEGER,started_at TEXT,started_by INTEGER,
   rejected_at TEXT,rejected_by INTEGER,rejection_reason TEXT,completed_at TEXT,completed_by INTEGER,payment_status TEXT NOT NULL DEFAULT 'PENDING',client_deleted_at TEXT,staff_deleted_at TEXT,staff_deleted_by INTEGER,first_paid_job_for_user INTEGER NOT NULL DEFAULT 0,is_repeat_customer INTEGER NOT NULL DEFAULT 0,referral_id INTEGER,metadata_json TEXT
