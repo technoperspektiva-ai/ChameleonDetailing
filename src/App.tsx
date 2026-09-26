@@ -210,10 +210,10 @@ function CarsPage({locale,cars,services,options,goto,refresh}:any){
     ><Trash2/></button>
     {expanded&&<div className="garage-inline-menu">
       {note&&<div className="garage-inline-reminder"><Clock3/><span>{note}</span></div>}
-      <div className="garage-icon-actions">
-       <button onClick={()=>setEditing(car)} aria-label={ui3(locale,'Редагувати','Edytuj','Edit')} title={ui3(locale,'Редагувати','Edytuj','Edit')}><Pencil/></button>
+      <div className="garage-inline-actions">
+       <button className="garage-completed-button" onClick={()=>openHistory(car)}><History/><span>{ui3(locale,'Виконані замовлення','Wykonane zlecenia','Completed orders')}</span><ChevronRight/></button>
+       <button className="garage-edit-button" onClick={()=>setEditing(car)} aria-label={ui3(locale,'Редагувати','Edytuj','Edit')} title={ui3(locale,'Редагувати','Edytuj','Edit')}><Pencil/></button>
       </div>
-      <button className="garage-completed-button" onClick={()=>openHistory(car)}><History/><span>{ui3(locale,'Виконані замовлення','Wykonane zlecenia','Completed orders')}</span><ChevronRight/></button>
      </div>}
    </article>})}
    <button className="garage-add-card" onClick={()=>setEditing(null)}><span className="garage-add-plus">+</span><div><b>{ui3(locale,'Додати автомобіль','Dodaj samochód','Add car')}</b><small>{ui3(locale,'Зберегти ще одне авто в автопарку','Zapisz kolejne auto w garażu','Save another car in your garage')}</small></div></button>
