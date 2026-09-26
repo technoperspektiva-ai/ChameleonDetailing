@@ -139,5 +139,13 @@
   "calculator.emergencyExtra": "Доплата за екстрене замовлення",
   "calculator.emergencyTotal": "Разом екстрено",
   "calculator.emergencyMultiplier": "Екстрений множник",
-  "calculator.emergencyHint": "Замовлення поза робочим часом із пріоритетним виконанням."
+  "calculator.emergencyHint": "Замовлення поза робочим часом із пріоритетним виконанням.",
+  "orders.type.standard": "Стандартне",
+  "orders.type.deferred": "На найближчий робочий день",
+  "orders.type.emergency": "Екстрене",
+  "orders.payment.pending": "Очікує оплати",
+  "orders.payment.paid": "Оплачено",
+  "orders.payment.unpaid": "Не оплачено",
+  "orders.payment.refunded": "Кошти повернено",
+  "orders.payment.failed": "Помилка оплати"
 }
