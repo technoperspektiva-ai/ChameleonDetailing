@@ -1,11 +1,12 @@
-ChameleonDetailing v1.2.3 — Garage Polish & Service Recency
+ChameleonDetailing v1.2.4 — Approved Icons & Garage Interaction
 
-• Bottom navigation is now icon-first and visually lighter; labels stay accessible but are hidden from the compact UI.
-• Garage action buttons use restrained Lucide icons and shorter labels instead of emoji-heavy controls.
-• Completed-work view now shows the last completion date for each service on a saved car.
-• Cars not serviced for roughly 90+ days receive a subtle, friendly maintenance reminder.
-• Added a structured car brand/model catalog for the vehicle form, plus an Other Model fallback.
-• The catalog includes mainstream, premium and performance brands used across Europe and international markets.
-• Added future-ready model icon lookup: /car-models/<brand-model>.webp automatically displays when an original model asset exists, otherwise the brand badge is used.
-• Existing automatic body-type selection in the calculator remains active.
-• Production build verified successfully before release.
+• Integrated the user-provided approved ChameleonDetailing icon pack for base services and supported add-ons.
+• Approved icons are packaged as one optimized transparent sprite to keep their visual style consistent and avoid missing binary assets.
+• Admin-provided custom service images still take priority; approved icons are used for the standard catalog.
+• Saved car cards are now collapsed by default.
+• Tapping a car opens a compact action panel instead of showing all controls permanently.
+• Edit and delete are compact icon actions inside the expanded car panel.
+• Estimate remains available as a compact action.
+• A separate full-width Completed Orders button sits at the bottom of the expanded car panel.
+• Bottom navigation labels have been restored under the icons.
+• Existing garage history, service recency, reminders, automatic vehicle type and model catalog remain intact.
