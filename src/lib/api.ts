@@ -15,6 +15,7 @@ export const api={
  quote:(body:any)=>json<any>('/api/calculator/quote',{method:'POST',body:JSON.stringify({...body,initData:initData()})}),
  request:(body:any)=>json<any>('/api/orders/request',{method:'POST',body:JSON.stringify({...body,initData:initData()})}),
  orders:()=>json<any>('/api/orders?initData='+encodeURIComponent(initData())),
+ order:(id:number)=>json<any>(`/api/orders/${id}?initData=${encodeURIComponent(initData())}`),
  deleteOrder:(id:number)=>json<any>(`/api/orders/${id}`,{method:'DELETE',body:JSON.stringify({initData:initData()})}),
  socials:()=>json<any>('/api/socials'),
  specialists:()=>json<any>('/api/specialists'),
