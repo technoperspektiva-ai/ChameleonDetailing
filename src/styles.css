@@ -336,3 +336,40 @@ nav button.active::after{bottom:1px}
  .garage-card-delete svg{width:16px;height:16px}
  .garage-chevron{right:20px;bottom:16px}
 }
+
+
+/* v1.2.8 hotfix — Telegram iOS must not inherit generic button geometry */
+.garage-page .garage-car-card > button.garage-card-delete{
+ position:absolute!important;
+ right:12px!important;
+ left:auto!important;
+ top:12px!important;
+ bottom:auto!important;
+ width:38px!important;
+ min-width:38px!important;
+ max-width:38px!important;
+ height:38px!important;
+ min-height:38px!important;
+ padding:0!important;
+ margin:0!important;
+ display:grid!important;
+ place-items:center!important;
+ border-radius:12px!important;
+ border:1px solid rgba(255,151,15,.42)!important;
+ background:linear-gradient(145deg,rgba(255,138,0,.11),rgba(18,21,18,.98))!important;
+ color:#ff970f!important;
+ -webkit-appearance:none!important;
+ appearance:none!important;
+ box-shadow:inset 0 0 14px rgba(255,138,0,.05),0 6px 16px rgba(0,0,0,.24)!important;
+}
+.garage-page .garage-car-card > button.garage-card-delete svg{
+ width:17px!important;height:17px!important;
+ color:#ff970f!important;stroke:currentColor!important;
+}
+@media(max-width:420px){
+ .garage-page .garage-car-card > button.garage-card-delete{
+  right:11px!important;top:11px!important;
+  width:36px!important;min-width:36px!important;max-width:36px!important;
+  height:36px!important;min-height:36px!important;
+ }
+}
