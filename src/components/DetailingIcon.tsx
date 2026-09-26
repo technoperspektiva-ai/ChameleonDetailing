@@ -51,7 +51,7 @@ export function DetailingIcon({type,label}:Props){
   </defs>
   <rect x="2" y="2" width="92" height="92" rx="20" fill="url(#bg)" stroke="#203226" strokeWidth="2"/>
   <circle cx="48" cy="48" r="38" fill="url(#halo)"/>
-  <g fill="none" stroke="#a4ff00" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)"><Glyph type={type}/></g>
+  <g fill="none" stroke="#a4ff00" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)"><Glyph type={type||'custom-service'}/></g>
   <path d="M14 80h68" stroke="#a4ff00" strokeOpacity=".16" strokeWidth="1"/>
  </svg>;
 }
