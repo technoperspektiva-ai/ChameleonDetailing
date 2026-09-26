@@ -373,3 +373,46 @@ nav button.active::after{bottom:1px}
   height:36px!important;min-height:36px!important;
  }
 }
+
+
+/* v1.2.9 — compact garage footer actions */
+.garage-inline-actions{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) 44px;
+ gap:8px;
+ align-items:stretch;
+ margin-top:11px;
+}
+.garage-inline-actions .garage-completed-button{
+ margin-top:0;
+ min-height:44px;
+}
+.garage-edit-button{
+ width:44px;
+ min-width:44px;
+ height:44px;
+ min-height:44px;
+ padding:0;
+ margin:0;
+ display:grid;
+ place-items:center;
+ border-radius:11px;
+ border:1px solid color-mix(in srgb,var(--neon-color) 11%,var(--line));
+ background:rgba(16,21,17,.76);
+ color:#c5cec2;
+ -webkit-appearance:none;
+ appearance:none;
+ transition:transform .16s ease,border-color .16s ease,color .16s ease,background .16s ease;
+}
+.garage-edit-button svg{width:17px;height:17px;stroke-width:1.8}
+.garage-edit-button:active{
+ transform:scale(.96);
+ color:var(--neon-color);
+ border-color:color-mix(in srgb,var(--neon-color) 28%,var(--line));
+ background:color-mix(in srgb,var(--neon-color) 4%,#101511);
+}
+@media(max-width:420px){
+ .garage-inline-actions{grid-template-columns:minmax(0,1fr) 42px;gap:7px}
+ .garage-edit-button{width:42px;min-width:42px;height:42px;min-height:42px}
+ .garage-inline-actions .garage-completed-button{min-height:42px}
+}
