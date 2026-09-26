@@ -12,10 +12,10 @@ export type ServiceCatalogItem={
 };
 
 export const defaultServiceImageMap:Record<string,string>={
-  'exterior-detailing':'/service-icons/exterior-detailing.png',
-  'interior-detailing':'/service-icons/interior-detailing.png',
-  'full-detailing':'/service-icons/full-detailing.png',
-  'ceramic-coating':'/service-icons/ceramic-coating.png'
+  'exterior-detailing':'/service-icons/exterior-detailing.webp',
+  'interior-detailing':'/service-icons/interior-detailing.webp',
+  'full-detailing':'/service-icons/full-detailing.webp',
+  'ceramic-coating':'/service-icons/ceramic-coating.webp'
 };
 
 export const serviceCatalog:ServiceCatalogItem[]=[
