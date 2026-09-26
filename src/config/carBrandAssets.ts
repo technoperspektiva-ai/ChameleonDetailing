@@ -1,3 +1,4 @@
+import {uploadedCarBrandSprite} from './uploadedCarBrandSprite';
 import c0 from './carBrandSpriteChunks/chunk0';
 import c1 from './carBrandSpriteChunks/chunk1';
 import c2 from './carBrandSpriteChunks/chunk2';
@@ -79,6 +80,14 @@ export const carBrandIndex:Record<string,number>={
  'volvo':48
 };
 
+const uploadedCarBrandIndex:Record<string,number>={
+ 'audi':0,'bmw':1,'hyundai':2,'kia':3,'lexus':4,'mercedes_benz':5,
+ 'porsche':6,'tesla':7,'toyota':8,'volkswagen':9,'alfa_romeo':10,'chevrolet':11,
+ 'citroen':12,'dacia':13,'fiat':14,'ford':15,'opel':16,'peugeot':17,
+ 'renault':18,'volvo':19,'byd':20,'cupra':21,'ferrari':22,'genesis':23,
+ 'lamborghini':24,'maserati':25,'mg':26,'mini':27,'polestar':28,'smart':29
+};
+
 export const normalizeBrandAssetKey=(brand?:string)=>{
  const raw=String(brand||'').trim().toLowerCase().replace(/&/g,'and').replace(/[^a-z0-9]+/g,'_').replace(/^_+|_+$/g,'');
  const aliases:Record<string,string>={
@@ -89,7 +98,18 @@ export const normalizeBrandAssetKey=(brand?:string)=>{
  return Object.prototype.hasOwnProperty.call(carBrandIndex,key)?key:'other_brand';
 };
 export const carBrandSpriteStyle=(brand?:string)=>{
- const key=normalizeBrandAssetKey(brand),index=carBrandIndex[key]??carBrandIndex.other_brand;
+ const key=normalizeBrandAssetKey(brand);
+ const uploadedIndex=uploadedCarBrandIndex[key];
+ if(uploadedIndex!==undefined){
+  const col=uploadedIndex%6,row=Math.floor(uploadedIndex/6);
+  return {
+   backgroundImage:`url("${uploadedCarBrandSprite}")`,
+   backgroundSize:'600% 500%',
+   backgroundPosition:`${col*(100/5)}% ${row*(100/4)}%`,
+   backgroundRepeat:'no-repeat'
+  } as const;
+ }
+ const index=carBrandIndex[key]??carBrandIndex.other_brand;
  const col=index%8,row=Math.floor(index/8);
  return {
   backgroundImage:`url("${carBrandSprite}")`,
