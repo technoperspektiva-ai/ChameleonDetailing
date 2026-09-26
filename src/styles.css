@@ -449,3 +449,39 @@ nav button.active::after{bottom:1px}
  width:62%;
  height:62%;
 }
+
+
+/* v1.2.11 — approved main service artwork from owner references */
+.premium-main-service-icon{
+ display:block;
+ width:100%;
+ height:100%;
+ border-radius:inherit;
+ overflow:hidden;
+ flex:0 0 auto;
+}
+.premium-main-service-icon img{
+ display:block;
+ width:100%;
+ height:100%;
+ object-fit:cover;
+ border-radius:inherit;
+}
+.service-art:has(.premium-main-service-icon){
+ padding:0;
+ overflow:hidden;
+ background:#071108;
+ border:1px solid rgba(108,255,35,.10);
+}
+.choice-icon .premium-main-service-icon{
+ width:58px;
+ height:58px;
+ border-radius:14px;
+ box-shadow:0 0 18px rgba(112,255,24,.10);
+}
+.choice-icon .premium-main-service-icon img{
+ object-fit:cover;
+}
+@media(max-width:359px){
+ .choice-icon .premium-main-service-icon{width:50px;height:50px;border-radius:12px}
+}
