@@ -200,11 +200,11 @@ function CarsPage({locale,cars,services,options,goto,refresh}:any){
      <div className="grow"><h3>{car.name}</h3><p>{[car.brand,car.model,car.modification].filter(Boolean).join(' · ')}</p><div className="car-tags">{car.bodyType&&<span>{bodyTypeLabel(locale,carVehicleType(car.bodyType)||car.bodyType)}</span>}{car.plate&&<span>{car.plate}</span>}{car.hasCeramic&&<span>{ui3(locale,'Кераміка','Ceramika','Ceramic')}</span>}{car.lastServiceAt&&<span>{ui3(locale,'Останній візит','Ostatnia wizyta','Last visit')}: {formatDate(car.lastServiceAt)}</span>}</div></div>
      <ChevronRight className="garage-chevron"/>
     </button>
+    <button className="garage-card-delete" onClick={()=>setDeleteTarget(car)} aria-label={ui3(locale,'Видалити','Usuń','Delete')} title={ui3(locale,'Видалити','Usuń','Delete')}><Trash2/></button>
     {expanded&&<div className="garage-inline-menu">
       {note&&<div className="garage-inline-reminder"><Clock3/><span>{note}</span></div>}
       <div className="garage-icon-actions">
        <button onClick={()=>setEditing(car)} aria-label={ui3(locale,'Редагувати','Edytuj','Edit')} title={ui3(locale,'Редагувати','Edytuj','Edit')}><Pencil/></button>
-       <button className="danger" onClick={()=>setDeleteTarget(car)} aria-label={ui3(locale,'Видалити','Usuń','Delete')} title={ui3(locale,'Видалити','Usuń','Delete')}><Trash2/></button>
       </div>
       <button className="garage-completed-button" onClick={()=>openHistory(car)}><History/><span>{ui3(locale,'Виконані замовлення','Wykonane zlecenia','Completed orders')}</span><ChevronRight/></button>
      </div>}
