@@ -241,7 +241,7 @@ export default {
    const historyMatch=url.pathname.match(/^\/api\/cars\/(\d+)\/history$/);
    if(historyMatch&&request.method==='GET'){
     const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const id=Number(historyMatch[1]);const car=await env.DB!.prepare('SELECT id FROM client_cars WHERE id=? AND user_id=?').bind(id,u.id).first<any>();if(!car)return json({error:'Car not found'},404);
-    const r=await env.DB!.prepare("SELECT id,service_slug,services_json,options_json,status,calculated_price,final_job_price,currency,created_at,completed_at FROM service_requests WHERE car_id=? AND user_id=? AND staff_deleted_at IS NULL AND status IN ('COMPLETED','PAID','COMPLETED_UNPAID') ORDER BY COALESCE(completed_at,created_at) DESC,id DESC LIMIT 100").bind(id,u.id).all<any>();
+    const r=await env.DB!.prepare("SELECT id,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,payment_status,calculated_price,final_job_price,currency,created_at,confirmed_at,completed_at,scheduled_for FROM service_requests WHERE car_id=? AND user_id=? AND staff_deleted_at IS NULL AND client_deleted_at IS NULL ORDER BY COALESCE(completed_at,updated_at,created_at) DESC,id DESC LIMIT 100").bind(id,u.id).all<any>();
     const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
    if(url.pathname==='/api/referrals/create'&&request.method==='POST'){
@@ -297,6 +297,12 @@ export default {
     const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL AND staff_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
 
+   const getOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
+   if(getOrderMatch&&request.method==='GET'){
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({order:null});await ensureDb(env);const id=Number(getOrderMatch[1]);
+    const row=await env.DB!.prepare('SELECT id,user_id,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,payment_status,calculated_price,final_job_price,currency,created_at,completed_at,car_id,car_name,car_plate FROM service_requests WHERE id=? AND user_id=? AND staff_deleted_at IS NULL AND client_deleted_at IS NULL').bind(id,u.id).first<any>();
+    if(!row)return json({error:'Request not found'},404);return json({order:row});
+   }
    const deleteOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
    if(deleteOrderMatch&&request.method==='DELETE'){
     const b=await read(request),u=await auth(env,b.initData||'');if(u.demo)return json({ok:true});await ensureDb(env);const id=Number(deleteOrderMatch[1]);
