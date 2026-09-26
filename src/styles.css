@@ -416,3 +416,36 @@ nav button.active::after{bottom:1px}
  .garage-edit-button{width:42px;min-width:42px;height:42px;min-height:42px}
  .garage-inline-actions .garage-completed-button{min-height:42px}
 }
+
+
+/* v1.2.10 — crisp neon main service icons */
+.service-art .premium-main-service-icon{
+ width:100%;
+ height:100%;
+ display:grid;
+ place-items:center;
+ color:#b9ff00;
+}
+.service-art .premium-main-service-icon svg{
+ width:64%;
+ height:64%;
+ max-width:72px;
+ max-height:72px;
+ overflow:visible;
+}
+.service-art .premium-main-service-icon .main-stroke,
+.service-art .premium-main-service-icon .accent-stroke{
+ stroke:#b9ff00;
+ opacity:1;
+ filter:drop-shadow(0 0 3px rgba(185,255,0,.72)) drop-shadow(0 0 8px rgba(73,255,0,.28));
+}
+.service-art:has(.premium-main-service-icon){
+ background:
+  radial-gradient(circle at center,rgba(77,168,23,.38) 0%,rgba(17,43,18,.88) 48%,rgba(7,18,10,.98) 100%);
+ border:1px solid rgba(98,255,41,.08);
+ box-shadow:inset 0 0 24px rgba(71,255,0,.055);
+}
+.service-art.small .premium-main-service-icon svg{
+ width:62%;
+ height:62%;
+}
