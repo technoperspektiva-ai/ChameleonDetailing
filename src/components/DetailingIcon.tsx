@@ -44,14 +44,8 @@ function Glyph({type}:{type:string}){
 
 export function DetailingIcon({type,label}:Props){
  return <svg className="detailing-icon" viewBox="0 0 96 96" role="img" aria-label={label||type||'Service'}>
-  <defs>
-   <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#111b15"/><stop offset="1" stopColor="#070b09"/></linearGradient>
-   <radialGradient id="halo"><stop offset="0" stopColor="#a4ff00" stopOpacity=".24"/><stop offset="1" stopColor="#a4ff00" stopOpacity="0"/></radialGradient>
-   <filter id="glow"><feGaussianBlur stdDeviation="1.7" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-  </defs>
-  <rect x="2" y="2" width="92" height="92" rx="20" fill="url(#bg)" stroke="#203226" strokeWidth="2"/>
-  <circle cx="48" cy="48" r="38" fill="url(#halo)"/>
-  <g fill="none" stroke="#a4ff00" strokeWidth="3.2" strokeLinecap="round" strokeLinejoin="round" filter="url(#glow)"><Glyph type={type||'custom-service'}/></g>
-  <path d="M14 80h68" stroke="#a4ff00" strokeOpacity=".16" strokeWidth="1"/>
+  <g fill="none" stroke="#a4ff00" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" style={{filter:'drop-shadow(0 0 5px rgba(164,255,0,.35))'}}>
+   <Glyph type={type||'custom-service'}/>
+  </g>
  </svg>;
 }
