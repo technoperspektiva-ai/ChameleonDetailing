@@ -139,5 +139,13 @@
   "calculator.emergencyExtra": "Emergency surcharge",
   "calculator.emergencyTotal": "Emergency total",
   "calculator.emergencyMultiplier": "Emergency multiplier",
-  "calculator.emergencyHint": "Priority request outside regular working hours."
+  "calculator.emergencyHint": "Priority request outside regular working hours.",
+  "orders.type.standard": "Standard",
+  "orders.type.deferred": "Next working day",
+  "orders.type.emergency": "Emergency",
+  "orders.payment.pending": "Pending",
+  "orders.payment.paid": "Paid",
+  "orders.payment.unpaid": "Unpaid",
+  "orders.payment.refunded": "Refunded",
+  "orders.payment.failed": "Payment failed"
 }
