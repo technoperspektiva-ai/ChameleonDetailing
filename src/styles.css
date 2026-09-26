@@ -276,3 +276,32 @@ nav button.active::after{bottom:1px}
 .car-form-footer{display:grid;grid-template-columns:.78fr 1.22fr;gap:9px;padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.06);background:#0b0f0c}.car-form-footer button{min-height:46px;border-radius:12px}.car-form-footer .primary{display:flex;align-items:center;justify-content:center;gap:8px}.car-form-footer .primary svg{width:17px;height:17px}
 @media(max-width:560px){.car-form-backdrop{padding-inline:8px}.car-form-modal{border-radius:22px}.car-form-header{grid-template-columns:50px minmax(0,1fr) 34px;padding:14px 14px 12px}.car-form-preview{width:50px;height:50px;border-radius:14px}.car-form-header h2{font-size:1.03rem}.car-form-header p{font-size:.68rem}.car-form-body{padding:11px 12px 6px}.car-form-section{padding:11px}.car-form-grid{grid-template-columns:1fr}.car-form-grid .span-2{grid-column:auto}.car-form-footer{padding-inline:12px}.car-form-footer button{font-size:.76rem}}
 @media(max-height:700px){.car-form-modal{max-height:calc(100dvh - 14px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}.car-form-header p{display:none}.car-form-body{gap:9px}.car-form-section{padding-block:10px}}
+
+
+/* v1.2.7 — refined service icons + inline garage actions */
+.premium-main-service-icon{width:100%;height:100%;display:grid;place-items:center;color:#d9e5d5}
+.premium-main-service-icon svg{width:78%;height:78%;overflow:visible}
+.premium-main-service-icon .main-stroke{stroke:#d7e2d4;opacity:.92}
+.premium-main-service-icon .accent-stroke{stroke:var(--neon-color);filter:drop-shadow(0 0 4px color-mix(in srgb,var(--neon-color) 24%,transparent))}
+.service-art .premium-main-service-icon{width:100%;height:100%}
+.choice-icon .premium-main-service-icon{width:52px;height:52px}
+.choice.active .premium-main-service-icon .main-stroke,.choice.selected .premium-main-service-icon .main-stroke{stroke:#f2f6ef}
+.choice.active .premium-main-service-icon .accent-stroke,.choice.selected .premium-main-service-icon .accent-stroke{stroke:var(--neon-color)}
+.garage-car-card{overflow:hidden}
+.garage-car-card.expanded{border-color:color-mix(in srgb,var(--neon-color) 22%,var(--line))}
+.garage-car-card.expanded .garage-chevron{transform:rotate(90deg);color:var(--neon-color)}
+.garage-chevron{transition:transform .18s ease,color .18s ease}
+.garage-inline-menu{padding:0 14px 14px;border-top:1px solid rgba(255,255,255,.055);background:linear-gradient(180deg,rgba(255,255,255,.008),rgba(0,0,0,.08));animation:garageInlineOpen .18s ease both}
+@keyframes garageInlineOpen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.garage-inline-reminder{display:grid;grid-template-columns:18px 1fr;gap:8px;align-items:start;margin:11px 0 0;padding:9px 10px;border-radius:11px;border:1px solid color-mix(in srgb,var(--neon-color) 10%,var(--line));background:color-mix(in srgb,var(--neon-color) 3%,#101510);color:#aeb8ac;font-size:.7rem;line-height:1.4}
+.garage-inline-reminder svg{width:15px;height:15px;margin-top:1px;color:color-mix(in srgb,var(--neon-color) 62%,#9ca79a);stroke-width:1.7}
+.garage-icon-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:11px}
+.garage-icon-actions button{width:38px;height:38px;display:grid;place-items:center;border-radius:10px;border:1px solid var(--line);background:#111612;color:#bec8bc}
+.garage-icon-actions button svg{width:16px;height:16px;stroke-width:1.8}
+.garage-icon-actions button:active{transform:scale(.96);border-color:color-mix(in srgb,var(--neon-color) 28%,var(--line));color:var(--neon-color)}
+.garage-icon-actions button.danger{color:#bc8e8e;border-color:rgba(194,112,112,.15)}
+.garage-completed-button{width:100%;min-height:43px;margin-top:9px;display:grid;grid-template-columns:18px 1fr 16px;align-items:center;gap:8px;padding:9px 11px;border-radius:11px;border:1px solid color-mix(in srgb,var(--neon-color) 11%,var(--line));background:rgba(16,21,17,.76);color:#e6ede3;text-align:left;font-size:.72rem;font-weight:760}
+.garage-completed-button svg{width:15px;height:15px;stroke-width:1.8;color:#aeb8ac}
+.garage-completed-button svg:last-child{justify-self:end}
+.garage-order-bottom>span{font-size:.67rem;color:#9fab9c}
+@media(max-width:420px){.choice-icon .premium-main-service-icon{width:48px;height:48px}.garage-inline-menu{padding-inline:12px}.garage-icon-actions button{width:36px;height:36px}}
