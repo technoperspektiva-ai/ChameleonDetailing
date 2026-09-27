@@ -5,6 +5,7 @@ import {sendMessage,sendPhoto,tgApi,uploadPhoto} from './telegram';
 import {buildReport,buildStaffMemberReport,type ReportType,type ReportLocale} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
+import {grantReferralRewardsIfEligible} from './referrals';
 
 export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'broadcast_forced_access'|'reports_access'|'financial_access'|'clients_access'|'order_deadline_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
@@ -428,7 +429,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
    await env.DB!.prepare('UPDATE service_requests SET estimated_duration_min=NULL,duration_overridden=0,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id).run();
    await syncOrderTiming(env,id,true);
   }else if(Object.prototype.hasOwnProperty.call(b,'scheduledFor'))await syncOrderTiming(env,id,false);
-  const now=await orderDetail(env,id);await log(env,staff.user_id,'desktop.order.update','service_request',String(id),old,now);if(Object.prototype.hasOwnProperty.call(b,'status')&&String(old.status)!==String(now?.status))await notifyClientOrderNeutral(env,id,String(now?.status||b.status));return reply({ok:true,order:now});
+  const now=await orderDetail(env,id);await log(env,staff.user_id,'desktop.order.update','service_request',String(id),old,now);if(Object.prototype.hasOwnProperty.call(b,'status')&&String(old.status)!==String(now?.status)){await notifyClientOrderNeutral(env,id,String(now?.status||b.status));if(String(now?.status)==='COMPLETED')await grantReferralRewardsIfEligible(env,id,'COMPLETED')}if(String(old.payment_status)!=='PAID'&&String(now?.payment_status)==='PAID')await grantReferralRewardsIfEligible(env,id,'PAID');return reply({ok:true,order:now});
  }
  const orderSelectionMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)\/catalog-selection$/);
  if(orderSelectionMatch&&request.method==='PATCH'){if(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders')))return reply({error:'Orders management is disabled for Manager.'},403);await writable(env);const id=Number(orderSelectionMatch[1]),b=await body(request),old=await orderDetail(env,id);if(!old)return reply({error:'Order not found.'},404);const clean=(v:any)=>Array.isArray(v)?v.map(x=>String(x||'').trim()).filter(Boolean).slice(0,40):[];const services=clean(b.services),options=clean(b.options);await env.DB!.prepare('UPDATE service_requests SET services_json=?,options_json=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(JSON.stringify(services),JSON.stringify(options),id).run();if(Number(old.duration_overridden||0)!==1)await syncOrderTiming(env,id,true);await log(env,staff.user_id,'order.catalog_selection.update','service_request',String(id),{services_json:old.services_json,options_json:old.options_json},{services,options});return reply({ok:true,services,options});}
