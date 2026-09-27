@@ -453,3 +453,46 @@
  .broadcast-form-grid,.broadcast-repeat>div{grid-template-columns:1fr!important}
  .broadcast-schedule{align-items:stretch!important;flex-direction:column!important}
 }
+
+
+/* NARROW ORDERS STABILITY */
+@media(max-width:760px){
+ .desk-toolbar{
+  align-items:stretch;
+  gap:8px;
+ }
+ .desk-toolbar>.search-input{
+  flex:1 0 100%;
+  width:100%;
+  min-width:0!important;
+  min-height:42px;
+ }
+ .desk-toolbar>select{
+  min-height:42px;
+  flex:1 1 145px;
+ }
+ .desk-toolbar>.desk-segment{
+  flex:1 1 auto;
+  min-height:42px;
+ }
+ .desk-toolbar>button{
+  min-height:42px;
+ }
+ .desk-kanban{
+  grid-template-columns:repeat(5,minmax(min(82vw,340px),min(82vw,340px)));
+  gap:10px;
+  padding-bottom:12px;
+  scroll-snap-type:x proximity;
+ }
+ .desk-kanban-col{
+  min-height:500px;
+  scroll-snap-align:start;
+ }
+ .desk-kanban-col h3{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:var(--surface-1);
+  padding:4px 0 8px;
+ }
+}
