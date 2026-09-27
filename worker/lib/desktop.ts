@@ -509,6 +509,13 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   if(b.discountAmount!==undefined&&(!Number.isFinite(Number(b.discountAmount))||Number(b.discountAmount)<0))return reply({error:'Знижка має бути невід’ємним числом.'},400);
   if(b.acceleratedSurcharge!==undefined&&(!Number.isFinite(Number(b.acceleratedSurcharge))||Number(b.acceleratedSurcharge)<0))return reply({error:'Некоректна надбавка.'},400);
   if(b.responsibleStaffId){const person=await env.DB!.prepare("SELECT id FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER') AND status='ACTIVE'").bind(Number(b.responsibleStaffId)).first<any>();if(!person)return reply({error:'Співробітника не знайдено.'},400)}
+  if(Object.prototype.hasOwnProperty.call(b,'responsibleStaffId')){
+   const currentResponsible=Number(old.responsible_staff_id||old.assigned_manager_id||0);
+   const requestedResponsible=b.responsibleStaffId?Number(b.responsibleStaffId):0;
+   const elevated=staff.role==='OWNER'||staff.role==='ADMIN';
+   if(currentResponsible&&requestedResponsible!==currentResponsible&&!elevated)return reply({error:'Замовлення вже закріплене за відповідальним. Перепризначити може лише адміністратор або власник.'},403);
+   if(!currentResponsible&&staff.role==='MANAGER'&&requestedResponsible&&requestedResponsible!==Number(staff.user_id))return reply({error:'Менеджер може взяти вільне замовлення лише на себе.'},403);
+  }
   const fields:{key:string,col:string}[]=[{key:'status',col:'status'},{key:'paymentStatus',col:'payment_status'},{key:'scheduledFor',col:'scheduled_for'},{key:'staffNote',col:'staff_note'}];
   for(const f of fields)if(Object.prototype.hasOwnProperty.call(b,f.key)){await env.DB!.prepare('UPDATE service_requests SET '+f.col+'=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b[f.key]||null,id).run()}
   if(b.status==='CONFIRMED'&&String(old.status)!=='CONFIRMED'){
