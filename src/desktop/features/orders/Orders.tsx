@@ -15,7 +15,7 @@ const filterOptions:[string,string][]=[
 ];
 const deadlineState=(o:Order)=>{const active=!['COMPLETED','CANCELLED','REJECTED'].includes(String(o.status||'').toUpperCase()),at=o.deadline_at?Date.parse(o.deadline_at):NaN;if(!active||!Number.isFinite(at))return 'none';const left=at-Date.now();return left<0?'overdue':left<=30*60_000?'soon':'ok'};
 const durationText=(value?:number)=>{const m=Math.max(0,Number(value||0));return m>=60?`${Math.floor(m/60)}г${m%60?' '+m%60+'хв':''}`:`${m}хв`};
-const vehicleImage=(body?:string|null)=>{const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp'};
+const vehicleImage=(body?:string|null)=>{const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'-v2.webp'};
 
 
 export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:string)=>void;initialFilter?:string}){
