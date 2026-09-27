@@ -269,6 +269,15 @@ export default {
     const r=await env.DB!.prepare("SELECT id,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,payment_status,calculated_price,final_job_price,currency,created_at,confirmed_at,completed_at,scheduled_for FROM service_requests WHERE car_id=? AND user_id=? AND staff_deleted_at IS NULL AND client_deleted_at IS NULL ORDER BY COALESCE(completed_at,updated_at,created_at) DESC,id DESC LIMIT 100").bind(id,u.id).all<any>();
     const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
+   if(url.pathname==='/api/referrals/status'&&request.method==='GET'){
+    const u=await auth(env,url.searchParams.get('initData')||'');
+    if(u.demo)return json({reward:null});
+    await ensureDb(env);
+    const rr=await env.DB!.prepare("SELECT rr.*,s.slug reward_service_slug FROM referral_rewards rr LEFT JOIN services s ON s.id=rr.reward_service_id WHERE rr.user_id=? AND rr.status='AVAILABLE' ORDER BY rr.id LIMIT 1").bind(u.id).first<any>();
+    if(!rr)return json({reward:null});
+    const target=normalizeCurrency(url.searchParams.get('currency')||u.preferred_currency||'PLN'),type=String(rr.reward_type||'').toUpperCase();
+    return json({reward:{id:Number(rr.id),type,value:type==='FIXED'?convertCurrency(Number(rr.reward_value||0),normalizeCurrency(rr.reward_currency||target),target):Number(rr.reward_value||0),currency:type==='FIXED'?target:null,service:rr.reward_service_slug||null}});
+   }
    if(url.pathname==='/api/referrals/create'&&request.method==='POST'){
     const b=await read(request),u=await auth(env,b.initData||'');
     if(u.demo)return json({ok:true,code:'DEMO',url:`https://t.me/${String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'')}?start=ref_DEMO`});
