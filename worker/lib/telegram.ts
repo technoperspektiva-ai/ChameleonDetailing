@@ -24,3 +24,14 @@ export async function tgApi(env:Env,method:string,body:Record<string,unknown>){
 export const sendMessage=(env:Env,chatId:number,text:string,reply_markup?:unknown)=>tgApi(env,'sendMessage',{chat_id:chatId,text,parse_mode:'HTML',reply_markup,disable_web_page_preview:true});
 export const sendPhoto=(env:Env,chatId:number,photo:string,caption:string,reply_markup?:unknown)=>tgApi(env,'sendPhoto',{chat_id:chatId,photo,caption,parse_mode:'HTML',reply_markup});
 export const editMessage=(env:Env,chatId:number,messageId:number,text:string,reply_markup?:unknown)=>tgApi(env,'editMessageText',{chat_id:chatId,message_id:messageId,text,parse_mode:'HTML',reply_markup,disable_web_page_preview:true});
+
+export async function uploadPhoto(env:Env,chatId:number,bytes:ArrayBuffer,mime='image/jpeg',fileName='broadcast.jpg'){
+ if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN is not configured');
+ const form=new FormData();
+ form.append('chat_id',String(chatId));
+ form.append('photo',new Blob([bytes],{type:mime}),fileName);
+ const r=await fetch(`https://api.telegram.org/bot${env.BOT_TOKEN}/sendPhoto`,{method:'POST',body:form});
+ const j:any=await r.json();
+ if(!j.ok)throw new Error(j.description||'Telegram photo upload failed');
+ return j.result;
+}
