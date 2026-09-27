@@ -1,330 +1,433 @@
-/* PHONE-ONLY DESKTOP CONTROL CENTER
-   Intentionally isolated from Mini App, tablet and desktop layouts.
-   Applies only to /desktop and only on narrow phone viewports. */
+/* PHONE-ONLY DESKTOP CONTROL CENTER — SAFE MOBILE LAYOUT
+   This file is intentionally isolated to /desktop and narrow phone viewports.
+   It must not affect Mini App, iPad/tablet, or normal desktop layouts. */
+
 @media (max-width:680px){
- html.desktop-route,
- html.desktop-route body{
-  width:100%;
-  min-width:0!important;
-  overflow-x:hidden!important;
- }
- html.desktop-route .desktop-shell,
- html.desktop-route .desktop-shell.sidebar-compact{
-  display:block!important;
-  width:100%!important;
-  min-width:0!important;
- }
-
- /* Phone header: one compact control bar, no desktop-only clutter. */
- html.desktop-route .desk-topbar{
-  position:sticky!important;
-  top:0;
-  z-index:80;
-  min-height:58px!important;
-  height:auto!important;
-  padding:8px 10px!important;
-  gap:7px!important;
-  display:grid!important;
-  grid-template-columns:42px minmax(0,1fr) 42px 42px!important;
-  align-items:center!important;
-  background:rgba(7,8,7,.92)!important;
-  -webkit-backdrop-filter:blur(20px) saturate(1.08);
-  backdrop-filter:blur(20px) saturate(1.08);
- }
- html.desktop-route .tablet-menu{display:flex!important;width:42px!important;height:42px!important;padding:0!important}
- html.desktop-route .topbar-mini-brand{
-  display:flex!important;
-  min-width:0;
-  align-items:center;
-  gap:8px;
- }
- html.desktop-route .topbar-mini-brand img{width:28px!important;height:30px!important;object-fit:contain}
- html.desktop-route .topbar-mini-brand span{
-  display:block!important;
-  font-size:11px!important;
-  letter-spacing:.13em;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
- }
- html.desktop-route .global-search{
-  grid-column:1/-1;
-  grid-row:2;
-  width:100%!important;
-  min-width:0!important;
-  height:40px!important;
-  margin:0!important;
-  justify-content:flex-start!important;
- }
- html.desktop-route .global-search span{display:block!important;font-size:12px!important}
- html.desktop-route .global-search kbd{display:none!important}
- html.desktop-route .desk-current-section,
- html.desktop-route .topbar-currency,
- html.desktop-route .desk-topbar>select,
- html.desktop-route .extra-time-button,
- html.desktop-route .create-menu .desk-primary span{
-  display:none!important;
- }
- html.desktop-route .create-menu{
-  grid-column:3;
-  grid-row:1;
- }
- html.desktop-route .create-menu .desk-primary{
-  width:42px!important;
-  min-width:42px!important;
-  height:42px!important;
-  padding:0!important;
- }
- html.desktop-route .notification-wrap{grid-column:4;grid-row:1}
- html.desktop-route .notification-wrap>.topbar-icon{width:42px!important;height:42px!important}
- html.desktop-route .desk-topbar>.topbar-icon,
- html.desktop-route .desk-avatar{display:none!important}
- html.desktop-route .dropdown{
-  position:fixed!important;
-  left:10px!important;
-  right:10px!important;
-  top:62px!important;
-  width:auto!important;
-  min-width:0!important;
-  z-index:140!important;
- }
-
- /* Sidebar becomes a true phone drawer. */
- html.desktop-route .desktop-sidebar{
-  position:fixed!important;
-  z-index:160!important;
-  top:0!important;
-  bottom:0!important;
-  left:-88vw!important;
-  width:min(84vw,320px)!important;
-  height:100dvh!important;
-  padding:18px 12px max(18px,env(safe-area-inset-bottom))!important;
-  overflow-y:auto!important;
-  transition:left .2s ease!important;
-  box-shadow:none!important;
- }
- html.desktop-route .desktop-shell.sidebar-open>.desktop-sidebar{
-  left:0!important;
-  box-shadow:24px 0 70px rgba(0,0,0,.58)!important;
- }
- html.desktop-route .desktop-sidebar.compact{
-  width:min(84vw,320px)!important;
- }
- html.desktop-route .desktop-sidebar.compact .desk-brand span,
- html.desktop-route .desktop-sidebar.compact .desk-brand small,
- html.desktop-route .desktop-sidebar.compact .desk-nav-group span,
- html.desktop-route .desktop-sidebar.compact .sidebar-footer,
- html.desktop-route .desktop-sidebar.compact .sidebar-collapse span{
-  display:initial!important;
- }
- html.desktop-route .desktop-sidebar nav{gap:12px!important}
- html.desktop-route .desktop-sidebar nav button{
-  min-height:46px!important;
-  font-size:14px!important;
- }
- html.desktop-route .desktop-main{
-  width:100%!important;
-  min-width:0!important;
-  overflow:visible!important;
- }
- html.desktop-route .desktop-content{
-  width:100%!important;
-  max-width:none!important;
-  padding:12px 10px calc(28px + env(safe-area-inset-bottom))!important;
-  overflow:visible!important;
- }
-
- /* Global phone rhythm: cards are stacked, wide grids are scrollable instead of crushed. */
- html.desktop-route .today-grid,
- html.desktop-route .dashboard-grid,
- html.desktop-route .system-grid,
- html.desktop-route .analytics-grid,
- html.desktop-route .finance-grid,
- html.desktop-route .marketing-grid,
- html.desktop-route .team-grid{
-  grid-template-columns:1fr!important;
-  gap:10px!important;
- }
- html.desktop-route .page-intro{
-  margin-bottom:12px!important;
- }
- html.desktop-route .page-intro h1{font-size:22px!important}
- html.desktop-route .desk-panel,
- html.desktop-route .system-hero,
- html.desktop-route .premium-hero,
- html.desktop-route .premium-focus-card{
-  border-radius:14px!important;
- }
-
- /* Dashboard phone layout. */
- html.desktop-route .premium-hero{
-  min-height:0!important;
-  padding:18px!important;
- }
- html.desktop-route .premium-hero h1{
-  font-size:clamp(28px,9vw,42px)!important;
-  line-height:.96!important;
- }
- html.desktop-route .premium-kpis{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:8px!important;
- }
- html.desktop-route .premium-kpi{
-  min-width:0!important;
-  padding:12px!important;
- }
- html.desktop-route .premium-focus-card{
-  grid-template-columns:1fr!important;
- }
- html.desktop-route .premium-focus-visual{
-  min-height:150px!important;
-  max-height:190px!important;
- }
- html.desktop-route .premium-focus-car-image{
-  max-width:360px!important;
-  max-height:175px!important;
- }
- html.desktop-route .premium-today-list{
-  min-width:0!important;
- }
-
- /* Kanban is phone-native: one readable stage at a time, horizontal swipe between stages. */
- html.desktop-route .orders-board-shell{
-  overflow:visible!important;
- }
- html.desktop-route .orders-kanban{
-  display:flex!important;
-  width:100%!important;
-  height:auto!important;
-  min-height:0!important;
-  max-height:none!important;
-  gap:10px!important;
-  padding:0 2px 8px!important;
-  overflow-x:auto!important;
-  overflow-y:visible!important;
-  scroll-snap-type:x mandatory;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none!important;
- }
- html.desktop-route .orders-kanban::-webkit-scrollbar{display:none!important}
- html.desktop-route .orders-kanban-col{
-  flex:0 0 calc(100vw - 34px)!important;
-  width:calc(100vw - 34px)!important;
-  min-width:calc(100vw - 34px)!important;
-  height:min(68dvh,650px)!important;
-  max-height:min(68dvh,650px)!important;
-  scroll-snap-align:center;
-  border-radius:14px!important;
- }
- html.desktop-route .orders-column-body{
-  min-height:0!important;
-  height:100%!important;
-  overflow-y:auto!important;
-  -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain;
-  padding:8px!important;
- }
- html.desktop-route .orders-kanban-card{
-  min-height:unset!important;
-  border-radius:12px!important;
- }
- html.desktop-route .orders-card-main{
-  padding:10px!important;
- }
-
- /* Forms: single column, touch-size controls. */
- html.desktop-route .desk-form-grid,
- html.desktop-route .create-order-grid,
- html.desktop-route .order-edit-grid,
- html.desktop-route .service-edit-grid{
-  grid-template-columns:1fr!important;
- }
- html.desktop-route .desk-field,
- html.desktop-route .desk-field input,
- html.desktop-route .desk-field select,
- html.desktop-route .desk-field textarea,
- html.desktop-route button{
-  min-height:44px;
- }
- html.desktop-route input,
- html.desktop-route select,
- html.desktop-route textarea{
-  font-size:16px!important; /* prevents iOS zoom */
- }
-
- /* Drawers/modals become full-screen mobile workspaces. */
- html.desktop-route .desk-drawer{
-  position:fixed!important;
-  inset:0!important;
-  width:100%!important;
-  max-width:none!important;
-  height:100dvh!important;
-  max-height:none!important;
-  border-radius:0!important;
-  border:0!important;
-  overflow-y:auto!important;
-  padding-bottom:calc(20px + env(safe-area-inset-bottom))!important;
-  z-index:220!important;
- }
- html.desktop-route .desk-modal-backdrop{
-  align-items:flex-end!important;
-  padding:0!important;
- }
- html.desktop-route .desk-modal{
-  width:100%!important;
-  max-width:none!important;
-  max-height:92dvh!important;
-  border-radius:18px 18px 0 0!important;
-  overflow-y:auto!important;
-  padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;
- }
- html.desktop-route .tabs,
- html.desktop-route .desk-tabs{
-  overflow-x:auto!important;
-  flex-wrap:nowrap!important;
-  -webkit-overflow-scrolling:touch;
-  scrollbar-width:none;
- }
- html.desktop-route .tabs::-webkit-scrollbar,
- html.desktop-route .desk-tabs::-webkit-scrollbar{display:none}
- html.desktop-route .tabs button,
- html.desktop-route .desk-tabs button{white-space:nowrap!important}
-
- /* Tables stay usable without changing their desktop definitions. */
- html.desktop-route .desk-table-wrap,
- html.desktop-route .table-wrap,
- html.desktop-route .simple-table-wrap{
-  overflow-x:auto!important;
-  -webkit-overflow-scrolling:touch;
- }
- html.desktop-route table{min-width:680px}
-
- /* Notification popover: contained inside phone viewport. */
- html.desktop-route .notification-popover{
-  position:fixed!important;
-  left:10px!important;
-  right:10px!important;
-  top:62px!important;
-  width:auto!important;
-  max-width:none!important;
-  max-height:70dvh!important;
-  overflow:auto!important;
- }
-
- /* Safe-area spacing for iPhone Safari / Telegram browser. */
- @supports(padding:max(0px)){
-  html.desktop-route .desk-topbar{
-   padding-top:max(8px,env(safe-area-inset-top))!important;
+  html.desktop-route,
+  html.desktop-route body{
+    width:100%;
+    max-width:100%;
+    min-width:0!important;
+    overflow-x:hidden!important;
   }
- }
+
+  html.desktop-route *{
+    box-sizing:border-box;
+  }
+
+  html.desktop-route .desktop-shell,
+  html.desktop-route .desktop-shell.sidebar-compact{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:100dvh!important;
+    overflow:visible!important;
+  }
+
+  html.desktop-route .desktop-main{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:visible!important;
+  }
+
+  /* Header: one stable row. No second grid row, no absolute overlap. */
+  html.desktop-route .desk-topbar{
+    position:sticky!important;
+    top:0!important;
+    z-index:90!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:58px!important;
+    height:58px!important;
+    padding:8px 10px!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    flex-wrap:nowrap!important;
+    overflow:visible!important;
+    background:rgba(7,8,7,.94)!important;
+    -webkit-backdrop-filter:blur(18px) saturate(1.08);
+    backdrop-filter:blur(18px) saturate(1.08);
+  }
+
+  html.desktop-route .tablet-menu,
+  html.desktop-route .desk-topbar .global-search,
+  html.desktop-route .create-menu>.desk-primary,
+  html.desktop-route .notification-wrap>.topbar-icon{
+    flex:0 0 40px!important;
+    width:40px!important;
+    min-width:40px!important;
+    height:40px!important;
+    min-height:40px!important;
+    padding:0!important;
+    display:grid!important;
+    place-items:center!important;
+    border-radius:11px!important;
+  }
+
+  html.desktop-route .tablet-menu{order:1!important}
+
+  html.desktop-route .topbar-mini-brand{
+    order:2!important;
+    flex:1 1 auto!important;
+    min-width:0!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:7px!important;
+    overflow:hidden!important;
+  }
+  html.desktop-route .topbar-mini-brand img{
+    flex:0 0 28px!important;
+    width:28px!important;
+    height:30px!important;
+    object-fit:contain!important;
+  }
+  html.desktop-route .topbar-mini-brand span{
+    display:block!important;
+    min-width:0!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+    font-size:10px!important;
+    letter-spacing:.12em!important;
+  }
+
+  html.desktop-route .desk-topbar .global-search{
+    order:3!important;
+    margin:0!important;
+    color:var(--text-muted)!important;
+  }
+  html.desktop-route .desk-topbar .global-search span,
+  html.desktop-route .desk-topbar .global-search kbd{
+    display:none!important;
+  }
+
+  html.desktop-route .create-menu{
+    order:4!important;
+    flex:0 0 40px!important;
+    position:relative!important;
+  }
+  html.desktop-route .create-menu>.desk-primary span{display:none!important}
+
+  html.desktop-route .notification-wrap{
+    order:5!important;
+    flex:0 0 40px!important;
+    position:relative!important;
+  }
+
+  /* Hide controls that simply do not fit on an iPhone header.
+     They remain available from settings/profile on larger layouts. */
+  html.desktop-route .desk-current-section,
+  html.desktop-route .extra-time-button,
+  html.desktop-route .desk-topbar>.topbar-icon,
+  html.desktop-route .desk-topbar>.topbar-currency,
+  html.desktop-route .desk-topbar>select,
+  html.desktop-route .desk-avatar{
+    display:none!important;
+  }
+
+  html.desktop-route .dropdown{
+    position:fixed!important;
+    top:64px!important;
+    left:10px!important;
+    right:10px!important;
+    width:auto!important;
+    min-width:0!important;
+    max-width:none!important;
+    z-index:220!important;
+  }
+
+  html.desktop-route .notification-popover{
+    position:fixed!important;
+    top:64px!important;
+    left:10px!important;
+    right:10px!important;
+    width:auto!important;
+    max-width:none!important;
+    max-height:72dvh!important;
+    overflow:auto!important;
+    z-index:220!important;
+  }
+
+  /* Sidebar: true off-canvas menu. */
+  html.desktop-route .desktop-sidebar,
+  html.desktop-route .desktop-sidebar.compact{
+    position:fixed!important;
+    top:0!important;
+    bottom:0!important;
+    left:0!important;
+    z-index:180!important;
+    width:min(84vw,318px)!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    padding:18px 12px calc(18px + env(safe-area-inset-bottom))!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    transform:translateX(-105%)!important;
+    transition:transform .2s ease!important;
+    box-shadow:none!important;
+  }
+
+  html.desktop-route .desktop-shell.sidebar-open>.desktop-sidebar{
+    transform:translateX(0)!important;
+    box-shadow:24px 0 70px rgba(0,0,0,.6)!important;
+  }
+
+  html.desktop-route .desktop-sidebar.compact span,
+  html.desktop-route .desktop-sidebar.compact .desk-brand span,
+  html.desktop-route .desktop-sidebar.compact .desk-brand small,
+  html.desktop-route .desktop-sidebar.compact .sidebar-collapse span,
+  html.desktop-route .desktop-sidebar.compact .sidebar-footer{
+    display:initial!important;
+  }
+  html.desktop-route .desktop-sidebar.compact .desk-nav-group button,
+  html.desktop-route .desktop-sidebar.compact .sidebar-collapse{
+    justify-content:flex-start!important;
+  }
+
+  /* Main content is a normal document flow. */
+  html.desktop-route .desktop-content{
+    display:block!important;
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    margin:0!important;
+    padding:12px 10px calc(24px + env(safe-area-inset-bottom))!important;
+    overflow:visible!important;
+  }
+
+  html.desktop-route .desktop-content>*{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  html.desktop-route .page-intro{
+    display:block!important;
+    margin:0 0 12px!important;
+  }
+  html.desktop-route .page-intro h1{
+    margin-top:0!important;
+    font-size:22px!important;
+    line-height:1.08!important;
+  }
+
+  /* Common multi-column sections collapse instead of overlapping. */
+  html.desktop-route .today-grid,
+  html.desktop-route .dashboard-grid,
+  html.desktop-route .system-grid,
+  html.desktop-route .analytics-grid,
+  html.desktop-route .finance-grid,
+  html.desktop-route .marketing-grid,
+  html.desktop-route .team-grid,
+  html.desktop-route .team-layout,
+  html.desktop-route .team-lower-grid,
+  html.desktop-route .staff-detail-columns,
+  html.desktop-route .staff-edit-strip,
+  html.desktop-route .team-add-row,
+  html.desktop-route .desk-form-grid,
+  html.desktop-route .create-order-grid,
+  html.desktop-route .order-edit-grid,
+  html.desktop-route .service-edit-grid{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:10px!important;
+  }
+
+  /* Dashboard */
+  html.desktop-route .premium-dashboard{
+    width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  html.desktop-route .premium-hero{
+    min-height:0!important;
+    padding:16px!important;
+    overflow:hidden!important;
+  }
+  html.desktop-route .premium-hero h1{
+    font-size:clamp(27px,8vw,38px)!important;
+    line-height:.98!important;
+  }
+  html.desktop-route .premium-kpis{
+    display:grid!important;
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:8px!important;
+  }
+  html.desktop-route .premium-kpi{
+    min-width:0!important;
+    padding:11px!important;
+  }
+  html.desktop-route .premium-focus-card{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    min-width:0!important;
+  }
+  html.desktop-route .premium-focus-visual{
+    min-height:150px!important;
+    max-height:185px!important;
+  }
+  html.desktop-route .premium-focus-car-image{
+    max-width:340px!important;
+    max-height:170px!important;
+  }
+
+  /* Kanban: exactly one stage per swipe, each stage scrolls internally. */
+  html.desktop-route .orders-board-shell{
+    width:100%!important;
+    min-width:0!important;
+    overflow:visible!important;
+  }
+  html.desktop-route .orders-kanban{
+    display:flex!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+    max-height:none!important;
+    gap:10px!important;
+    padding:0 0 8px!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    scroll-snap-type:x mandatory!important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none!important;
+  }
+  html.desktop-route .orders-kanban::-webkit-scrollbar{display:none!important}
+
+  html.desktop-route .orders-kanban-col{
+    flex:0 0 calc(100vw - 28px)!important;
+    width:calc(100vw - 28px)!important;
+    min-width:calc(100vw - 28px)!important;
+    max-width:calc(100vw - 28px)!important;
+    height:62dvh!important;
+    min-height:420px!important;
+    max-height:620px!important;
+    display:grid!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    overflow:hidden!important;
+    scroll-snap-align:start!important;
+  }
+  html.desktop-route .orders-column-body{
+    min-height:0!important;
+    height:auto!important;
+    max-height:none!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  html.desktop-route .orders-kanban-card{
+    flex:none!important;
+    width:100%!important;
+    min-width:0!important;
+    height:auto!important;
+  }
+
+  /* Forms and controls */
+  html.desktop-route input:not([type=checkbox]):not([type=radio]):not([type=file]),
+  html.desktop-route select,
+  html.desktop-route textarea{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    font-size:16px!important; /* prevent iOS focus zoom */
+  }
+
+  html.desktop-route .desk-field{
+    min-width:0!important;
+    width:100%!important;
+  }
+
+  /* Drawers are full-screen on phones, but their children stay in normal flow. */
+  html.desktop-route .desk-drawer{
+    position:fixed!important;
+    inset:0!important;
+    z-index:240!important;
+    width:100%!important;
+    max-width:100%!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    border-radius:0!important;
+    padding-bottom:calc(20px + env(safe-area-inset-bottom))!important;
+  }
+  html.desktop-route .desk-drawer>*{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  html.desktop-route .desk-modal-backdrop{
+    padding:0!important;
+    align-items:flex-end!important;
+  }
+  html.desktop-route .desk-modal{
+    width:100%!important;
+    max-width:100%!important;
+    max-height:90dvh!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    border-radius:18px 18px 0 0!important;
+    padding-bottom:calc(16px + env(safe-area-inset-bottom))!important;
+  }
+
+  html.desktop-route .tabs,
+  html.desktop-route .desk-tabs{
+    display:flex!important;
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    flex-wrap:nowrap!important;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:none!important;
+  }
+  html.desktop-route .tabs::-webkit-scrollbar,
+  html.desktop-route .desk-tabs::-webkit-scrollbar{display:none!important}
+  html.desktop-route .tabs button,
+  html.desktop-route .desk-tabs button{
+    flex:0 0 auto!important;
+    white-space:nowrap!important;
+  }
+
+  /* Wide data remains horizontally scrollable instead of shrinking/overlapping. */
+  html.desktop-route .desk-table-wrap,
+  html.desktop-route .table-wrap,
+  html.desktop-route .simple-table-wrap{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch;
+  }
+  html.desktop-route table{min-width:680px!important}
+
+  /* Specific staff/marketing blocks that otherwise keep desktop widths. */
+  html.desktop-route .team-workspace .team-kpis,
+  html.desktop-route .staff-detail-kpis,
+  html.desktop-route .bot-health-kpis,
+  html.desktop-route .bot-health-analysis{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html.desktop-route .broadcast-recipient-list{
+    grid-template-columns:1fr!important;
+  }
+
+  @supports(padding:max(0px)){
+    html.desktop-route .desk-topbar{
+      padding-top:max(8px,env(safe-area-inset-top))!important;
+    }
+  }
 }
 
-/* Narrow phones only. This block deliberately does not apply to iPad/tablet. */
-@media (max-width:390px){
- html.desktop-route .premium-kpis{grid-template-columns:1fr!important}
- html.desktop-route .orders-kanban-col{
-  flex-basis:calc(100vw - 24px)!important;
-  width:calc(100vw - 24px)!important;
-  min-width:calc(100vw - 24px)!important;
- }
+/* iPhone 13 / similar 390px class */
+@media (max-width:400px){
+  html.desktop-route .topbar-mini-brand span{display:none!important}
+  html.desktop-route .premium-kpis{grid-template-columns:1fr!important}
+  html.desktop-route .orders-kanban-col{
+    flex-basis:calc(100vw - 20px)!important;
+    width:calc(100vw - 20px)!important;
+    min-width:calc(100vw - 20px)!important;
+    max-width:calc(100vw - 20px)!important;
+  }
 }
