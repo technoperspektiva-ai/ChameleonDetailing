@@ -1,9 +1,9 @@
-import React,{useEffect,useMemo,useState} from 'react';
+import React,{useEffect,useMemo,useRef,useState} from 'react';
 import {
  Home,ClipboardList,Search,Car,Users,CalendarDays,Wrench,CreditCard,Megaphone,
  BarChart3,FileText,BadgeCheck,Settings,History,LayoutDashboard,LogOut,RefreshCw,
  ChevronRight,Lock,Unlock,Save,Upload,Download,RotateCcw,Send,Pause,Play,Eye,
- Monitor,Tablet,X,Check,AlertTriangle,Sun,Moon
+ Monitor,Tablet,X,Check,AlertTriangle,Sun,Moon,ChevronDown,Globe2
 } from 'lucide-react';
 import './desktop.css';
 import {desktopLocales,desktopLocaleLabels,desktopLocaleNames,desktopT,normalizeDesktopLocale,type DesktopLocale} from './desktopLocales';
@@ -37,6 +37,8 @@ export function DesktopApp(){
  const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard');
  const [theme,setTheme]=useState<'dark'|'light'>(()=>localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark');
  const [locale,setLocale]=useState<DesktopLocale>(()=>normalizeDesktopLocale(localStorage.getItem('chameleon.desktop.locale')||navigator.language));
+ const [langOpen,setLangOpen]=useState(false);
+ const langRef=useRef<HTMLDivElement|null>(null);
  const t=(key:string)=>desktopT(locale,key);
  const load=async()=>{
   setLoading(true);setError('');
@@ -59,6 +61,7 @@ export function DesktopApp(){
  useEffect(()=>{location.hash=page==='dashboard'?'':page},[page]);
  useEffect(()=>{document.documentElement.dataset.desktopTheme=theme;localStorage.setItem('chameleon.desktop.theme',theme)},[theme]);
  useEffect(()=>{document.documentElement.lang=locale;localStorage.setItem('chameleon.desktop.locale',locale)},[locale]);
+ useEffect(()=>{const onPointer=(e:PointerEvent)=>{if(langRef.current&&!langRef.current.contains(e.target as Node))setLangOpen(false)};document.addEventListener('pointerdown',onPointer);return()=>document.removeEventListener('pointerdown',onPointer)},[]);
  if(phoneBlocked)return <div className="desk-state"><AlertTriangle/><h1>{t('blocked.title')}</h1><p>{t('blocked.phone')}</p><p className="desk-muted">{t('blocked.device')}</p></div>;
  if(loading)return <div className="desk-state"><div className="desk-spinner"/><h1>Chameleon Control Center</h1><p>{t('loading')}</p></div>;
  if(!boot)return <div className="desk-state"><AlertTriangle/><h1>{t('blocked.title')}</h1><p>{error||t('session.error')}</p><p className="desk-muted">{t('session.hint')}</p></div>;
@@ -76,10 +79,11 @@ export function DesktopApp(){
  const sidebar=(boot.workspace?.config?.sidebar||[]).filter((x:any)=>x&&labels[x.id as Page]&&allowed(x.id)&&(!x.roles||x.roles.includes(boot.user.role)));
  const savePersonal=async(next:any)=>{const personal={...(boot.personal||{}),...next};setBoot({...boot,personal});try{await post('/api/desktop/personal-workspace',personal,'PUT')}catch{}};
  const toggleTheme=async()=>{const next=theme==='dark'?'light':'dark';setTheme(next);await savePersonal({theme:next,locale})};
- const changeLocale=async(next:DesktopLocale)=>{setLocale(next);await savePersonal({locale:next,theme})};
+ const changeLocale=async(next:DesktopLocale)=>{setLocale(next);setLangOpen(false);await savePersonal({locale:next,theme})};
+ const localeFlags:Record<DesktopLocale,string>={uk:'🇺🇦',pl:'🇵🇱',en:'🇬🇧',de:'🇩🇪',fr:'🇫🇷'};
  return <div className={'desktop-shell theme-'+theme} data-theme={theme}>
   <main className="desktop-main">
-   <header className="desk-topbar"><div className="desk-top-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><small>CHAMELEON DETAILING</small><h1>{t('page.'+page)}</h1></div></div><div className="desk-top-actions"><label className="desk-language-select" title={t('common.language')}><span>{desktopLocaleLabels[locale]}</span><select value={locale} onChange={e=>changeLocale(e.target.value as DesktopLocale)}>{desktopLocales.map(l=><option value={l} key={l}>{desktopLocaleLabels[l]} · {desktopLocaleNames[l]}</option>)}</select></label><button className="desk-theme-toggle" onClick={toggleTheme} title={theme==='dark'?t('theme.light'):t('theme.dark')}>{theme==='dark'?<Sun/>:<Moon/>}<span>{theme==='dark'?t('theme.light'):t('theme.dark')}</span></button><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div><div className="desk-user-top"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}</span></div><button onClick={logout} title={t('logout')}><LogOut/></button></div></div></header>
+   <header className="desk-topbar"><div className="desk-top-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><small>CHAMELEON DETAILING</small><h1>{t('page.'+page)}</h1></div></div><div className="desk-top-actions"><div className={'desk-language-picker '+(langOpen?'open':'')} ref={langRef}><button className="desk-language-trigger" type="button" onClick={()=>setLangOpen(v=>!v)} title={t('common.language')} aria-haspopup="listbox" aria-expanded={langOpen}><Globe2/><span className="desk-language-flag">{localeFlags[locale]}</span><span className="desk-language-current"><b>{desktopLocaleLabels[locale]}</b><small>{desktopLocaleNames[locale]}</small></span><ChevronDown className="desk-language-chevron"/></button>{langOpen&&<div className="desk-language-menu" role="listbox" aria-label={t('common.language')}>{desktopLocales.map(l=><button type="button" role="option" aria-selected={l===locale} className={l===locale?'active':''} key={l} onClick={()=>changeLocale(l)}><span className="desk-language-flag">{localeFlags[l]}</span><span><b>{desktopLocaleNames[l]}</b><small>{desktopLocaleLabels[l]}</small></span>{l===locale&&<Check/>}</button>)}</div>}</div><button className="desk-theme-toggle" onClick={toggleTheme} title={theme==='dark'?t('theme.light'):t('theme.dark')}>{theme==='dark'?<Sun/>:<Moon/>}<span>{theme==='dark'?t('theme.light'):t('theme.dark')}</span></button><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div><div className="desk-user-top"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}</span></div><button onClick={logout} title={t('logout')}><LogOut/></button></div></div></header>
    {boot.mode==='READ_ONLY'&&<div className="desk-banner warning">{t('readonly')}</div>}
    <div className="desktop-content">
     {page==='dashboard'&&<Dashboard boot={boot} goto={setPage} locale={locale}/>}
