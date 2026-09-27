@@ -388,7 +388,17 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/bootstrap'&&request.method==='GET'){
   const active=await env.DB!.prepare('SELECT version_number,config_json FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>();
   const personal=await env.DB!.prepare('SELECT config_json FROM desktop_personal_workspace WHERE user_id=?').bind(staff.user_id).first<any>();
-  return reply({user:{id:staff.user_id,telegramId:staff.telegram_user_id,firstName:staff.first_name,username:staff.username,role:staff.role},permissions:perms,mode:m,workspace:{version:Number(active?.version_number||1),config:parse(active?.config_json,defaultWorkspace)},personal:parse(personal?.config_json,{}),kanbanLabels:parse(await getSetting(env,'desktop.kanban_labels','{}'),{})});
+  const emergencyRaw=String(await getSetting(env,'emergency_enabled','0')).toLowerCase(),emergencyEnabled=['1','true','yes','on','enabled'].includes(emergencyRaw),emergencyMultiplier=Math.max(1,Number(await getSetting(env,'emergency_multiplier','1.5'))||1.5);
+  return reply({user:{id:staff.user_id,telegramId:staff.telegram_user_id,firstName:staff.first_name,username:staff.username,role:staff.role},permissions:perms,mode:m,workspace:{version:Number(active?.version_number||1),config:parse(active?.config_json,defaultWorkspace)},personal:parse(personal?.config_json,{}),kanbanLabels:parse(await getSetting(env,'desktop.kanban_labels','{}'),{}),emergency:{enabled:emergencyEnabled,multiplier:emergencyMultiplier}});
+ }
+ if(url.pathname==='/api/desktop/emergency'&&request.method==='PATCH'){
+  if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
+  await writable(env);const b=await body(request),enabled=!!b.enabled;
+  const multiplier=Math.max(1,Math.min(3,Number(b.multiplier||await getSetting(env,'emergency_multiplier','1.5'))||1.5));
+  const previous={enabled:String(await getSetting(env,'emergency_enabled','0')),multiplier:String(await getSetting(env,'emergency_multiplier','1.5'))};
+  await setSetting(env,'emergency_enabled',enabled?'1':'0');await setSetting(env,'emergency_multiplier',String(multiplier));
+  await log(env,staff.user_id,'desktop.extra_time.toggle','settings','emergency_enabled',previous,{enabled,multiplier});
+  return reply({ok:true,enabled,multiplier});
  }
  if(url.pathname==='/api/desktop/kanban-labels'&&request.method==='PATCH'){
   if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
@@ -496,6 +506,13 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   return reply({ok:true,id,userId,carId,total:finalPrice,currency:target});
  }
  const orderMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)$/);
+ if(orderMatch&&request.method==='DELETE'){
+  if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
+  await writable(env);const id=Number(orderMatch[1]),old=await orderDetail(env,id);if(!old)return reply({error:'Order not found.'},404);
+  await env.DB!.prepare('UPDATE service_requests SET staff_deleted_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id).run();
+  await log(env,staff.user_id,'desktop.order.silent_delete','service_request',String(id),old,{staff_deleted_at:'NOW'});
+  return reply({ok:true,id});
+ }
  if(orderMatch&&request.method==='GET')return reply({order:await orderDetail(env,Number(orderMatch[1]))});
  if(orderMatch&&request.method==='PATCH'){
   if(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders')))return reply({error:'Orders management is disabled for Manager.'},403);
