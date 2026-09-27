@@ -102,7 +102,7 @@ export function App(){
  if(splash)return <StartupSplash locale={locale} startup={startup} onRetry={()=>location.reload()} t={t}/>;
  if(directWebBlocked)return <DirectWebGate locale={locale}/>;
  if(!session)return <StateScreen title="Chameleon Detailing" text={startup.error||t('errors.startup')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
- if(session.blocked)return <StateScreen title={t('blacklist.title')} text={session.blockedReason||t('blacklist.text')} action={()=>openBot()} actionLabel={t('common.support')}/>;
+ if(session.blocked)return <StateScreen title={t('blacklist.title')} text={t('blacklist.text')} action={()=>openBot()} actionLabel={t('common.support')}/>;
  if(session.maintenance&&session.user.role!=='OWNER')return <StateScreen title={t('maintenance.title')} text={t('maintenance.text')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
  return <div className="app"><SeasonalDecor theme={session.theme?.seasonalTheme}/>
   <header><div className="brand"><img className="logo" src="/brand/chameleon-logo.webp" alt="Chameleon Detailing"/><div><b>Chameleon Detailing</b><span>{t('common.miniApp')}</span></div></div><button className="pill" aria-label={t('profile.language')} onClick={cycleLocale}><Globe2 size={16}/>{localeLabels[locale]}</button></header>
