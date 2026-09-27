@@ -370,7 +370,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(!url.pathname.startsWith('/api/desktop/'))return null;
  await ensureDesktopDb(env);
  if(url.pathname==='/api/desktop/login'&&request.method==='POST'){
-  if(isPhoneRequest(request))return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center доступний лише з PC, Mac, ноутбука або планшета.'},403);
+  if(isPhoneRequest(request)&&(await getSetting(env,'desktop.mobile_access_enabled','0'))!=='1')return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center з телефону вимкнений Owner. Увімкніть «Desktop з телефону» в налаштуваннях Bot Panel.'},403);
   const b=await body(request),raw=String(b.token||'');if(!raw)return reply({error:'Login token is required.'},400);
   const h=await digest(raw),row=await env.DB!.prepare("SELECT lt.*,u.first_name,u.username,u.role,u.status FROM desktop_login_tokens lt JOIN users u ON u.id=lt.user_id WHERE lt.token_hash=? AND lt.used_at IS NULL AND lt.expires_at>CURRENT_TIMESTAMP").bind(h).first<any>();
   if(!row||row.status!=='ACTIVE'||!['OWNER','ADMIN','MANAGER'].includes(row.role))return reply({error:'Login token is invalid or expired.'},401);
@@ -381,7 +381,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   await log(env,row.user_id,'desktop.login','desktop_session',undefined,null,{device});
   return reply({ok:true,session,user:{id:row.user_id,firstName:row.first_name,username:row.username,role:row.role}});
  }
- if(isPhoneRequest(request))return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center доступний лише з PC, Mac, ноутбука або планшета.'},403);
+ if(isPhoneRequest(request)&&(await getSetting(env,'desktop.mobile_access_enabled','0'))!=='1')return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center з телефону вимкнений Owner. Увімкніть «Desktop з телефону» в налаштуваннях Bot Panel.'},403);
  const staff=await auth(env,request);if(!staff)return reply({error:'Desktop session is missing, expired or revoked.'},401);
  const m=await mode(env);if(m==='DISABLED')return reply({error:'DESKTOP_DISABLED',mode:m},503);if(m==='MAINTENANCE'&&url.pathname!=='/api/desktop/bootstrap')return reply({error:'DESKTOP_MAINTENANCE',mode:m},503);
  const perms=await permissionSnapshot(env,staff.role);
