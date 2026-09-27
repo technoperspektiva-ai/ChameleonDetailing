@@ -711,3 +711,9 @@ nav button.active::after{bottom:1px}
  .garage-order-bottom{gap:10px}
  .garage-order-bottom button{min-height:38px;padding:7px 11px}
 }
+
+.referral-active-bonus{display:flex;align-items:center;gap:12px;margin:0 0 14px;padding:12px 14px;border:1px solid rgba(164,255,0,.22);border-radius:16px;background:linear-gradient(135deg,rgba(164,255,0,.09),rgba(164,255,0,.025));box-shadow:0 12px 34px rgba(0,0,0,.16)}
+.referral-active-bonus>svg{width:34px;height:34px;padding:8px;border-radius:12px;background:rgba(164,255,0,.12);color:var(--neon-color)}
+.referral-active-bonus>div{display:grid;gap:3px;min-width:0}
+.referral-active-bonus b{font-size:.92rem;color:#f4f8ef}
+.referral-active-bonus small{font-size:.76rem;line-height:1.4;color:#aab3a7}
