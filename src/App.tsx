@@ -13,7 +13,7 @@ import {PremiumMainServiceIcon} from './components/PremiumMainServiceIcon';
 type Tab='home'|'services'|'calculator'|'vip'|'profile'|'orders'|'cars';
 type SocialLink={type:string;url:string};
 type Specialist={id:number;name:string;roleTitle?:string;portfolioUrl?:string;contactUrl?:string;contactLabel?:string;photoUrl?:string};
-const vehicles=[['sedan','vehicle.sedan','/vehicle-types/sedan.webp'],['hatchback','vehicle.hatchback','/vehicle-types/hatchback.webp'],['suv','vehicle.suv','/vehicle-types/suv.webp'],['large-suv','vehicle.largeSuv','/vehicle-types/large-suv.webp'],['van','vehicle.van','/vehicle-types/van.webp']] as const;
+const vehicles=[['sedan','vehicle.sedan','/miniapp-vehicle-icons/sedan.webp'],['hatchback','vehicle.hatchback','/miniapp-vehicle-icons/hatchback.webp'],['suv','vehicle.suv','/miniapp-vehicle-icons/suv.webp'],['large-suv','vehicle.largeSuv','/miniapp-vehicle-icons/large-suv.webp'],['van','vehicle.van','/miniapp-vehicle-icons/van.webp']] as const;
 const conditions=[['light','condition.light'],['normal','condition.normal'],['dirty','condition.dirty'],['very-dirty','condition.veryDirty']] as const;
 const canonicalBodyTypes=['sedan','hatchback','suv','large-suv','van'] as const;
 const mainServiceSlugs=new Set(['exterior-detailing','interior-detailing','full-detailing','ceramic-coating']);
