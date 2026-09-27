@@ -1,5 +1,7 @@
+import {useEffect,useState} from 'react';
 import {ArrowUpRight,Banknote,BarChart3,CalendarDays,CarFront,CheckCircle2,Clock3,MessageCircle,MoreHorizontal,Package,Phone,Plus,Users,UsersRound,Wrench} from 'lucide-react';
-import {useData} from '../../hooks';
+import {useData,usePreference} from '../../hooks';
+import {api} from '../../api/desktopApi';
 import type {Order,Bootstrap} from '../../types/desktop';
 import {Skeleton,EmptyState,StatusBadge} from '../../components/primitives';
 import {businessDate,businessTime} from '../../format';
@@ -39,6 +41,9 @@ function monthGrid(date:Date,orders:Order[]){
 
 export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;create?:()=>void}){
  const {rows,loading,updated}=useData<Order>('/api/desktop/orders','orders');
+ const [currency]=usePreference('currency',boot.personal?.currency||'PLN');
+ const [dashboard,setDashboard]=useState<any>(null);
+ useEffect(()=>{let live=true;api('/api/desktop/dashboard?currency='+encodeURIComponent(currency)).then(d=>{if(live)setDashboard(d)}).catch(()=>{});return()=>{live=false}},[currency,rows.length]);
  if(loading)return <Skeleton/>;
 
  const now=new Date();
@@ -48,13 +53,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
  const attention=rows.filter(x=>x.status==='READY'||(x.status==='COMPLETED'&&x.payment_status!=='PAID')||(!x.responsible_staff_id&&active.includes(x))).slice(0,6);
  const focus=scheduled.find(x=>working.has(x.status))||active.find(x=>working.has(x.status))||scheduled[0]||active[0]||rows[0];
 
- const currentMonth=now.getMonth(),currentYear=now.getFullYear();
- const monthly=rows.filter(x=>{
-  const d=new Date(x.completed_at||x.created_at);
-  return d.getMonth()===currentMonth&&d.getFullYear()===currentYear&&!['CANCELLED','REJECTED'].includes(x.status);
- });
- const monthlyRevenue=monthly.reduce((sum,x)=>sum+Number(x.final_job_price??x.calculated_price??0),0);
- const currency=monthly.find(x=>x.currency)?.currency||'PLN';
+ const monthlyRevenue=Number(dashboard?.kpi?.revenue||0);
 
  const clientCount=new Map<number,number>();
  rows.forEach(x=>clientCount.set(x.user_id,(clientCount.get(x.user_id)||0)+1));
