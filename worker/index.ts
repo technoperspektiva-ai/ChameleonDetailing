@@ -2,6 +2,7 @@ import type {Env} from './lib/types';
 import {validateInitData,tgApi} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getServiceOptions,getSetting,setSetting,upsertUser} from './lib/db';
 import {optionDisplayPrice,quote,serviceDisplayPrice} from './lib/pricing';
+import {convertCurrency,normalizeCurrency} from './lib/currency';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
@@ -77,6 +78,13 @@ async function sessionState(env:Env,u:any){
  const blocked=u.demo?null:await getActiveBlock(env,u.id);
  const schedule=await scheduleState(env);
  const seasonal=await resolveSeasonalTheme(env);
+ let referralReward:any=null;
+ if(env.DB&&!u.demo&&u.id){
+  try{
+   const rr=await env.DB.prepare("SELECT rr.*,s.slug reward_service_slug FROM referral_rewards rr LEFT JOIN services s ON s.id=rr.reward_service_id WHERE rr.user_id=? AND rr.status='AVAILABLE' ORDER BY rr.id LIMIT 1").bind(u.id).first<any>();
+   if(rr){const type=String(rr.reward_type||'').toUpperCase(),target=normalizeCurrency(u.preferred_currency||'PLN');referralReward={id:Number(rr.id),type,value:type==='FIXED'?convertCurrency(Number(rr.reward_value||0),normalizeCurrency(rr.reward_currency||target),target):Number(rr.reward_value||0),currency:type==='FIXED'?target:null,service:rr.reward_service_slug||null}}
+  }catch{}
+ }
  const theme={
   fontH1:await getSetting(env,'theme.font_h1','clamp(1.7rem,7vw,2.35rem)'),
   fontH2:await getSetting(env,'theme.font_h2','clamp(1.25rem,5.4vw,1.6rem)'),
@@ -87,7 +95,7 @@ async function sessionState(env:Env,u:any){
   seasonalMode:seasonal.mode,
   seasonalTheme:seasonal.active
  };
- return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule,theme};
+ return {maintenance,blocked:!!blocked,blockedReason:blocked?.public_reason||null,schedule,theme,referralReward};
 }
 async function selfHealWebhook(env:Env,origin?:string,force=false){
  if(!env.BOT_TOKEN)return;
