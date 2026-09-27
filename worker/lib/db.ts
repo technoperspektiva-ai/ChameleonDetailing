@@ -12,6 +12,7 @@ async function safeAlter(env:Env,sql:string){
 export async function ensureDb(env:Env){
  if(!env.DB)return false;
  if(ready)return true;
+ await env.DB.exec("CREATE TABLE IF NOT EXISTS service_option_vip_pricing_rules(option_id INTEGER NOT NULL,tier TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'PERCENT',percent_discount REAL,multiplier REAL,fixed_price REAL,currency TEXT,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(option_id,tier))");
 
  // Production D1 is persistent across Worker deployments. On a fresh isolate we only
  // need to verify that the current schema is already present; rerunning the entire
@@ -48,6 +49,7 @@ CREATE TABLE IF NOT EXISTS vip_pricing_rules(service_id INTEGER NOT NULL,tier TE
 CREATE TABLE IF NOT EXISTS vehicle_types(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS condition_levels(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,multiplier REAL NOT NULL DEFAULT 1,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS service_options(id INTEGER PRIMARY KEY AUTOINCREMENT,service_id INTEGER,slug TEXT NOT NULL UNIQUE,price REAL NOT NULL DEFAULT 0,base_currency TEXT NOT NULL DEFAULT 'PLN',pricing_type TEXT NOT NULL DEFAULT 'FIXED',icon_key TEXT,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS service_option_vip_pricing_rules(option_id INTEGER NOT NULL,tier TEXT NOT NULL,mode TEXT NOT NULL DEFAULT 'PERCENT',percent_discount REAL,multiplier REAL,fixed_price REAL,currency TEXT,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(option_id,tier));
 CREATE TABLE IF NOT EXISTS service_option_translations(option_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',PRIMARY KEY(option_id,locale));
 CREATE TABLE IF NOT EXISTS service_requirements(service_id INTEGER PRIMARY KEY,require_condition INTEGER NOT NULL DEFAULT 1,require_vehicle INTEGER NOT NULL DEFAULT 1,allow_options INTEGER NOT NULL DEFAULT 1,allow_multiple_options INTEGER NOT NULL DEFAULT 1,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_option_links(service_id INTEGER NOT NULL,option_id INTEGER NOT NULL,sort_order INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(service_id,option_id));
