@@ -46,6 +46,17 @@ export async function grantReferralRewardsIfEligible(env:Env,requestId:number,ev
  return granted;
 }
 
+export async function grantReferralRewardsForCurrentState(env:Env,requestId:number){
+ if(!env.DB)return 0;
+ await ensureDb(env);
+ const expected=String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase()==='PAID'?'PAID':'COMPLETED';
+ const row=await env.DB.prepare('SELECT status,payment_status FROM service_requests WHERE id=? AND staff_deleted_at IS NULL').bind(requestId).first<any>();
+ if(!row)return 0;
+ if(expected==='PAID'&&String(row.payment_status||'').toUpperCase()!=='PAID')return 0;
+ if(expected==='COMPLETED'&&String(row.status||'').toUpperCase()!=='COMPLETED')return 0;
+ return grantReferralRewardsIfEligible(env,requestId,expected);
+}
+
 
 export async function reconcileReferralRewards(env:Env){
  if(!env.DB)return {eligible:0,granted:0,expected:'COMPLETED'};
