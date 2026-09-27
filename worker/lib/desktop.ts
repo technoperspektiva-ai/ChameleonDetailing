@@ -569,7 +569,11 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const [services,options]=await Promise.all([
    env.DB!.prepare("SELECT s.id,s.slug,s.enabled,s.archived,s.category,s.duration_min,s.image_url,s.icon_key,s.is_popular,p.base_price,p.base_currency,COALESCE(t.title,s.slug) title FROM services s LEFT JOIN service_prices p ON p.service_id=s.id LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale='uk' ORDER BY s.sort_order,s.id").all<any>(),
    env.DB!.prepare("SELECT o.id,o.slug,o.enabled,o.price,o.base_currency,o.pricing_type,o.icon_key,COALESCE(t.title,o.slug) title FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale='uk' ORDER BY o.sort_order,o.id").all<any>()
-  ]);return reply({services:services.results||[],options:options.results||[]});
+  ]);
+  const requestedCurrency=url.searchParams.get('currency'),target=requestedCurrency?normalizeCurrency(requestedCurrency):null;
+  const serviceRows=(services.results||[]).map((x:any)=>target?{...x,display_price:convertCurrency(Number(x.base_price||0),normalizeCurrency(x.base_currency||target),target),display_currency:target}:x);
+  const optionRows=(options.results||[]).map((x:any)=>target?{...x,display_price:convertCurrency(Number(x.price||0),normalizeCurrency(x.base_currency||target),target),display_currency:target}:x);
+  return reply({services:serviceRows,options:optionRows,currency:target});
  }
  const serviceDetailMatch=url.pathname.match(/^\/api\/desktop\/services\/detail\/(\d+)$/);
  if(serviceDetailMatch&&request.method==='GET'){
