@@ -45,3 +45,16 @@ export async function grantReferralRewardsIfEligible(env:Env,requestId:number,ev
  await event(env,req.user_id,'referral_rewards_granted',{referralId:ref.id,requestId,eventType,granted});
  return granted;
 }
+
+
+export async function reconcileReferralRewards(env:Env){
+ if(!env.DB)return {eligible:0,granted:0,expected:'COMPLETED'};
+ await ensureDb(env);
+ if((await getSetting(env,'referral_enabled','1'))!=='1')return {eligible:0,granted:0,expected:String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase()};
+ const expected=String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase()==='PAID'?'PAID':'COMPLETED';
+ const condition=expected==='PAID'?"sr.payment_status='PAID'":"sr.status='COMPLETED'";
+ const rows=await env.DB.prepare("SELECT r.id referral_id,(SELECT sr.id FROM service_requests sr WHERE sr.user_id=r.referred_user_id AND sr.staff_deleted_at IS NULL AND "+condition+" ORDER BY COALESCE(sr.completed_at,sr.confirmed_at,sr.created_at),sr.id LIMIT 1) request_id FROM referrals r WHERE r.referred_user_id IS NOT NULL ORDER BY r.id").all<any>();
+ let eligible=0,granted=0;
+ for(const row of rows.results||[]){const requestId=Number(row.request_id||0);if(!requestId)continue;eligible++;granted+=await grantReferralRewardsIfEligible(env,requestId,expected)}
+ return {eligible,granted,expected};
+}
