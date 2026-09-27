@@ -15,7 +15,7 @@ export const normalizeDesktopLocale=(value?:string|null):DesktopLocale=>{
 
 type Dict=Record<string,string>;
 const uk:Dict={
- 'page.dashboard':'Dashboard','page.orders':'Замовлення','page.sales':'Sales','page.cars':'Автомобілі','page.clients':'Клієнти','page.calendar':'Календар','page.services':'Послуги','page.payments':'Оплати','page.broadcasts':'Розсилки','page.analytics':'Аналітика','page.reports':'Звіти','page.staff':'Персонал','page.audit':'Audit Log','page.workspace':'Layout Editor','page.settings':'Налаштування',
+ 'page.dashboard':'Dashboard','page.orders':'Замовлення','page.sales':'Sales','page.cars':'Автомобілі','page.clients':'Клієнти','page.calendar':'Календар','page.services':'Послуги','page.payments':'Оплати','page.broadcasts':'Розсилки','page.analytics':'Аналітика','page.reports':'Звіти','page.staff':'Персонал','page.audit':'Audit Log','page.workspace':'Layout Editor','page.settings':'Налаштування','page.control':'Control Hub',
  'theme.light':'Світла','theme.dark':'Темна','logout':'Вийти','readonly':'Read Only: перегляд доступний, зміни заблоковані backend.',
  'blocked.title':'Desktop Control Center','blocked.phone':'Вхід з телефону заблокований.','blocked.device':'Відкрийте панель на PC, Mac, ноутбуці або iPad / планшеті.',
  'loading':'Завантаження робочого простору…','session.error':'Сесія недоступна.','session.hint':'Відкрийте Telegram Bot та надішліть команду /desktop, щоб отримати нове одноразове посилання.',
@@ -25,7 +25,7 @@ const uk:Dict={
  'common.search':'Пошук','common.save':'Зберегти','common.close':'Закрити','common.language':'Мова','common.theme':'Тема'
 };
 const pl:Dict={
- 'page.dashboard':'Dashboard','page.orders':'Zamówienia','page.sales':'Sales','page.cars':'Samochody','page.clients':'Klienci','page.calendar':'Kalendarz','page.services':'Usługi','page.payments':'Płatności','page.broadcasts':'Wysyłki','page.analytics':'Analityka','page.reports':'Raporty','page.staff':'Personel','page.audit':'Dziennik audytu','page.workspace':'Edytor układu','page.settings':'Ustawienia',
+ 'page.dashboard':'Dashboard','page.orders':'Zamówienia','page.sales':'Sales','page.cars':'Samochody','page.clients':'Klienci','page.calendar':'Kalendarz','page.services':'Usługi','page.payments':'Płatności','page.broadcasts':'Wysyłki','page.analytics':'Analityka','page.reports':'Raporty','page.staff':'Personel','page.audit':'Dziennik audytu','page.workspace':'Edytor układu','page.settings':'Ustawienia','page.control':'Control Hub',
  'theme.light':'Jasny','theme.dark':'Ciemny','logout':'Wyloguj','readonly':'Tylko odczyt: podgląd jest dostępny, zmiany są zablokowane.',
  'blocked.title':'Desktop Control Center','blocked.phone':'Dostęp z telefonu jest zablokowany.','blocked.device':'Otwórz panel na PC, Mac, laptopie lub iPadzie / tablecie.',
  'loading':'Ładowanie przestrzeni roboczej…','session.error':'Sesja jest niedostępna.','session.hint':'Otwórz bota Telegram i wyślij /desktop, aby otrzymać nowy jednorazowy link.',
@@ -35,7 +35,7 @@ const pl:Dict={
  'common.search':'Szukaj','common.save':'Zapisz','common.close':'Zamknij','common.language':'Język','common.theme':'Motyw'
 };
 const en:Dict={
- 'page.dashboard':'Dashboard','page.orders':'Orders','page.sales':'Sales','page.cars':'Cars','page.clients':'Clients','page.calendar':'Calendar','page.services':'Services','page.payments':'Payments','page.broadcasts':'Broadcasts','page.analytics':'Analytics','page.reports':'Reports','page.staff':'Staff','page.audit':'Audit Log','page.workspace':'Layout Editor','page.settings':'Settings',
+ 'page.dashboard':'Dashboard','page.orders':'Orders','page.sales':'Sales','page.cars':'Cars','page.clients':'Clients','page.calendar':'Calendar','page.services':'Services','page.payments':'Payments','page.broadcasts':'Broadcasts','page.analytics':'Analytics','page.reports':'Reports','page.staff':'Staff','page.audit':'Audit Log','page.workspace':'Layout Editor','page.settings':'Settings','page.control':'Control Hub',
  'theme.light':'Light','theme.dark':'Dark','logout':'Log out','readonly':'Read Only: viewing is available, changes are blocked by the backend.',
  'blocked.title':'Desktop Control Center','blocked.phone':'Phone access is blocked.','blocked.device':'Open the panel on a PC, Mac, laptop or iPad / tablet.',
  'loading':'Loading workspace…','session.error':'Session is unavailable.','session.hint':'Open the Telegram Bot and send /desktop to get a new one-time link.',
@@ -45,7 +45,7 @@ const en:Dict={
  'common.search':'Search','common.save':'Save','common.close':'Close','common.language':'Language','common.theme':'Theme'
 };
 const de:Dict={
- 'page.dashboard':'Dashboard','page.orders':'Aufträge','page.sales':'Sales','page.cars':'Fahrzeuge','page.clients':'Kunden','page.calendar':'Kalender','page.services':'Leistungen','page.payments':'Zahlungen','page.broadcasts':'Nachrichten','page.analytics':'Analysen','page.reports':'Berichte','page.staff':'Personal','page.audit':'Audit-Protokoll','page.workspace':'Layout-Editor','page.settings':'Einstellungen',
+ 'page.dashboard':'Dashboard','page.orders':'Aufträge','page.sales':'Sales','page.cars':'Fahrzeuge','page.clients':'Kunden','page.calendar':'Kalender','page.services':'Leistungen','page.payments':'Zahlungen','page.broadcasts':'Nachrichten','page.analytics':'Analysen','page.reports':'Berichte','page.staff':'Personal','page.audit':'Audit-Protokoll','page.workspace':'Layout-Editor','page.settings':'Einstellungen','page.control':'Control Hub',
  'theme.light':'Hell','theme.dark':'Dunkel','logout':'Abmelden','readonly':'Nur Lesen: Ansicht verfügbar, Änderungen sind serverseitig gesperrt.',
  'blocked.title':'Desktop Control Center','blocked.phone':'Der Zugriff per Smartphone ist gesperrt.','blocked.device':'Öffne das Panel auf PC, Mac, Laptop oder iPad / Tablet.',
  'loading':'Arbeitsbereich wird geladen…','session.error':'Sitzung nicht verfügbar.','session.hint':'Öffne den Telegram-Bot und sende /desktop, um einen neuen Einmal-Link zu erhalten.',
@@ -55,7 +55,7 @@ const de:Dict={
  'common.search':'Suchen','common.save':'Speichern','common.close':'Schließen','common.language':'Sprache','common.theme':'Design'
 };
 const fr:Dict={
- 'page.dashboard':'Dashboard','page.orders':'Commandes','page.sales':'Sales','page.cars':'Véhicules','page.clients':'Clients','page.calendar':'Calendrier','page.services':'Services','page.payments':'Paiements','page.broadcasts':'Diffusions','page.analytics':'Analytique','page.reports':'Rapports','page.staff':'Personnel','page.audit':'Journal d’audit','page.workspace':'Éditeur de mise en page','page.settings':'Paramètres',
+ 'page.dashboard':'Dashboard','page.orders':'Commandes','page.sales':'Sales','page.cars':'Véhicules','page.clients':'Clients','page.calendar':'Calendrier','page.services':'Services','page.payments':'Paiements','page.broadcasts':'Diffusions','page.analytics':'Analytique','page.reports':'Rapports','page.staff':'Personnel','page.audit':'Journal d’audit','page.workspace':'Éditeur de mise en page','page.settings':'Paramètres','page.control':'Control Hub',
  'theme.light':'Clair','theme.dark':'Sombre','logout':'Déconnexion','readonly':'Lecture seule : consultation disponible, modifications bloquées côté serveur.',
  'blocked.title':'Desktop Control Center','blocked.phone':'L’accès depuis un téléphone est bloqué.','blocked.device':'Ouvrez le panneau sur PC, Mac, ordinateur portable ou iPad / tablette.',
  'loading':'Chargement de l’espace de travail…','session.error':'Session indisponible.','session.hint':'Ouvrez le bot Telegram et envoyez /desktop pour obtenir un nouveau lien à usage unique.',
