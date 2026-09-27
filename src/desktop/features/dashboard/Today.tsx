@@ -113,7 +113,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
      {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><CarFront/><span>{focus.plate||'CHAMELEON'}</span></div>
       <div className="premium-focus-content">
        <header><div><span className="premium-eyebrow">Активне замовлення</span><h2>{[focus.brand,focus.model].filter(Boolean).join(' ')||'Замовлення CHD-'+focus.id}</h2></div><StatusBadge status={focus.status}/></header>
-       <div className="premium-focus-tabs"><span className="active">Деталі</span><span>Послуги</span><span>Чек-лист</span><span>Фото</span></div>
+       <div className="premium-focus-tabs" aria-label="Розділи замовлення"><button className="active" onClick={()=>goto('orders/'+focus.id+'/overview')}>Деталі</button><button onClick={()=>goto('orders/'+focus.id+'/services')}>Послуги</button><button onClick={()=>goto('orders/'+focus.id+'/checklist')}>Чек-лист</button><button onClick={()=>goto('orders/'+focus.id+'/photos')}>Фото</button></div>
        <dl className="premium-focus-details">
         <div><dt><Users/>Клієнт</dt><dd>{focus.first_name}</dd></div>
         <div><dt><Phone/>Телефон</dt><dd>{focus.phone_number||'Не вказано'}</dd></div>
@@ -122,7 +122,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
         <div><dt><CarFront/>Номер</dt><dd>{focus.plate||'—'}</dd></div>
         <div><dt><UsersRound/>Майстер</dt><dd>{focus.responsible_name||'Не призначено'}</dd></div>
        </dl>
-       <div className="premium-focus-actions"><button className="premium-complete" onClick={()=>goto('orders/'+focus.id)}><CheckCircle2/>Відкрити замовлення</button><button aria-label="Додаткові дії"><MoreHorizontal/></button></div>
+       <div className="premium-focus-actions"><button className="premium-complete" onClick={()=>goto('orders/'+focus.id)}><CheckCircle2/>Відкрити замовлення</button><button aria-label="Оплата та додаткові дії" onClick={()=>goto('orders/'+focus.id+'/payment')}><MoreHorizontal/></button></div>
       </div></>:<EmptyState>Активних замовлень поки немає.</EmptyState>}
     </section>
 
