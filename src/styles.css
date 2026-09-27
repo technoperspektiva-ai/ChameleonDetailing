@@ -717,3 +717,58 @@ nav button.active::after{bottom:1px}
 .referral-active-bonus>div{display:grid;gap:3px;min-width:0}
 .referral-active-bonus b{font-size:.92rem;color:#f4f8ef}
 .referral-active-bonus small{font-size:.76rem;line-height:1.4;color:#aab3a7}
+
+
+/* v1.1.49 — VIP badge + client order assignee */
+.vip-tier{
+ grid-template-columns:minmax(46px,64px) 1px minmax(0,1fr)!important;
+ gap:14px!important;
+ padding-inline:16px!important;
+ overflow:visible!important;
+}
+.vip-tier b{
+ display:block!important;
+ min-width:0!important;
+ width:100%!important;
+ max-width:100%!important;
+ overflow:visible!important;
+ text-overflow:clip!important;
+ white-space:normal!important;
+ overflow-wrap:anywhere!important;
+ word-break:break-word!important;
+ text-align:left!important;
+ font-size:clamp(.68rem,3.2vw,.98rem)!important;
+ line-height:1.15!important;
+ letter-spacing:clamp(.045em,1.4vw,.11em)!important;
+}
+.order-card-assignee-status{
+ flex:0 0 auto;
+ display:grid;
+ justify-items:end;
+ gap:7px;
+ max-width:46%;
+}
+.order-master{
+ max-width:100%;
+ min-height:29px;
+ display:inline-flex;
+ align-items:center;
+ gap:6px;
+ padding:6px 8px;
+ border:1px solid color-mix(in srgb,var(--neon-color) 12%,#283529);
+ border-radius:999px;
+ background:color-mix(in srgb,var(--neon-color) 5%,#111711);
+ color:#bac5b7;
+ font-size:.66rem;
+ line-height:1.15;
+ text-align:right;
+ overflow-wrap:anywhere;
+}
+.order-master svg{width:13px;height:13px;flex:0 0 auto;color:var(--neon-color)}
+@media(max-width:380px){
+ .vip-tier{grid-template-columns:44px 1px minmax(0,1fr)!important;gap:10px!important;padding-inline:12px!important}
+ .vip-tier b{font-size:.66rem!important;letter-spacing:.045em!important}
+ .order-card-top{gap:8px}
+ .order-card-assignee-status{max-width:50%}
+ .order-master{font-size:.61rem;padding:5px 7px}
+}
