@@ -384,6 +384,19 @@ const confirmKb=(locale:BotLocale,yesCb:string,noCb='panel:home')=>({inline_keyb
 async function isPermanentlyBanned(env:Env,telegramUserId:number){if(!env.DB)return false;await ensureDb(env);const row=await env.DB.prepare('SELECT 1 ok FROM permanent_bans WHERE telegram_user_id=? LIMIT 1').bind(telegramUserId).first<any>().catch(()=>null);return !!row}
 async function registerUser(env:Env,from:TgFrom){const owner=isOwner(env,from.id);const u=await upsertUser(env,asUser(from),owner);await event(env,u.id,'bot_start');return u}
 async function getRole(env:Env,from:TgFrom):Promise<{u:any;role:Role}>{const u=await registerUser(env,from);return {u,role:(isOwner(env,from.id)?'OWNER':String(u.role||'CLIENT')) as Role}}
+async function requireStaffDisplayName(env:Env,msg:TgMessage,from:TgFrom,u:any,role:Role){
+ if(!['ADMIN','MANAGER'].includes(role)||String(u?.staff_display_name||'').trim())return true;
+ const locale=botLocaleFromUser(u,from),panelMessageId=Number(await currentPanelId(env,msg.chat.id)||msg.message_id||0);
+ await setBotState(env,u.id,'STAFF_NAME_REQUIRED',{panelMessageId});
+ await safeEdit(env,{...msg,message_id:panelMessageId||msg.message_id},l5(locale,
+  '👤 <b>Як до вас звертатись у команді?</b>\n\nВведіть робоче ім’я, яке буде показуватись у замовленнях і панелі персоналу. Після збереження самостійно змінити його не можна — лише Owner або Admin.',
+  '👤 <b>Jak mamy zwracać się do Ciebie w zespole?</b>\n\nWpisz imię robocze widoczne w zleceniach i panelu personelu. Po zapisaniu może je zmienić tylko Owner lub Admin.',
+  '👤 <b>What should the team call you?</b>\n\nEnter the work name shown on orders and in the staff panel. After saving, only Owner or Admin can change it.',
+  '👤 <b>Wie soll das Team Sie ansprechen?</b>\n\nGeben Sie den Arbeitsnamen ein, der in Aufträgen und im Personalbereich angezeigt wird. Danach können ihn nur Owner oder Admin ändern.',
+  '👤 <b>Comment l’équipe doit-elle vous appeler ?</b>\n\nSaisissez le nom de travail affiché dans les commandes et le panneau du personnel. Après enregistrement, seul Owner ou Admin pourra le modifier.'
+ ),{inline_keyboard:[[{text:l5(locale,'✖️ Скасувати','✖️ Anuluj','✖️ Cancel','✖️ Abbrechen','✖️ Annuler'),callback_data:'panel:home'}]]});
+ return false;
+}
 async function rememberPanel(env:Env,chatId:number,messageId:number){if(!env.DB)return;await ensureDb(env);await env.DB.prepare(`INSERT INTO bot_ui_state(chat_id,panel_message_id) VALUES(?,?) ON CONFLICT(chat_id) DO UPDATE SET panel_message_id=excluded.panel_message_id,updated_at=CURRENT_TIMESTAMP`).bind(chatId,messageId).run().catch(()=>{})}
 async function currentPanelId(env:Env,chatId:number){if(!env.DB)return 0;await ensureDb(env);const r=await env.DB.prepare('SELECT panel_message_id FROM bot_ui_state WHERE chat_id=?').bind(chatId).first<any>().catch(()=>null);return Number(r?.panel_message_id||0)}
 async function deleteMessageSafe(env:Env,chatId:number,messageId:number|undefined){if(!messageId)return;await tgApi(env,'deleteMessage',{chat_id:chatId,message_id:messageId}).catch(()=>{})}
@@ -452,7 +465,12 @@ async function welcome(env:Env,origin:string,msg:TgMessage,startPayload=''){
    }
   }
  }
- const {role}=await getRole(env,msg.from);const name=esc(msg.from.first_name||'friend');const roleText=role==='OWNER'?`\n\n${c.owner}`:'';
+ const fresh=await getRole(env,msg.from),role=fresh.role;const name=esc(msg.from.first_name||'friend');const roleText=role==='OWNER'?`\n\n${c.owner}`:'';
+ if(['ADMIN','MANAGER'].includes(role)&&!String(fresh.u?.staff_display_name||'').trim()){
+  await setBotState(env,fresh.u.id,'STAFF_NAME_REQUIRED',{panelMessageId:0});
+  await sendPanel(env,msg.chat.id,l5(locale,'✅ Роль підтверджено.\n\n👤 <b>Введіть ваше робоче ім’я</b> — саме його бачитимуть у замовленнях та панелі персоналу.','✅ Rola potwierdzona.\n\n👤 <b>Wpisz swoje imię robocze</b> — będzie widoczne w zleceniach i panelu personelu.','✅ Role confirmed.\n\n👤 <b>Enter your work name</b> — this is what will appear on orders and in the staff panel.','✅ Rolle bestätigt.\n\n👤 <b>Geben Sie Ihren Arbeitsnamen ein</b> — er wird in Aufträgen und im Personalbereich angezeigt.','✅ Rôle confirmé.\n\n👤 <b>Saisissez votre nom de travail</b> — il sera affiché dans les commandes et le panneau du personnel.'));
+  return;
+ }
  await sendPanel(env,msg.chat.id,`🦎 <b>Chameleon Detailing</b>\n\n${c.hello}, <b>${name}</b>! ${c.body}${roleText}\n\n${c.tap}`,mainKeyboard(env,origin,locale,role));
  if(msg.chat.type==='private')await showPersistentMenuKeyboard(env,msg.chat.id,locale);
 }
@@ -477,6 +495,7 @@ async function saveContact(env:Env,origin:string,msg:TgMessage){
 async function panelSection(env:Env,msg:TgMessage,from:TgFrom,section:string){
  const staff=await requireStaff(env,from);if(!staff){await sendMessage(env,msg.chat.id,pcopy(localeOf(from)).staffRequired);return}
  const locale=panelLocaleOf(staff,from),c=pcopy(locale);
+ if(!await requireStaffDisplayName(env,msg,from,staff.u,staff.role))return;
  if(!env.DB){await safeEdit(env,msg,c.dbMissing,backPanel(locale));return}await ensureDb(env);
  if(staff.role==='MANAGER'){
   const blocks:Record<string,string>={users:'users',vip:'vip',whitelist:'whitelist',blacklist:'blacklist',requests:'orders',notifications:'orders',services:'services',pricing:'pricing',calculator:'calculator',vehicles:'calculator',conditions:'calculator',content:'content',languages:'languages',referrals:'referrals',analytics:'analytics',audit:'audit',settings:'settings',schedule:'settings',reports:'reports',offers:'offers'};
@@ -949,6 +968,24 @@ async function toggleBlacklistRemove(env:Env,actor:any,targetId:number){if(!env.
 
 async function handleTextState(env:Env,origin:string,msg:TgMessage,from:TgFrom,u:any,role:Role){
  const st=await getBotState(env,u.id);if(!st?.state)return false;const p=parsePayload(st.payload_json);const raw=(msg.text||'').trim();const locale=(clientBotLocales.includes(String(u.management_language||'') as BotLocale)?String(u.management_language):localeOf(from)) as BotLocale;const panelId=Number(p.panelMessageId||await currentPanelId(env,msg.chat.id)||0);const panelMsg:TgMessage={...msg,message_id:panelId||msg.message_id};const reply=async(text:string,kb?:unknown)=>safeEdit(env,panelMsg,text,kb||backPanel(locale));const done=async(text:string)=>{await setBotState(env,u.id,null);await reply(text,await panelKeyboardFor(env,role,locale))};
+ if(st.state==='STAFF_NAME_REQUIRED'){
+  if(!['ADMIN','MANAGER'].includes(role)){await setBotState(env,u.id,null);return true}
+  const current=await env.DB!.prepare('SELECT staff_display_name FROM users WHERE id=?').bind(u.id).first<any>();
+  if(String(current?.staff_display_name||'').trim()){await setBotState(env,u.id,null);await reply(l5(locale,'✅ Ім’я вже збережене. Змінити його може Owner або Admin.','✅ Imię jest już zapisane. Może je zmienić Owner lub Admin.','✅ Your name is already saved. Only Owner or Admin can change it.','✅ Der Name ist bereits gespeichert. Nur Owner oder Admin können ihn ändern.','✅ Le nom est déjà enregistré. Seul Owner ou Admin peut le modifier.'));return true}
+  const name=raw.replace(/\s+/g,' ').trim();
+  if(name.length<2||name.length>60||/^[@\d\s._-]+$/.test(name)){await reply(l5(locale,'Введіть справжнє робоче ім’я від 2 до 60 символів.','Wpisz prawidłowe imię robocze (2–60 znaków).','Enter a valid work name (2–60 characters).','Geben Sie einen gültigen Arbeitsnamen ein (2–60 Zeichen).','Saisissez un nom de travail valide (2 à 60 caractères).'));return true}
+  await env.DB!.prepare("UPDATE users SET staff_display_name=?,staff_name_set_at=CURRENT_TIMESTAMP,staff_name_updated_by=id,updated_at=CURRENT_TIMESTAMP WHERE id=? AND COALESCE(TRIM(staff_display_name),'')='' ").bind(name,u.id).run();
+  await audit(env,u.id,'staff.name.set','user',String(u.id),null,{name});await setBotState(env,u.id,null);
+  await reply(l5(locale,`✅ Ім’я збережено: <b>${esc(name)}</b>`,`✅ Imię zapisane: <b>${esc(name)}</b>`,`✅ Name saved: <b>${esc(name)}</b>`,`✅ Name gespeichert: <b>${esc(name)}</b>`,`✅ Nom enregistré : <b>${esc(name)}</b>`),await panelKeyboardFor(env,role,locale));return true
+ }
+ if(st.state==='STAFF_NAME_ADMIN_EDIT'){
+  if(!['OWNER','ADMIN'].includes(role)){await setBotState(env,u.id,null);return true}
+  const name=raw.replace(/\s+/g,' ').trim();if(name.length<2||name.length>60){await reply(l5(locale,'Ім’я має містити 2–60 символів.','Imię musi mieć 2–60 znaków.','Name must be 2–60 characters.','Der Name muss 2–60 Zeichen lang sein.','Le nom doit contenir 2 à 60 caractères.'));return true}
+  const target=await env.DB!.prepare("SELECT id,role,staff_display_name FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER')").bind(Number(p.targetId)).first<any>();if(!target){await done('Staff not found.');return true}
+  if(target.role==='OWNER'&&role!=='OWNER'){await done(l5(locale,'Тільки Owner може змінити ім’я Owner.','Tylko Owner może zmienić imię Ownera.','Only Owner can edit the Owner name.','Nur der Owner kann den Owner-Namen ändern.','Seul Owner peut modifier le nom du Owner.'));return true}
+  await env.DB!.prepare("UPDATE users SET staff_display_name=?,staff_name_set_at=COALESCE(staff_name_set_at,CURRENT_TIMESTAMP),staff_name_updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(name,u.id,target.id).run();await audit(env,u.id,'staff.name.admin_update','user',String(target.id),{name:target.staff_display_name},{name});await setBotState(env,u.id,null);
+  await reply(l5(locale,'✅ Ім’я співробітника оновлено.','✅ Imię pracownika zaktualizowane.','✅ Staff name updated.','✅ Mitarbeitername aktualisiert.','✅ Nom du membre mis à jour.'),{inline_keyboard:[[{text:'👥 Staff',callback_data:`staff:${target.id}:open`}],[{text:pcopy(locale).back,callback_data:'panel:staff'}]]});return true
+ }
  if(st.state==='MENU_RENAME'){if(role!=='OWNER'){await setBotState(env,u.id,null);return true}const title=safeMenuTitle(raw);if(!title){await reply(l3(locale,'Надішліть непорожню назву.','Wyślij niepustą nazwę.','Send a non-empty name.'));return true}const nodes=await loadMenuLayout(env),node=nodes.find(n=>n.id===String(p.nodeId));if(!node){await setBotState(env,u.id,null);return true}const old={title:node.title||null};node.title=node.type==='folder'?`📁 ${title.replace(/^📁\s*/,'')}`:title;await saveMenuLayout(env,nodes);await audit(env,u.id,'menu.layout.rename','menu',node.id,old,{title});await setBotState(env,u.id,null);await showMenuEditorItem(env,panelMsg,from,node.id);return true}
  if(st.state==='MENU_FOLDER_CREATE'){if(role!=='OWNER'){await setBotState(env,u.id,null);return true}const title=safeMenuTitle(raw);if(!title){await reply(l3(locale,'Надішліть непорожню назву папки.','Wyślij niepustą nazwę folderu.','Send a non-empty folder name.'));return true}const nodes=await loadMenuLayout(env),parentId=p.parentId&&p.parentId!=='root'?String(p.parentId):null,max=Math.max(0,...nodes.filter(n=>n.parentId===parentId).map(n=>n.order));const id='f_'+Date.now().toString(36);nodes.push({id,type:'folder',parentId,order:max+10,title:`📁 ${title}`});await saveMenuLayout(env,nodes);await audit(env,u.id,'menu.folder.create','menu',id,null,{title,parentId});await setBotState(env,u.id,null);await showMenuEditorItem(env,panelMsg,from,id);return true}
  if(st.state==='PROMO_RULE'){
