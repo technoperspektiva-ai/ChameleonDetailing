@@ -3538,3 +3538,42 @@
  .client-lookup{grid-template-columns:1fr}
  .notification-popover{right:-92px}
 }
+
+
+/* BONUS & REACTIVATION POLISH */
+.client-bonus-presets{
+ display:flex;
+ flex-wrap:wrap;
+ gap:6px;
+ margin:10px 0 12px;
+}
+.client-bonus-presets button{
+ min-width:52px;
+ min-height:32px;
+ padding:0 9px!important;
+ border-radius:999px!important;
+ font-size:9px;
+ color:var(--text-muted)!important;
+}
+.client-bonus-presets button.active{
+ color:var(--accent-strong)!important;
+ border-color:rgba(221,184,111,.22)!important;
+ background:var(--accent-soft)!important;
+}
+.reactivation-photo-preview{
+ grid-column:1/-1;
+ height:150px;
+ overflow:hidden;
+ border:1px solid var(--border);
+ border-radius:11px;
+ background:#080907;
+}
+.reactivation-photo-preview img{
+ width:100%;
+ height:100%;
+ display:block;
+ object-fit:cover;
+}
+:root[data-desktop-theme="light"] .reactivation-photo-preview{
+ background:#eee7da;
+}
