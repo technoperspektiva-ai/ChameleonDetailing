@@ -631,6 +631,16 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/admin-hub/gift-discount'&&request.method==='POST'){
   if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);await writable(env);const b=await body(request),userId=Number(b.userId||0),pct=Math.max(0,Math.min(100,Number(b.percentDiscount||0)));if(!userId||pct<=0)return reply({error:'Client and discount are required.'},400);const r=await env.DB!.prepare("INSERT INTO personal_discounts(user_id,percent_discount,greeting,status,expires_at,created_by) VALUES(?,?,?,'OFFERED',?,?)").bind(userId,pct,String(b.greeting||'').slice(0,1000),b.expiresAt?String(b.expiresAt):null,staff.user_id).run();await log(env,staff.user_id,'desktop.gift_discount.create','personal_discount',String(r.meta.last_row_id),null,{userId,pct});return reply({ok:true,id:r.meta.last_row_id});
  }
+ const giftDiscountMatch=url.pathname.match(/^\/api\/desktop\/admin-hub\/gift-discount\/(\d+)$/);
+ if(giftDiscountMatch&&request.method==='DELETE'){
+  if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
+  await writable(env);
+  const id=Number(giftDiscountMatch[1]),old=await env.DB!.prepare('SELECT * FROM personal_discounts WHERE id=?').bind(id).first<any>();
+  if(!old)return reply({error:'Gift discount not found.'},404);
+  await env.DB!.prepare('DELETE FROM personal_discounts WHERE id=?').bind(id).run();
+  await log(env,staff.user_id,'desktop.gift_discount.delete','personal_discount',String(id),old,null);
+  return reply({ok:true,id});
+ }
  if(url.pathname==='/api/desktop/admin-hub/reactivation/run'&&request.method==='POST'){
   if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);await writable(env);const result=await runReactivationCampaigns(env,true);await log(env,staff.user_id,'desktop.reactivation.run','campaign','reactivation',null,result);return reply({ok:true,...result});
  }
