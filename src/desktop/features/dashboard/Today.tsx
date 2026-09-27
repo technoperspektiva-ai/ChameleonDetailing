@@ -96,7 +96,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
   <div className="premium-dashboard-grid">
    <div className="premium-dashboard-main">
     <section className="premium-schedule-card premium-surface">
-     <header className="premium-section-head"><div><h2>Записи на сьогодні</h2><span>{scheduled.length} заплановано</span></div>{create&&<button className="premium-inline-action" onClick={create}><Plus/>Новий запис</button>}</header>
+     <header className="premium-section-head"><div><h2>Записи на сьогодні</h2><span>{scheduled.length} заплановано</span></div>{create&&<button className="premium-inline-action" onClick={()=>create?.()}><Plus/>Новий запис</button>}</header>
      <div className="premium-timeline">
       {scheduled.map((x,index)=><button key={x.id} className="premium-timeline-row" onClick={()=>goto('orders/'+x.id)}>
        <div className="premium-time"><span>{businessTime(x.scheduled_for!)}</span><i className={working.has(x.status)?'is-live':''}/>{index<scheduled.length-1&&<b/>}</div>
