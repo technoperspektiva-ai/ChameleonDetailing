@@ -5,8 +5,9 @@ import {quote,serviceDisplayPrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
+import {handleDesktopApi,runDesktopScheduledJobs} from './lib/desktop';
 
-const VERSION='1.2.7';
+const VERSION='1.3.0';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
 const read=async(r:Request)=>{try{return await r.json() as any}catch{return {}}};
 const escapeHtml=(value:string)=>value.replace(/[&<>"]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':c==='>'?'&gt;':'&quot;');
@@ -124,6 +125,10 @@ export default {
     const expected=String(env.TELEGRAM_SETUP_KEY||'');
     if(!expected||supplied!==expected)return json({error:'Unauthorized'},401);
     return json({health:await telegramBotHealth(env),debug:await getBotDebug(env),expectedWebhook:url.origin+'/api/telegram/webhook'});
+   }
+   if(url.pathname.startsWith('/api/desktop/')){
+    const desktopResponse=await handleDesktopApi(request,env,url);
+    if(desktopResponse)return desktopResponse;
    }
    if(url.pathname==='/api/system/status'){
     ctx.waitUntil(selfHealWebhook(env,url.origin));
@@ -324,5 +329,6 @@ export default {
  async scheduled(_controller:ScheduledController,env:Env,_ctx:ExecutionContext):Promise<void>{
   await selfHealWebhook(env,undefined,true);
   await runReactivationCampaigns(env,false).catch(error=>console.error('reactivation campaign failed',error));
+  await runDesktopScheduledJobs(env).catch(error=>console.error('desktop scheduled jobs failed',error));
  }
 };
