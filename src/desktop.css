@@ -2059,3 +2059,38 @@
  .content-human-head{flex-direction:column}
  .content-human-head code{align-self:flex-start}
 }
+
+/* v1.5.1 — Telegram live preview */
+.botmenu-layout{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(330px,.75fr);gap:16px;align-items:start}
+.telegram-live-preview{
+ position:sticky;top:92px;border:1px solid var(--desk-line);border-radius:18px;background:var(--desk-panel);overflow:hidden
+}
+.telegram-preview-head{
+ min-height:58px;padding:0 14px;border-bottom:1px solid var(--desk-line);display:flex;align-items:center;justify-content:space-between;gap:12px
+}
+.telegram-preview-head>div{display:grid;gap:2px}
+.telegram-preview-head b{font-size:11px}
+.telegram-preview-head span{font-size:8px;color:var(--desk-muted)}
+.telegram-preview-head select{
+ min-height:32px;border:1px solid var(--desk-line);border-radius:9px;background:var(--desk-panel2);color:var(--desk-text);padding:0 8px;font:inherit;font-size:9px
+}
+.telegram-phone{
+ margin:14px;border:1px solid #c8d7e3;border-radius:18px;background:#dfeaf2;min-height:540px;padding:12px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.35)
+}
+.telegram-chat-title{
+ display:flex;align-items:center;gap:8px;margin:-12px -12px 14px;padding:10px 12px;background:#f4f8fb;border-bottom:1px solid #cbd6dd
+}
+.telegram-chat-title>span{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#e8f1e5}
+.telegram-chat-title>div{display:grid}.telegram-chat-title b{font-size:10px;color:#1f2a33}.telegram-chat-title small{font-size:8px;color:#7c8993}
+.telegram-bubble{
+ max-width:82%;padding:9px 10px;border-radius:11px 11px 11px 3px;background:#fff;color:#202a31;font-size:9px;line-height:1.4;box-shadow:0 1px 2px rgba(0,0,0,.06)
+}
+.telegram-inline-keyboard{display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-top:7px}
+.telegram-inline-keyboard>button,.telegram-child-preview button{
+ min-height:34px;border:0;border-radius:7px;background:#fff;color:#2d6f9d;font-size:8px;font-weight:700;white-space:pre-wrap;box-shadow:0 1px 2px rgba(0,0,0,.055)
+}
+.telegram-inline-keyboard>button.size-wide{grid-column:1/-1}
+.telegram-inline-keyboard>button.size-compact{min-height:30px}
+.telegram-child-preview{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:5px;border-radius:8px;background:rgba(255,255,255,.32)}
+.theme-light .telegram-live-preview{background:#fffaf0;border-color:#d8cfbd}
+@media(max-width:1100px){.botmenu-layout{grid-template-columns:1fr}.telegram-live-preview{position:relative;top:auto}.telegram-phone{min-height:420px}}
