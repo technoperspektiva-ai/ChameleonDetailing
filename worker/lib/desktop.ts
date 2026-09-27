@@ -204,7 +204,7 @@ const permissionSnapshot=async(env:Env,role:string)=>{
 };
 const auth=async(env:Env,request:Request)=>{
  await ensureDesktopDb(env);
- if(isPhoneRequest(request))return null;
+ // Phone sessions are allowed here when handleDesktopApi has already passed the Owner-controlled mobile-access gate.
  const raw=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'').trim();
  if(!raw)return null;
  const h=await digest(raw);
