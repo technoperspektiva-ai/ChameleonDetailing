@@ -20,7 +20,7 @@ export async function ensureDb(env:Env){
  // and can make Telegram session bootstrap fail before the UI opens.
  try{
   await env.DB.batch([
-   env.DB.prepare("SELECT management_language,photo_url,notifications_enabled FROM users LIMIT 1"),
+   env.DB.prepare("SELECT management_language,photo_url,notifications_enabled,staff_display_name,staff_name_set_at,staff_name_updated_by,bot_status,bot_unavailable_at,bot_last_error,bot_status_updated_at FROM users LIMIT 1"),
    env.DB.prepare("SELECT phone_number,phone_verified_via_telegram,paid_jobs_count,lifetime_value FROM client_profiles LIMIT 1"),
    env.DB.prepare("SELECT services_json,client_deleted_at,staff_deleted_at,car_id,promotion_id,personal_discount_id FROM service_requests LIMIT 1"),
    env.DB.prepare("SELECT services_json,promotion_id,personal_discount_id FROM calculator_sessions LIMIT 1"),
@@ -36,7 +36,7 @@ export async function ensureDb(env:Env){
  }
 
  await env.DB.exec(`
-CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT,notifications_enabled INTEGER NOT NULL DEFAULT 1);
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT,notifications_enabled INTEGER NOT NULL DEFAULT 1,staff_display_name TEXT,staff_name_set_at TEXT,staff_name_updated_by INTEGER,bot_status TEXT NOT NULL DEFAULT 'ACTIVE',bot_unavailable_at TEXT,bot_last_error TEXT,bot_status_updated_at TEXT);
 CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
 CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
@@ -97,6 +97,13 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE users ADD COLUMN management_language TEXT");
  await safeAlter(env,"ALTER TABLE users ADD COLUMN photo_url TEXT");
  await safeAlter(env,"ALTER TABLE users ADD COLUMN notifications_enabled INTEGER NOT NULL DEFAULT 1");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN staff_display_name TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN staff_name_set_at TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN staff_name_updated_by INTEGER");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN bot_status TEXT NOT NULL DEFAULT 'ACTIVE'");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN bot_unavailable_at TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN bot_last_error TEXT");
+ await safeAlter(env,"ALTER TABLE users ADD COLUMN bot_status_updated_at TEXT");
  await safeAlter(env,"ALTER TABLE services ADD COLUMN is_popular INTEGER NOT NULL DEFAULT 0");
  await safeAlter(env,"ALTER TABLE service_options ADD COLUMN base_currency TEXT NOT NULL DEFAULT 'PLN'");
  await safeAlter(env,"ALTER TABLE service_options ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0");
@@ -277,7 +284,7 @@ export async function upsertUser(env:Env,u:TelegramUser,owner=false){
  const lang=u.language_code?.startsWith('uk')?'uk':u.language_code?.startsWith('pl')?'pl':u.language_code?.startsWith('de')?'de':u.language_code?.startsWith('fr')?'fr':'en';
  if(!env.DB)return {id:0,telegram_user_id:u.id,first_name:u.first_name,username:u.username,language:lang,preferred_currency:env.DEFAULT_CURRENCY,role:owner?'OWNER':'CLIENT',client_tier:'STANDARD',phone_number:null};
  await ensureDb(env);
- await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role,photo_url) VALUES(?,?,?,?,?,?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,photo_url=COALESCE(excluded.photo_url,users.photo_url),last_seen_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT',u.photo_url||null).run();
+ await env.DB.prepare(`INSERT INTO users(telegram_user_id,username,first_name,last_name,language,preferred_currency,role,photo_url,bot_status,bot_status_updated_at) VALUES(?,?,?,?,?,?,?,?, 'ACTIVE',CURRENT_TIMESTAMP) ON CONFLICT(telegram_user_id) DO UPDATE SET username=excluded.username,first_name=excluded.first_name,last_name=excluded.last_name,photo_url=COALESCE(excluded.photo_url,users.photo_url),last_seen_at=CURRENT_TIMESTAMP,bot_status='ACTIVE',bot_unavailable_at=NULL,bot_last_error=NULL,bot_status_updated_at=CURRENT_TIMESTAMP,role=CASE WHEN excluded.role='OWNER' THEN 'OWNER' ELSE users.role END`).bind(u.id,u.username||null,u.first_name,u.last_name||null,lang,env.DEFAULT_CURRENCY,owner?'OWNER':'CLIENT',u.photo_url||null).run();
  const row=await env.DB.prepare(`SELECT u.*,COALESCE(p.client_tier,'STANDARD') client_tier,p.phone_number FROM users u LEFT JOIN client_profiles p ON p.user_id=u.id WHERE u.telegram_user_id=?`).bind(u.id).first<any>();
  await env.DB.prepare('INSERT OR IGNORE INTO client_profiles(user_id) VALUES(?)').bind(row.id).run();
  return row;
