@@ -1,7 +1,7 @@
 import type {Env} from './lib/types';
 import {validateInitData,tgApi} from './lib/telegram';
 import {ensureDb,event,getActiveBlock,getServices,getServiceOptions,getSetting,setSetting,upsertUser} from './lib/db';
-import {quote,serviceDisplayPrice} from './lib/pricing';
+import {optionDisplayPrice,quote,serviceDisplayPrice} from './lib/pricing';
 import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
@@ -205,9 +205,10 @@ export default {
     return json({services:list,tier});
    }
    if(url.pathname==='/api/options'&&request.method==='GET'){
-    const locale=url.searchParams.get('locale')||'en',currency=url.searchParams.get('currency')||'PLN';
-    const options=await getServiceOptions(env,locale,currency);
-    return json({options});
+    const locale=url.searchParams.get('locale')||'en',currency=url.searchParams.get('currency')||'PLN',initData=url.searchParams.get('initData')||'';
+    const options=await getServiceOptions(env,locale,currency);let tier='STANDARD';try{if(initData){const u=await auth(env,initData);tier=u.client_tier||'STANDARD'}}catch{}
+    for(const item of options){const regular=Number(item.price||0),eff=await optionDisplayPrice(env,Number(item.id),regular,String(item.currency||currency||'PLN'),tier);if(eff.mode!=='STANDARD'){(item as any).standardPrice=regular;(item as any).price=Math.round(Number(eff.price||0)*100)/100;(item as any).vipPricingMode=eff.mode;(item as any).clientTier=tier}}
+    return json({options,tier});
    }
    if(url.pathname==='/api/content'&&request.method==='GET'){
     const rawLocale=(url.searchParams.get('locale')||'en').toLowerCase();
