@@ -1,7 +1,7 @@
 import type {Env} from './types';
 import {ensureDb,getSetting,setSetting} from './db';
 import {managerBlockEnabled} from './permissions';
-import {sendMessage,sendPhoto,tgApi} from './telegram';
+import {sendMessage,sendPhoto,tgApi,uploadPhoto} from './telegram';
 import {buildReport,type ReportType} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
@@ -269,7 +269,11 @@ async function runCampaign(env:Env,row:any){
  let sent=0,blocked=0,telegramError=0,otherError=0;
  for(const u of batch){
   try{
-   if(row.photo_file_id)await sendPhoto(env,Number(u.telegram_user_id),String(row.photo_file_id),htmlEscape(row.text));else await sendMessage(env,Number(u.telegram_user_id),htmlEscape(row.text));
+   const message=htmlEscape(row.text);
+   if(row.photo_file_id){
+    if(String(row.text||'').length<=900)await sendPhoto(env,Number(u.telegram_user_id),String(row.photo_file_id),message);
+    else{await sendPhoto(env,Number(u.telegram_user_id),String(row.photo_file_id),'');await sendMessage(env,Number(u.telegram_user_id),message)}
+   }else await sendMessage(env,Number(u.telegram_user_id),message);
    sent++;
    await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status) VALUES(?,?,?,?)').bind(runId,row.id,u.id,'SENT').run();
   }catch(e:any){
@@ -310,7 +314,7 @@ export async function enqueueDesktopCampaign(env:Env,actorId:number,text:string,
 export async function runDesktopScheduledJobs(env:Env){
  if(!env.DB||!env.BOT_TOKEN)return;
  await ensureDesktopDb(env);
- const r=await env.DB.prepare("SELECT * FROM desktop_campaigns WHERE status IN ('SCHEDULED','ACTIVE') AND next_run_at IS NOT NULL AND next_run_at<=CURRENT_TIMESTAMP ORDER BY next_run_at LIMIT 5").all<any>();
+ const r=await env.DB.prepare("SELECT * FROM desktop_campaigns WHERE status IN ('SCHEDULED','ACTIVE') AND next_run_at IS NOT NULL AND datetime(next_run_at)<=datetime('now') ORDER BY datetime(next_run_at) LIMIT 5").all<any>();
  for(const row of r.results||[])try{await runCampaign(env,row)}catch(e){console.error('Desktop campaign failed',e)}
 }
 
@@ -562,6 +566,28 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const {filename,buffer}=await buildReport(env,type,days,locale);
   await log(env,staff.user_id,'desktop.report.export','report',type,null,{days,filename,locale});
   return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
+ }
+ if(url.pathname==='/api/desktop/campaign-recipients'&&request.method==='GET'){
+  if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);
+  const search=String(url.searchParams.get('q')||'').trim().replace(/^@/,'').slice(0,80),binds:any[]=[];
+  let where="u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";
+  if(search){where+=" AND (lower(COALESCE(u.first_name,'')) LIKE lower(?) OR lower(COALESCE(u.username,'')) LIKE lower(?) OR CAST(u.telegram_user_id AS TEXT) LIKE ? OR COALESCE(cp.phone_number,'') LIKE ?)";const like='%'+search+'%';binds.push(like,like,like,like)}
+  const r=await env.DB!.prepare("SELECT u.id,u.first_name,u.username,u.telegram_user_id,u.notifications_enabled,u.last_seen_at,cp.phone_number,COALESCE(cp.client_tier,'STANDARD') client_tier FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE "+where+" ORDER BY u.last_seen_at DESC,u.id DESC LIMIT 200").bind(...binds).all<any>();
+  return reply({recipients:r.results||[]});
+ }
+ if(url.pathname==='/api/desktop/campaigns/photo'&&request.method==='POST'){
+  if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);
+  await writable(env);
+  const b=await body(request),raw=String(b.dataUrl||''),m=raw.match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if(!m)return reply({error:'Use a JPG, PNG or WEBP image.'},400);
+  const binary=atob(m[2]);if(binary.length>5*1024*1024)return reply({error:'Image is too large. Maximum 5 MB.'},413);
+  const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+  const owner=Number(env.OWNER_TELEGRAM_ID||0);if(!owner)return reply({error:'OWNER_TELEGRAM_ID is not configured.'},503);
+  const uploaded=await uploadPhoto(env,owner,bytes.buffer as ArrayBuffer,m[1],String(b.fileName||'broadcast.jpg').slice(0,120));
+  const photos=Array.isArray(uploaded?.photo)?uploaded.photo:[],fileId=photos.length?String(photos[photos.length-1]?.file_id||''):'';
+  if(uploaded?.message_id)await tgApi(env,'deleteMessage',{chat_id:owner,message_id:Number(uploaded.message_id)}).catch(()=>{});
+  if(!fileId)return reply({error:'Telegram did not return a photo file_id.'},502);
+  return reply({ok:true,fileId});
  }
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='GET'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);const r=await env.DB!.prepare('SELECT * FROM desktop_campaigns ORDER BY id DESC LIMIT 100').all<any>();return reply({campaigns:r.results||[]});}
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const type=['SYSTEM','IMPORTANT','FORCED'].includes(String(b.type||'').toUpperCase())?'SYSTEM':'STANDARD';if(type==='SYSTEM'&&!perms.broadcast_forced_access)return reply({error:'System/forced broadcast permission is required.'},403);const scheduleAt=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');if(!b.sendNow&&!scheduleAt)return reply({error:'Schedule date/time is required.'},400);const queued=await enqueueDesktopCampaign(env,staff.user_id,text,{type,audience:b.audience||{type:'all'},scheduleAt,timezone:b.timezone||'Europe/Warsaw',repeatType:b.repeatType||'ONCE',repeatInterval:Number(b.repeatInterval||1),repeatCount:b.repeatCount?Number(b.repeatCount):null,repeatUntil:b.repeatUntil||null,photoFileId:b.photoFileId||null});await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(queued.id),null,{status:'SCHEDULED',type,recipients:queued.recipients});if(b.sendNow)await runDesktopScheduledJobs(env);const row=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(queued.id).first<any>();return reply({ok:true,id:queued.id,recipients:queued.recipients,campaign:row});}
