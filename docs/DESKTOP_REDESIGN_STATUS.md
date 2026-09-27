@@ -20,3 +20,5 @@ Still required for full acceptance:
 Validation: TypeScript application/Worker build, existing translation validator and Vite production build. No authenticated production workflow test or real broadcast/payment mutation was performed.
 
 Deployment target remains the existing Cloudflare Worker from `wrangler.jsonc`. GitHub's included workflow performs a build only; Cloudflare Git integration or authenticated Wrangler deployment is needed to publish.
+
+Deployment confirmed on 2026-09-27: the public `/desktop` response served the same `index-BVMGGdB7.js` production asset as the local build; GitHub Actions run 36320755891 completed successfully for commit 25c042f215b158076b031491fbd6c282077e06db. The existing external Cloudflare integration publishes changes from main.
