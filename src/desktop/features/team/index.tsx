@@ -1,96 +1,52 @@
-import {useEffect,useMemo,useState} from 'react';
-import {BadgeCheck,Clock3,Globe2,Plus,RefreshCw,Search,ShieldCheck,Users} from 'lucide-react';
+import React,{useEffect,useMemo,useState} from 'react';
+import {Activity,AlertTriangle,BadgeCheck,BarChart3,Bell,Briefcase,Download,Gift,RefreshCw,Shield,Trash2,UserPlus,Users2,Wallet,X} from 'lucide-react';
 import {api,post} from '../../api/desktopApi';
+import {dt} from '../../format';
 import type {Role} from '../../types/desktop';
+import type {DesktopLocale} from '../../../desktopLocales';
+import {Panel} from '../../components/Panel';
 
-const roleLabel=(role:string)=>role==='OWNER'?'Власник':role==='ADMIN'?'Адміністратор':role==='MANAGER'?'Менеджер':role;
-const langLabel=(lang:string)=>lang==='uk'?'Українська':lang==='pl'?'Polski':'English';
-const initials=(name:string)=>name.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'CH';
-const seenLabel=(value?:string|null)=>{
- if(!value)return 'Не входив';
- const ms=Date.now()-Date.parse(value);
- if(!Number.isFinite(ms))return '—';
- if(ms<5*60_000)return 'Щойно';
- if(ms<60*60_000)return Math.max(1,Math.floor(ms/60_000))+' хв тому';
- if(ms<24*60*60_000)return Math.floor(ms/3_600_000)+' год тому';
- return new Intl.DateTimeFormat('uk-UA',{day:'2-digit',month:'short'}).format(new Date(value));
-};
+const roleName=(r:string,locale:DesktopLocale)=>r==='OWNER'?(locale==='uk'?'Власник':locale==='pl'?'Właściciel':locale==='de'?'Owner':locale==='fr'?'Propriétaire':'Owner'):r==='ADMIN'?(locale==='uk'?'Адміністратор':locale==='pl'?'Administrator':locale==='de'?'Administrator':locale==='fr'?'Administrateur':'Administrator'):(locale==='uk'?'Менеджер':locale==='pl'?'Menedżer':locale==='de'?'Manager':locale==='fr'?'Manager':'Manager');
+const displayName=(x:any)=>x?.staff_display_name||x?.first_name||x?.username||('Staff #'+x?.id);
+const shortMoney=(value:any,currency:string)=>new Intl.NumberFormat(undefined,{maximumFractionDigits:0}).format(Number(value||0))+' '+currency;
 
-export function StaffManagement({role}:{role:Role}){
- const [rows,setRows]=useState<any[]>([]),[username,setUsername]=useState(''),[newRole,setNewRole]=useState<'ADMIN'|'MANAGER'>('MANAGER'),[msg,setMsg]=useState(''),[busy,setBusy]=useState(false),[loading,setLoading]=useState(true),[q,setQ]=useState(''),[roleFilter,setRoleFilter]=useState('ALL');
- const load=async()=>{setLoading(true);try{const d=await api('/api/desktop/staff');setRows(d.staff||[])}finally{setLoading(false)}};
+export function StaffManagement({role,locale}:{role:Role;locale:DesktopLocale}){
+ const t=(uk:string,pl:string,en:string,de:string,fr:string)=>({uk,pl,en,de,fr}[locale]||en);
+ const [staff,setStaff]=useState<any[]>([]),[health,setHealth]=useState<any>(null),[selectedId,setSelectedId]=useState<number|null>(null),[detail,setDetail]=useState<any>(null),[username,setUsername]=useState(''),[newRole,setNewRole]=useState<'ADMIN'|'MANAGER'>('MANAGER'),[msg,setMsg]=useState(''),[inviteUrl,setInviteUrl]=useState(''),[busy,setBusy]=useState(false),[nameDraft,setNameDraft]=useState('');
+ const load=async()=>{setBusy(true);try{const [s,h]=await Promise.all([api('/api/desktop/staff'),api('/api/desktop/bot-health').catch(()=>null)]);setStaff(s.staff||[]);setHealth(h)}finally{setBusy(false)}};
  useEffect(()=>{void load()},[]);
- const add=async()=>{setBusy(true);setMsg('');try{const d=await post('/api/desktop/admin-hub/staff-role',{username,role:newRole});setMsg(d.known?'✅ Роль призначено':'🕓 Створено запрошення: '+d.inviteUrl);setUsername('');await load()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}finally{setBusy(false)}};
- const change=async(id:number,next:string,managementLanguage?:string)=>{
-  if(next==='CLIENT'&&!confirm('Прибрати цього користувача з команди? Він втратить Staff-доступ.'))return;
-  try{await post('/api/desktop/admin-hub/staff-role/'+id,{role:next,managementLanguage},'PATCH');setMsg(next==='CLIENT'?'✅ Користувача прибрано з команди':'✅ Дані співробітника оновлено');await load()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}
- };
- const counts=useMemo(()=>({all:rows.length,admins:rows.filter(x=>x.role==='ADMIN').length,managers:rows.filter(x=>x.role==='MANAGER').length,online:rows.filter(x=>x.last_seen_at&&Date.now()-Date.parse(x.last_seen_at)<30*60_000).length}),[rows]);
- const filtered=useMemo(()=>rows.filter(x=>roleFilter==='ALL'||x.role===roleFilter).filter(x=>[x.first_name,x.username,x.telegram_user_id,x.role].join(' ').toLowerCase().includes(q.trim().toLowerCase())),[rows,q,roleFilter]);
-
+ const open=async(id:number)=>{setSelectedId(id);setDetail(null);try{const d=await api('/api/desktop/staff/'+id);setDetail(d);setNameDraft(displayName(d.person))}catch(e:any){setMsg(String(e?.message||e))}};
+ const invite=async()=>{if(!username.trim())return;setBusy(true);setMsg('');setInviteUrl('');try{const d=await post('/api/desktop/admin-hub/staff-role',{username,role:newRole});setInviteUrl(d.inviteUrl||'');setMsg(d.already?t('Ця роль вже активна.','Ta rola jest już aktywna.','This role is already active.','Diese Rolle ist bereits aktiv.','Ce rôle est déjà actif.'):t('Запрошення створено. Роль активується тільки після підтвердження в Telegram і введення робочого імені.','Zaproszenie utworzone. Rola aktywuje się dopiero po potwierdzeniu w Telegramie i podaniu imienia roboczego.','Invitation created. The role activates only after Telegram confirmation and entering a work name.','Einladung erstellt. Die Rolle wird erst nach Telegram-Bestätigung und Eingabe des Arbeitsnamens aktiviert.','Invitation créée. Le rôle ne sera activé qu’après confirmation Telegram et saisie du nom de travail.'));setUsername('');await load()}catch(e:any){setMsg(String(e?.message||e))}finally{setBusy(false)}};
+ const revoke=async(person:any)=>{if(!confirm(t('Відкликати роль? Активні замовлення буде відв’язано, а історія виконаних робіт і виручка залишаться.','Odwołać rolę? Aktywne zlecenia zostaną odpięte, historia i przychód pozostaną.','Revoke this role? Active orders will be unassigned while completed history and revenue remain.','Rolle entziehen? Aktive Aufträge werden freigegeben, Historie und Umsatz bleiben erhalten.','Révoquer ce rôle ? Les commandes actives seront désassignées, mais l’historique et les revenus seront conservés.')))return;await post('/api/desktop/admin-hub/staff-role/'+person.id,{role:'CLIENT'},'PATCH');setSelectedId(null);setDetail(null);await load()};
+ const setLanguage=async(person:any,managementLanguage:string)=>{await post('/api/desktop/admin-hub/staff-role/'+person.id,{role:person.role,managementLanguage},'PATCH');await load();if(selectedId===person.id)await open(person.id)};
+ const saveName=async()=>{if(!detail?.person||nameDraft.trim().length<2)return;await post('/api/desktop/admin-hub/staff-name/'+detail.person.id,{name:nameDraft.trim()},'PATCH');await load();await open(detail.person.id);setMsg(t('Робоче ім’я оновлено.','Imię robocze zaktualizowane.','Work name updated.','Arbeitsname aktualisiert.','Nom de travail mis à jour.'))};
+ const downloadReport=async(id:number)=>{try{const token=localStorage.getItem('chameleon.desktop.session')||'',r=await fetch('/api/desktop/reports/staff/'+id+'?days=0&locale='+encodeURIComponent(locale),{headers:{authorization:'Bearer '+token}});if(!r.ok){const j=await r.json().catch(()=>({}));throw new Error(j.error||'Report failed')}const blob=await r.blob(),cd=r.headers.get('content-disposition')||'',m=cd.match(/filename="([^"]+)"/),name=m?.[1]||('staff_'+id+'.xlsx'),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000)}catch(e:any){setMsg(String(e?.message||e))}};
+ const totals=useMemo(()=>({active:staff.filter(x=>x.status==='ACTIVE').length,orders:staff.reduce((n,x)=>n+Number(x.active_orders||0),0),offers:staff.reduce((n,x)=>n+Number(x.offers_total||0),0),revenue:staff.reduce((n,x)=>n+Number(x.revenue||0),0)}),[staff]);
+ const maxTrend=Math.max(1,...((health?.trend||[]).map((x:any)=>Number(x.events||0))));
  return <div className="team-workspace">
-  <section className="team-hero">
-   <div className="team-hero-copy">
-    <span className="desk-eyebrow">TEAM & ACCESS</span>
-    <h2>Команда</h2>
-    <p>Співробітники, ролі, мова керування та доступ до робочого простору — без перевантажених таблиць.</p>
-   </div>
-   <div className="team-kpis">
-    <div><span><Users/></span><small>У команді</small><strong>{counts.all}</strong></div>
-    <div><span><ShieldCheck/></span><small>Адміністратори</small><strong>{counts.admins}</strong></div>
-    <div><span><BadgeCheck/></span><small>Менеджери</small><strong>{counts.managers}</strong></div>
-    <div><span><Clock3/></span><small>Активні зараз</small><strong>{counts.online}</strong></div>
-   </div>
-  </section>
-
-  {msg&&<div className="desk-banner team-feedback">{msg}</div>}
-
-  <div className="team-top-grid">
-   <section className="team-card team-invite-card">
-    <header><div className="team-card-icon"><Plus/></div><div><span className="desk-eyebrow">ADD STAFF</span><h3>Додати співробітника</h3><p>Якщо @username ще не відомий системі, буде створено безпечне invite-посилання.</p></div></header>
-    <div className="team-invite-form">
-     <label><span>Telegram username</span><input value={username} onChange={e=>setUsername(e.target.value)} placeholder="@username" onKeyDown={e=>{if(e.key==='Enter'&&username.trim()&&!busy)void add()}}/></label>
-     <label><span>Роль</span><select value={newRole} onChange={e=>setNewRole(e.target.value as 'ADMIN'|'MANAGER')}><option value="MANAGER">Менеджер</option>{role==='OWNER'&&<option value="ADMIN">Адміністратор</option>}</select></label>
-     <button className="desk-primary" disabled={!username.trim()||busy} onClick={add}><Plus/>{busy?'Додаю…':'Додати до команди'}</button>
-    </div>
-   </section>
-
-   <section className="team-card team-rules-card">
-    <header><div className="team-card-icon"><ShieldCheck/></div><div><span className="desk-eyebrow">ROLE MODEL</span><h3>Як працюють ролі</h3><p>Права залишаються синхронними з Telegram Bot Panel.</p></div></header>
-    <div className="team-role-guide">
-     <div className="owner"><span>Owner</span><p>Повний контроль. Роль незмінна.</p></div>
-     <div className="admin"><span>Admin</span><p>Керує командою та операційними розділами.</p></div>
-     <div className="manager"><span>Manager</span><p>Працює лише в межах дозволених прав.</p></div>
-    </div>
-   </section>
+  <section className="team-hero"><div><span className="desk-eyebrow">TEAM OPERATIONS</span><h2>{t('Персонал','Personel','Staff','Personal','Personnel')}</h2><p>{t('Хто за що відповідає, які замовлення веде, які пропозиції створює та який дохід приніс.','Kto za co odpowiada, jakie zlecenia prowadzi, jakie oferty tworzy i jaki przychód generuje.','See responsibilities, assigned orders, created offers and attributed revenue for every team member.','Verantwortlichkeiten, zugewiesene Aufträge, erstellte Angebote und zugeordneter Umsatz pro Mitarbeiter.','Responsabilités, commandes assignées, offres créées et revenus attribués pour chaque membre.')}</p></div><button onClick={load} disabled={busy}><RefreshCw/>{t('Оновити','Odśwież','Refresh','Aktualisieren','Actualiser')}</button></section>
+  <div className="team-kpis"><div><Users2/><span><small>{t('Активний персонал','Aktywny personel','Active staff','Aktives Personal','Personnel actif')}</small><b>{totals.active}</b></span></div><div><Briefcase/><span><small>{t('Замовлень у роботі','Zlecenia w toku','Active orders','Aktive Aufträge','Commandes actives')}</small><b>{totals.orders}</b></span></div><div><Gift/><span><small>{t('Створено пропозицій','Utworzone oferty','Offers created','Erstellte Angebote','Offres créées')}</small><b>{totals.offers}</b></span></div><div><Wallet/><span><small>{t('Виручка персоналу','Przychód personelu','Attributed revenue','Zugeordneter Umsatz','Revenu attribué')}</small><b>{shortMoney(totals.revenue,staff[0]?.reporting_currency||detail?.currency||'PLN')}</b></span></div></div>
+  {msg&&<div className="desk-banner">{msg}</div>}{inviteUrl&&<div className="staff-invite-link"><span>{t('Посилання для підтвердження','Link potwierdzający','Confirmation link','Bestätigungslink','Lien de confirmation')}</span><code>{inviteUrl}</code><button onClick={()=>navigator.clipboard?.writeText(inviteUrl)}>{t('Копіювати','Kopiuj','Copy','Kopieren','Copier')}</button></div>}
+  <div className="team-layout"><section className="team-card staff-directory"><header><div><span className="desk-eyebrow">DIRECTORY</span><h3>{t('Весь персонал','Cały personel','All staff','Gesamtes Personal','Tout le personnel')}</h3></div><span>{staff.length}</span></header><div className="staff-list">{staff.map(x=><button key={x.id} className={selectedId===x.id?'active':''} onClick={()=>open(x.id)}><span className={'staff-role-mark '+String(x.role).toLowerCase()}>{x.role==='OWNER'?'O':x.role==='ADMIN'?'A':'M'}</span><span><b>{displayName(x)}</b><small>{roleName(x.role,locale)}{x.username?' · @'+x.username:''}</small></span><span className="staff-metrics-mini"><b>{Number(x.active_orders||0)}</b><small>{t('в роботі','w toku','active','aktiv','actives')}</small></span></button>)}</div></section>
+   <section className="team-card staff-detail">{!selectedId?<div className="staff-empty"><Users2/><b>{t('Оберіть співробітника','Wybierz pracownika','Choose a team member','Mitarbeiter auswählen','Choisissez un membre')}</b><p>{t('Праворуч з’явиться навантаження, пропозиції, виручка та журнал активності.','Po prawej zobaczysz obciążenie, oferty, przychód i historię aktywności.','Their workload, offers, revenue and activity history will appear here.','Arbeitslast, Angebote, Umsatz und Aktivität werden hier angezeigt.','Sa charge, ses offres, ses revenus et son activité apparaîtront ici.')}</p></div>:!detail?<div className="desk-spinner"/>:<StaffDetail detail={detail} role={role} locale={locale} nameDraft={nameDraft} setNameDraft={setNameDraft} saveName={saveName} setLanguage={setLanguage} revoke={revoke} downloadReport={downloadReport}/>}</section>
   </div>
-
-  <section className="team-card team-list-card">
-   <header className="team-list-head">
-    <div><span className="desk-eyebrow">STAFF DIRECTORY</span><h3>Співробітники</h3><p>{filtered.length} із {rows.length} показано</p></div>
-    <button className="team-refresh" onClick={()=>void load()} disabled={loading} title="Оновити"><RefreshCw className={loading?'spin':''}/></button>
-   </header>
-   <div className="team-toolbar">
-    <label className="team-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Ім’я, @username або Telegram ID"/></label>
-    <div className="team-role-filter">{[['ALL','Усі'],['OWNER','Owner'],['ADMIN','Admin'],['MANAGER','Manager']].map(([v,l])=><button key={v} className={roleFilter===v?'active':''} onClick={()=>setRoleFilter(v)}>{l}</button>)}</div>
-   </div>
-
-   <div className="team-member-list">
-    {filtered.map(x=><article className="team-member" key={x.id}>
-     <div className={'team-avatar role-'+String(x.role).toLowerCase()}>{initials(x.first_name||x.username||String(x.id))}</div>
-     <div className="team-member-main">
-      <div className="team-member-name"><strong>{x.first_name||x.username||'Staff #'+x.id}</strong><span className={'team-role-badge '+String(x.role).toLowerCase()}>{roleLabel(x.role)}</span></div>
-      <div className="team-member-meta"><span>{x.username?'@'+x.username:'Без username'}</span><i/> <span>ID {x.telegram_user_id}</span><i/> <span className={x.status==='ACTIVE'?'is-active':''}>{x.status==='ACTIVE'?'Активний':x.status}</span></div>
-     </div>
-     <div className="team-last-seen"><Clock3/><span><small>Остання активність</small><b>{seenLabel(x.last_seen_at)}</b></span></div>
-     <label className="team-language"><Globe2/><select aria-label="Мова керування" value={x.management_language||'en'} onChange={e=>change(x.id,x.role,e.target.value)}><option value="uk">UA · {langLabel('uk')}</option><option value="pl">PL · {langLabel('pl')}</option><option value="en">EN · {langLabel('en')}</option></select></label>
-     <div className="team-member-actions">
-      {x.role==='OWNER'?<span className="team-owner-lock"><ShieldCheck/>Незмінна роль</span>:<select aria-label="Роль співробітника" value={x.role} onChange={e=>change(x.id,e.target.value,x.management_language||'en')}><option value="MANAGER">Менеджер</option>{role==='OWNER'&&<option value="ADMIN">Адміністратор</option>}<option value="CLIENT">Прибрати з команди</option></select>}
-     </div>
-    </article>)}
-    {!loading&&!filtered.length&&<div className="team-empty"><Users/><strong>Нічого не знайдено</strong><span>Змініть пошук або фільтр ролі.</span></div>}
-    {loading&&!rows.length&&<div className="team-empty"><RefreshCw className="spin"/><strong>Завантажую команду…</strong></div>}
-   </div>
-  </section>
+  <div className="team-lower-grid"><Panel title={t('Додати до команди','Dodaj do zespołu','Add to team','Zum Team hinzufügen','Ajouter à l’équipe')}><div className="team-add-row"><input value={username} onChange={e=>setUsername(e.target.value)} placeholder="@username"/><select value={newRole} onChange={e=>setNewRole(e.target.value as any)}><option value="MANAGER">Manager</option>{role==='OWNER'&&<option value="ADMIN">Admin</option>}</select><button className="desk-primary" onClick={invite} disabled={busy||!username.trim()}><UserPlus/>{t('Запросити','Zaproś','Invite','Einladen','Inviter')}</button></div><p className="desk-muted">{t('Роль не видається миттєво: людина підтверджує її в Telegram і один раз задає робоче ім’я.','Rola nie jest nadawana od razu: użytkownik potwierdza ją w Telegramie i raz ustawia imię robocze.','The role is not granted instantly: the user confirms it in Telegram and sets a work name once.','Die Rolle wird nicht sofort vergeben: Der Nutzer bestätigt sie in Telegram und legt einmal einen Arbeitsnamen fest.','Le rôle n’est pas attribué immédiatement : l’utilisateur le confirme dans Telegram et définit une fois son nom de travail.')}</p></Panel>
+   <BotHealth health={health} locale={locale} maxTrend={maxTrend}/>
+  </div>
  </div>
+}
+
+function StaffDetail({detail,role,locale,nameDraft,setNameDraft,saveName,setLanguage,revoke,downloadReport}:{detail:any;role:Role;locale:DesktopLocale;nameDraft:string;setNameDraft:(v:string)=>void;saveName:()=>void;setLanguage:(p:any,l:string)=>void;revoke:(p:any)=>void;downloadReport:(id:number)=>void}){
+ const t=(uk:string,pl:string,en:string,de:string,fr:string)=>({uk,pl,en,de,fr}[locale]||en),p=detail.person,active=(detail.orders||[]).filter((x:any)=>['REQUESTED','PENDING_CONFIRMATION','CONFIRMED','CAR_ACCEPTED','IN_PROGRESS','INSPECTION','READY'].includes(String(x.status))),done=(detail.orders||[]).filter((x:any)=>x.status==='COMPLETED').length;
+ return <><header className="staff-detail-head"><div><span className={'staff-role-mark '+String(p.role).toLowerCase()}>{p.role==='OWNER'?'O':p.role==='ADMIN'?'A':'M'}</span><span><h3>{displayName(p)}</h3><small>{roleName(p.role,locale)}{p.username?' · @'+p.username:''}</small></span></div><button onClick={()=>downloadReport(p.id)}><Download/>{t('Звіт Excel','Raport Excel','Excel report','Excel-Bericht','Rapport Excel')}</button></header>
+  <div className="staff-detail-kpis"><div><Briefcase/><span><small>{t('Активні','Aktywne','Active','Aktiv','Actives')}</small><b>{active.length}</b></span></div><div><BadgeCheck/><span><small>{t('Виконані','Zakończone','Completed','Abgeschlossen','Terminées')}</small><b>{done}</b></span></div><div><Gift/><span><small>{t('Пропозиції','Oferty','Offers','Angebote','Offres')}</small><b>{(detail.offers||[]).length}</b></span></div><div><Wallet/><span><small>{t('Виручка','Przychód','Revenue','Umsatz','Revenu')}</small><b>{shortMoney(detail.revenue,detail.currency||'PLN')}</b></span></div></div>
+  <div className="staff-edit-strip"><label><span>{t('Робоче ім’я','Imię robocze','Work name','Arbeitsname','Nom de travail')}</span><input value={nameDraft} onChange={e=>setNameDraft(e.target.value)}/></label><button onClick={saveName}>{t('Зберегти ім’я','Zapisz imię','Save name','Namen speichern','Enregistrer le nom')}</button><label><span>{t('Мова панелі','Język panelu','Panel language','Panelsprache','Langue du panneau')}</span><select value={p.management_language||'en'} onChange={e=>setLanguage(p,e.target.value)}>{[['uk','Українська'],['pl','Polski'],['en','English'],['de','Deutsch'],['fr','Français']].map(([v,l])=><option value={v} key={v}>{l}</option>)}</select></label>{p.role!=='OWNER'&&(p.role!=='ADMIN'||role==='OWNER')&&<button className="danger-mini staff-revoke" onClick={()=>revoke(p)}><Trash2/>{t('Відкликати роль','Odwołaj rolę','Revoke role','Rolle entziehen','Révoquer le rôle')}</button>}</div>
+  <div className="staff-detail-columns"><div><h4>{t('Замовлення','Zlecenia','Orders','Aufträge','Commandes')}</h4><div className="staff-order-list">{(detail.orders||[]).slice(0,12).map((x:any)=><div key={x.id}><span><b>CHD-{x.id} · {x.car_name||x.car_plate||x.service_slug||'—'}</b><small>{x.status} · {x.deadline_at?dt(x.deadline_at):t('без дедлайну','bez terminu','no deadline','keine Frist','sans échéance')}</small></span><strong>{Number(x.final_job_price??x.calculated_price??0).toFixed(0)} {x.currency}</strong></div>)}</div></div><div><h4>{t('Створені пропозиції','Utworzone oferty','Created offers','Erstellte Angebote','Offres créées')}</h4><div className="staff-offer-list">{(detail.offers||[]).slice(0,12).map((x:any)=><div key={x.id}><span><b>#{x.id} · {x.first_name||x.username||'Client'}</b><small>{x.status} · {dt(x.created_at)}</small></span><strong>{Number(x.final_price||0).toFixed(0)} {x.currency}</strong></div>)}</div></div></div>
+  <div className="staff-activity"><h4><Activity/>{t('Остання активність','Ostatnia aktywność','Recent activity','Letzte Aktivität','Activité récente')}</h4>{(detail.activity||[]).slice(0,8).map((x:any,i:number)=><div key={i}><span>{x.action}</span><small>{x.entity_type||'—'} {x.entity_id?'#'+x.entity_id:''} · {dt(x.created_at)}</small></div>)}</div>
+ </>;
+}
+
+function BotHealth({health,locale,maxTrend}:{health:any;locale:DesktopLocale;maxTrend:number}){
+ const t=(uk:string,pl:string,en:string,de:string,fr:string)=>({uk,pl,en,de,fr}[locale]||en);if(!health)return <Panel title={t('Telegram-статистика','Statystyka Telegram','Telegram statistics','Telegram-Statistik','Statistiques Telegram')}><p className="desk-muted">—</p></Panel>;const s=health.summary||{};
+ return <Panel title={t('Telegram-статистика','Statystyka Telegram','Telegram statistics','Telegram-Statistik','Statistiques Telegram')}><div className="bot-health-note"><AlertTriangle/><p>{t('Telegram не передає окрему подію «видалив бота». Тут показуються підтверджені блокування та недоступність чату за my_chat_member і помилками доставки.','Telegram nie wysyła osobnego zdarzenia „usunięto bota”. Pokazujemy potwierdzone blokady i niedostępność czatu z my_chat_member oraz błędów dostarczenia.','Telegram does not expose a separate “bot deleted” event. This analysis uses confirmed blocks and unavailable-chat signals from my_chat_member and delivery errors.','Telegram meldet kein separates Ereignis „Bot gelöscht“. Die Analyse verwendet bestätigte Blockierungen und nicht erreichbare Chats aus my_chat_member und Zustellfehlern.','Telegram n’expose pas d’événement distinct « bot supprimé ». L’analyse utilise les blocages confirmés et les chats indisponibles via my_chat_member et les erreurs de livraison.')}</p></div><div className="bot-health-kpis"><span><b>{Number(s.active||0)}</b><small>Active</small></span><span><b>{Number(s.blocked||0)}</b><small>Blocked</small></span><span><b>{Number(s.unavailable||0)}</b><small>Unavailable</small></span><span><b>{Number(s.total||0)}</b><small>Total</small></span></div><div className="bot-health-trend">{(health.trend||[]).slice(-30).map((x:any)=><i key={x.day} title={x.day+' · '+x.events} style={{height:Math.max(5,Math.round(Number(x.events||0)/maxTrend*48))}}/>)}</div><div className="bot-health-users">{(health.users||[]).slice(0,8).map((x:any)=><div key={x.id}><span><b>{x.first_name||x.username||x.telegram_user_id}</b><small>{x.username?'@'+x.username+' · ':''}{x.language||'en'} · {dt(x.bot_unavailable_at)}</small></span><strong className={String(x.bot_status).toLowerCase()}>{x.bot_status}</strong></div>)}</div></Panel>
 }
