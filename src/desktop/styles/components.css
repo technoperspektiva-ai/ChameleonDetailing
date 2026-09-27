@@ -3412,3 +3412,129 @@
 .referral-service-setting small{grid-column:1/-1;font-size:7.5px!important;line-height:1.45;color:var(--text-muted)!important}
 .referral-reconcile{width:100%;margin-top:9px;justify-content:center}
 @media(max-width:760px){.referral-service-setting{grid-template-columns:1fr}}
+
+
+/* DESKTOP UX PASS 2026-09-27 */
+.desktop-splash{
+ position:fixed;inset:0;z-index:9999;display:grid;place-items:center;align-content:center;gap:7px;
+ background:
+  radial-gradient(circle at 50% 42%,rgba(221,184,111,.13),transparent 21%),
+  linear-gradient(180deg,#080907,#050605);
+ color:#f4f0e8;
+}
+.desktop-splash-glow{position:absolute;width:260px;height:160px;border-radius:50%;background:rgba(221,184,111,.08);filter:blur(42px)}
+.desktop-splash img{position:relative;width:78px;height:78px;object-fit:contain;filter:grayscale(1) sepia(1) saturate(2.5) hue-rotate(352deg) brightness(1.12)}
+.desktop-splash strong{position:relative;font-size:19px;letter-spacing:.24em;margin-left:.24em;color:#e7c37c}
+.desktop-splash>span{position:relative;font-size:9px;font-weight:700;letter-spacing:.42em;margin-left:.42em;color:#ba9655}
+.desktop-splash>i{position:relative;width:86px;height:2px;margin-top:13px;border-radius:999px;background:rgba(221,184,111,.12);overflow:hidden}
+.desktop-splash>i:after{content:"";display:block;width:38%;height:100%;border-radius:inherit;background:linear-gradient(90deg,transparent,#e6bd69,transparent);animation:desktopSplash 1.1s ease-in-out infinite}
+@keyframes desktopSplash{0%{transform:translateX(-110%)}100%{transform:translateX(290%)}}
+
+.notification-wrap{position:relative}
+.notification-count{position:absolute;right:-4px;bottom:-4px;min-width:17px;height:17px;padding:0 4px;display:grid;place-items:center;border-radius:999px;background:var(--danger);color:white!important;border:2px solid var(--bg);font-size:7px!important;line-height:1}
+.notification-popover{position:absolute;right:0;top:47px;width:min(380px,calc(100vw - 28px));z-index:80;border:1px solid var(--border);border-radius:14px;background:rgba(13,15,13,.985);box-shadow:0 24px 70px rgba(0,0,0,.34);backdrop-filter:blur(22px);overflow:hidden}
+.notification-popover>header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;border-bottom:1px solid var(--border)}
+.notification-popover>header>div{display:grid;gap:1px}
+.notification-popover>header strong{font-size:11px}
+.notification-popover>header span{font-size:8px;color:var(--text-muted)}
+.notification-popover>header button{border:0!important;background:transparent!important;padding:4px!important;color:var(--accent)!important;font-size:8px}
+.notification-list{display:grid;max-height:410px;overflow:auto}
+.notification-list>button{display:grid!important;grid-template-columns:34px minmax(0,1fr);gap:9px!important;align-items:center!important;padding:10px 12px!important;text-align:left!important;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;background:transparent!important}
+.notification-list>button:hover{background:rgba(255,255,255,.025)!important}
+.notification-list>button:last-of-type{border-bottom:0!important}
+.notification-list>button>div{min-width:0;display:grid;gap:2px}
+.notification-list b{font-size:9.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notification-list small{font-size:8px!important;color:var(--text-muted)!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.notification-list>p{margin:0;padding:28px 14px;text-align:center;font-size:9px;color:var(--text-muted)}
+.notification-kind{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;background:var(--accent-soft);color:var(--accent)}
+.notification-kind.ready{background:rgba(87,185,130,.09);color:var(--success)}
+.notification-kind svg{width:14px;height:14px}
+
+.premium-focus-car-image{position:relative;z-index:2;width:92%!important;height:92%!important;object-fit:contain!important;filter:drop-shadow(0 22px 18px rgba(0,0,0,.45));transform:scale(1.04)}
+.premium-contact-actions{display:grid;grid-template-columns:repeat(2,36px);gap:6px;margin:11px 0 0}
+.premium-contact-actions button{width:36px;height:36px;padding:0!important;display:grid!important;place-items:center!important;color:var(--accent)!important;border-color:rgba(221,184,111,.14)!important;background:var(--accent-soft)!important}
+.premium-contact-actions button svg{width:14px;height:14px}
+.premium-focus-tabs button{border:0!important;background:transparent!important;border-radius:0!important;padding:0 0 7px!important;color:var(--text-muted)!important;font-size:9px;cursor:pointer}
+.premium-focus-tabs button:hover{color:var(--accent-strong)!important}
+.premium-focus-tabs button.active{color:var(--accent-strong)!important;border-bottom:1px solid var(--accent)!important}
+
+.payments-kpis+.desk-panel{margin-bottom:14px}
+.client-lookup{display:grid;grid-template-columns:minmax(150px,.8fr) minmax(190px,1.2fr);gap:7px}
+.client-lookup input,.client-lookup select{width:100%;min-width:0}
+
+.staff-order-list>button,.staff-offer-list>button{width:100%;min-height:48px;display:grid!important;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;text-align:left!important;padding:8px 0!important;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;background:transparent!important}
+.staff-order-list>button:hover,.staff-offer-list>button:hover{background:var(--accent-soft)!important;padding-inline:8px!important}
+.staff-order-list>button>span,.staff-offer-list>button>span{min-width:0;display:grid}
+
+/* High-contrast light mode: no dark islands or washed-out text. */
+:root[data-desktop-theme="light"] .desktop-shell{color:#171612!important;background:var(--bg)!important}
+:root[data-desktop-theme="light"] .desktop-main,
+:root[data-desktop-theme="light"] .desktop-content{background:transparent!important;color:#171612!important}
+:root[data-desktop-theme="light"] .desk-panel,
+:root[data-desktop-theme="light"] .desk-kanban-col,
+:root[data-desktop-theme="light"] .desk-kanban-card,
+:root[data-desktop-theme="light"] .premium-surface,
+:root[data-desktop-theme="light"] .team-card,
+:root[data-desktop-theme="light"] .commercial-card,
+:root[data-desktop-theme="light"] .orders-board-shell,
+:root[data-desktop-theme="light"] .orders-table-card,
+:root[data-desktop-theme="light"] .broadcast-composer,
+:root[data-desktop-theme="light"] .broadcast-history,
+:root[data-desktop-theme="light"] .content-human-card,
+:root[data-desktop-theme="light"] .workspace-preview,
+:root[data-desktop-theme="light"] .telegram-live-preview{
+ background:#fffefa!important;color:#171612!important;border-color:rgba(42,34,22,.16)!important;
+ box-shadow:0 12px 32px rgba(65,47,20,.065)!important;
+}
+:root[data-desktop-theme="light"] .premium-hero,
+:root[data-desktop-theme="light"] .team-hero,
+:root[data-desktop-theme="light"] .commercial-hero,
+:root[data-desktop-theme="light"] .orders-hero,
+:root[data-desktop-theme="light"] .system-hero{
+ background:
+  radial-gradient(circle at 78% 20%,rgba(138,97,39,.12),transparent 25%),
+  linear-gradient(135deg,#fffefa,#eee5d7)!important;
+ color:#171612!important;border-color:rgba(42,34,22,.16)!important;
+}
+:root[data-desktop-theme="light"] .premium-hero h1,
+:root[data-desktop-theme="light"] .premium-hero h2,
+:root[data-desktop-theme="light"] .team-hero h2,
+:root[data-desktop-theme="light"] .commercial-hero h2,
+:root[data-desktop-theme="light"] .orders-hero h2,
+:root[data-desktop-theme="light"] .system-hero h2,
+:root[data-desktop-theme="light"] .desktop-shell h1,
+:root[data-desktop-theme="light"] .desktop-shell h2,
+:root[data-desktop-theme="light"] .desktop-shell h3,
+:root[data-desktop-theme="light"] .desktop-shell h4,
+:root[data-desktop-theme="light"] .desktop-shell strong,
+:root[data-desktop-theme="light"] .desktop-shell b{color:#171612!important}
+:root[data-desktop-theme="light"] .desktop-shell p,
+:root[data-desktop-theme="light"] .desktop-shell small,
+:root[data-desktop-theme="light"] .desk-muted{color:#5b574f!important}
+:root[data-desktop-theme="light"] .premium-focus-visual{
+ background:radial-gradient(circle at 50% 55%,rgba(138,97,39,.12),transparent 38%),linear-gradient(145deg,#eee6da,#fffefa)!important;
+}
+:root[data-desktop-theme="light"] .premium-focus-car-image{filter:drop-shadow(0 18px 18px rgba(72,48,18,.2))}
+:root[data-desktop-theme="light"] .notification-popover{background:rgba(255,254,250,.99)!important;box-shadow:0 22px 60px rgba(61,43,17,.15)!important}
+:root[data-desktop-theme="light"] .notification-list>button:hover{background:rgba(138,97,39,.06)!important}
+:root[data-desktop-theme="light"] .telegram-phone{background:linear-gradient(180deg,#edf1ed,#e3e9e4)!important;color:#1c211d!important}
+:root[data-desktop-theme="light"] .telegram-bubble{background:#d7e2d9!important;color:#172219!important}
+:root[data-desktop-theme="light"] .desktop-shell input,
+:root[data-desktop-theme="light"] .desktop-shell textarea,
+:root[data-desktop-theme="light"] .desktop-shell select{background-color:#fffefa!important;color:#171612!important;border-color:rgba(42,34,22,.18)!important}
+:root[data-desktop-theme="light"] .desktop-shell input::placeholder,
+:root[data-desktop-theme="light"] .desktop-shell textarea::placeholder{color:#777066!important;opacity:1}
+:root[data-desktop-theme="light"] .desk-status,
+:root[data-desktop-theme="light"] .commercial-status{background:#f0e8dc!important;border-color:rgba(42,34,22,.12)!important;color:#514a40!important}
+:root[data-desktop-theme="light"] .premium-kpis>button,
+:root[data-desktop-theme="light"] .team-kpis>div,
+:root[data-desktop-theme="light"] .commercial-summary>div,
+:root[data-desktop-theme="light"] .orders-kpis>button{background:#fffefa!important;color:#171612!important}
+:root[data-desktop-theme="light"] .premium-timeline-row:hover,
+:root[data-desktop-theme="light"] .desk-table-wrap tbody tr:hover{background:rgba(138,97,39,.055)!important}
+:root[data-desktop-theme="light"] .desktop-shell select option{background:#fffefa!important;color:#171612!important}
+
+@media(max-width:760px){
+ .client-lookup{grid-template-columns:1fr}
+ .notification-popover{right:-92px}
+}
