@@ -179,3 +179,54 @@ html.desktop-route .desktop-shell span,
 html.desktop-route .desktop-shell small{
  text-shadow:none;
 }
+
+
+/* NARROW DESKTOP STABILITY */
+.topbar-mini-brand{
+ display:none;
+ align-items:center;
+ gap:7px;
+ text-decoration:none!important;
+ color:var(--accent-strong)!important;
+ font-size:10px;
+ font-weight:850;
+ letter-spacing:.12em;
+ white-space:nowrap;
+}
+.topbar-mini-brand img{
+ width:28px;
+ height:28px;
+ object-fit:contain;
+ filter:grayscale(1) sepia(1) saturate(2.7) hue-rotate(352deg) brightness(1.08) contrast(1.04);
+}
+@media(max-width:980px){
+ .desktop-main{width:100%;min-width:0}
+ .desk-topbar{
+  min-width:0;
+  padding:10px 12px;
+  gap:8px;
+ }
+ .topbar-mini-brand{display:flex}
+ .desk-topbar .global-search{
+  width:40px!important;
+  min-width:40px!important;
+  max-width:40px!important;
+  flex:0 0 40px;
+  margin-left:auto!important;
+  padding:0!important;
+  justify-content:center!important;
+ }
+ .desk-topbar .global-search span,
+ .desk-topbar .global-search kbd{display:none!important}
+ .desk-topbar .create-menu{flex:0 0 auto}
+ .desk-topbar .create-menu>.desk-primary{min-width:auto;padding-inline:10px}
+ .desk-topbar select{max-width:76px}
+}
+@media(max-width:680px){
+ .topbar-mini-brand span{display:none}
+ .desk-topbar .create-menu>.desk-primary span{display:none}
+ .desk-topbar .create-menu>.desk-primary{width:40px;padding:0!important}
+ .desk-topbar select{display:none}
+ .desk-topbar .topbar-icon{width:38px}
+ .desktop-content{padding:14px 12px 24px!important}
+}
