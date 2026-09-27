@@ -3,6 +3,7 @@ import {ensureDb,getSetting,setSetting} from './db';
 import {managerBlockEnabled} from './permissions';
 import {sendMessage} from './telegram';
 import {buildReport,type ReportType} from './reports';
+import {convertCurrency,normalizeCurrency,fx} from './currency';
 
 export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'reports_access'|'financial_access'|'clients_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
@@ -36,29 +37,29 @@ export const defaultWorkspace={
  defaultPage:'orders',
  theme:{accent:'#7aa63a',mode:'light',radius:18,density:'comfortable',fontScale:1,animations:true,sidebarStyle:'glass'},
  sidebar:[
-  {id:'dashboard',label:'Dashboard',icon:'home',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'orders',label:'Замовлення',icon:'clipboard',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'sales',label:'Sales',icon:'search',group:'CRM',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'cars',label:'Автомобілі',icon:'car',group:'CRM',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'clients',label:'Клієнти',icon:'users',group:'CRM',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'calendar',label:'Календар',icon:'calendar',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'services',label:'Послуги',icon:'wrench',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
-  {id:'payments',label:'Оплати',icon:'credit-card',group:'Management',roles:['OWNER','ADMIN']},
-  {id:'broadcasts',label:'Розсилки',icon:'megaphone',group:'Management',roles:['OWNER','ADMIN']},
-  {id:'analytics',label:'Аналітика',icon:'chart',group:'Management',roles:['OWNER','ADMIN']},
-  {id:'reports',label:'Звіти',icon:'file',group:'Management',roles:['OWNER','ADMIN']},
-  {id:'staff',label:'Персонал',icon:'badge',group:'Management',roles:['OWNER','ADMIN']},
-  {id:'audit',label:'Audit Log',icon:'history',group:'System',roles:['OWNER','ADMIN']},
-  {id:'workspace',label:'Layout Editor',icon:'layout',group:'System',roles:['OWNER','ADMIN']},
-  {id:'settings',label:'Налаштування',icon:'settings',group:'System',roles:['OWNER','ADMIN']}
+  {id:'dashboard',label:'Dashboard',icon:'home',group:'Operations',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'orders',label:'Замовлення',icon:'clipboard',group:'Operations',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'sales',label:'Sales',icon:'search',group:'CRM',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'cars',label:'Автомобілі',icon:'car',group:'CRM',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'clients',label:'Клієнти',icon:'users',group:'CRM',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'calendar',label:'Календар',icon:'calendar',group:'Operations',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'services',label:'Послуги',icon:'wrench',group:'Operations',roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'payments',label:'Оплати',icon:'credit-card',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'broadcasts',label:'Розсилки',icon:'megaphone',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'analytics',label:'Аналітика',icon:'chart',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'reports',label:'Звіти',icon:'file',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'staff',label:'Персонал',icon:'badge',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'audit',label:'Audit Log',icon:'history',group:'System',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'workspace',label:'Layout Editor',icon:'layout',group:'System',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'settings',label:'Налаштування',icon:'settings',group:'System',roles:['OWNER','ADMIN'],hidden:false}
  ],
  widgets:[
-  {id:'orders_today',type:'kpi',title:'Orders Today',x:0,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER']},
-  {id:'revenue_today',type:'kpi',title:'Revenue Today',x:3,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN']},
-  {id:'cars_in_work',type:'kpi',title:'Cars in Work',x:6,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER']},
-  {id:'ready_cars',type:'kpi',title:'Ready Cars',x:9,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER']},
-  {id:'recent_orders',type:'orders',title:'Recent Orders',x:0,y:1,width:8,height:4,minWidth:4,minHeight:3,roles:['OWNER','ADMIN','MANAGER']},
-  {id:'today_schedule',type:'calendar',title:'Today Schedule',x:8,y:1,width:4,height:4,minWidth:3,minHeight:3,roles:['OWNER','ADMIN','MANAGER']}
+  {id:'orders_today',type:'kpi',title:'Orders Today',x:0,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'revenue_today',type:'kpi',title:'Revenue Today',x:3,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN'],hidden:false},
+  {id:'cars_in_work',type:'kpi',title:'Cars in Work',x:6,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'ready_cars',type:'kpi',title:'Ready Cars',x:9,y:0,width:3,height:1,minWidth:2,minHeight:1,roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'recent_orders',type:'orders',title:'Recent Orders',x:0,y:1,width:8,height:4,minWidth:4,minHeight:3,roles:['OWNER','ADMIN','MANAGER'],hidden:false},
+  {id:'today_schedule',type:'calendar',title:'Today Schedule',x:8,y:1,width:4,height:4,minWidth:3,minHeight:3,roles:['OWNER','ADMIN','MANAGER'],hidden:false}
  ],
  layouts:{OWNER:['orders_today','revenue_today','cars_in_work','ready_cars','recent_orders','today_schedule'],ADMIN:['orders_today','revenue_today','cars_in_work','ready_cars','recent_orders','today_schedule'],MANAGER:['orders_today','cars_in_work','ready_cars','recent_orders','today_schedule']},
  presets:['Default','Compact','Operations','CRM','Management','Tablet'],
@@ -240,9 +241,9 @@ export async function runDesktopScheduledJobs(env:Env){
 
 const cleanWorkspace=(input:any)=>{
  const x=input&&typeof input==='object'?input:{};
- const sidebar=Array.isArray(x.sidebar)?x.sidebar.slice(0,40).map((i:any)=>({id:String(i.id||'').slice(0,40),label:String(i.label||i.id||'').slice(0,60),icon:String(i.icon||'circle').slice(0,30),group:String(i.group||'Other').slice(0,40),roles:(Array.isArray(i.roles)?i.roles:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)))})).filter((i:any)=>i.id):defaultWorkspace.sidebar;
+ const sidebar=Array.isArray(x.sidebar)?x.sidebar.slice(0,40).map((i:any)=>({id:String(i.id||'').slice(0,40),label:String(i.label||i.id||'').slice(0,60),icon:String(i.icon||'circle').slice(0,30),group:String(i.group||'Other').slice(0,40),hidden:!!i.hidden,roles:(Array.isArray(i.roles)?i.roles:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)))})).filter((i:any)=>i.id):defaultWorkspace.sidebar;
  const widgets=Array.isArray(x.widgets)?x.widgets.slice(0,60).map((w:any)=>({id:String(w.id||'').slice(0,50),type:String(w.type||'kpi').slice(0,30),title:String(w.title||w.id||'').slice(0,80),x:Math.max(0,Math.min(11,Number(w.x)||0)),y:Math.max(0,Number(w.y)||0),width:Math.max(1,Math.min(12,Number(w.width)||3)),height:Math.max(1,Math.min(12,Number(w.height)||1)),minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),roles:(Array.isArray(w.roles)?w.roles:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)))})).filter((w:any)=>w.id):defaultWorkspace.widgets;
- return {schemaVersion:1,locked:!!x.locked,defaultPage:String(x.defaultPage||'dashboard'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings};
+ return {schemaVersion:1,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings};
 };
 
 export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<Response|null>{
@@ -279,6 +280,14 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
    env.DB!.prepare("SELECT COALESCE(SUM(COALESCE(final_job_price,calculated_price)),0) n FROM service_requests WHERE payment_status='PAID' AND date(COALESCE(completed_at,created_at))=date('now') AND staff_deleted_at IS NULL").first<any>()
   ]);
   return reply({kpi:{newOrders:Number(newOrders?.n||0),confirmed:Number(confirmed?.n||0),inWork:Number(inWork?.n||0),ready:Number(readyCars?.n||0),unpaid:Number(unpaid?.n||0),revenue:Number(revenue?.n||0)},currency:await getSetting(env,'reporting_currency','PLN'),serviceStatus:await getSetting(env,'business_status_override','AUTO')});
+ }
+ if(url.pathname==='/api/desktop/payments'&&request.method==='GET'){
+  if(!perms.financial_access)return reply({error:'Financial access is disabled.'},403);
+  const target=normalizeCurrency(url.searchParams.get('currency')||await getSetting(env,'reporting_currency','PLN'));
+  const r=await env.DB!.prepare("SELECT sr.id,sr.payment_status,sr.status,sr.final_job_price,sr.calculated_price,sr.currency,sr.created_at,sr.completed_at,u.first_name,u.username,c.brand,c.model,c.plate FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_cars c ON c.id=sr.car_id WHERE sr.staff_deleted_at IS NULL ORDER BY sr.id DESC LIMIT 250").all<any>();
+  const rows=(r.results||[]).map((x:any)=>{const original=Number(x.final_job_price??x.calculated_price??0),from=normalizeCurrency(x.currency);return {...x,original_amount:original,original_currency:from,display_amount:convertCurrency(original,from,target),display_currency:target}});
+  const paid=rows.filter((x:any)=>x.payment_status==='PAID'),unpaid=rows.filter((x:any)=>x.payment_status!=='PAID');
+  return reply({currency:target,rates:fx[target]||{},rows,summary:{paid:paid.length,unpaid:unpaid.length,paidTotal:Math.round(paid.reduce((s:number,x:any)=>s+Number(x.display_amount||0),0)*100)/100,unpaidTotal:Math.round(unpaid.reduce((s:number,x:any)=>s+Number(x.display_amount||0),0)*100)/100}});
  }
  if(url.pathname==='/api/desktop/search'&&request.method==='GET'){if(!perms.sales_access)return reply({error:'Sales access is disabled.'},403);return reply({results:await desktopSalesSearch(env,url.searchParams.get('q')||'',40)});}
  if(url.pathname==='/api/desktop/orders'&&request.method==='GET')return reply({orders:await orderRows(env,url.searchParams.get('q')||'',url.searchParams.get('status')||'')});
