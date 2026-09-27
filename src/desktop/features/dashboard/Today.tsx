@@ -82,7 +82,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
    <div className="premium-hero-mark" aria-hidden="true"><img src="/brand/chameleon-logo.webp" alt=""/></div>
    <div className="premium-hero-meta">
     <span>Оновлено {updated?.toLocaleTimeString('uk-UA',{hour:'2-digit',minute:'2-digit'})}</span>
-    {boot.mode==='ONLINE'&&create&&<button className="premium-new-order" onClick={create}><Plus/>Новий запис</button>}
+    {boot.mode==='ONLINE'&&create&&<button className="premium-new-order" onClick={()=>create?.()}><Plus/>Новий запис</button>}
    </div>
   </section>
 
