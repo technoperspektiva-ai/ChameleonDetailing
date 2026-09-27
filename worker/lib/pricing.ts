@@ -143,7 +143,7 @@ export async function quote(env:Env,input:any,tier='STANDARD',emergencyMultiplie
   }
  }
  let referralDiscount=0;
- if(!personal&&referralReward){
+ if(referralReward){
   const type=String(referralReward.reward_type||'').toUpperCase();
   if(type==='PERCENT'){const pct=Math.max(0,Math.min(100,Number(referralReward.reward_value||0)));referralDiscount=discountedTotal*pct/100;discountedTotal=Math.max(0,discountedTotal-referralDiscount)}
   else if(type==='FIXED'){const fixed=convertCurrency(Number(referralReward.reward_value||0),normalizeCurrency(referralReward.reward_currency||target),target);referralDiscount=Math.min(discountedTotal,Math.max(0,fixed));discountedTotal=Math.max(0,discountedTotal-referralDiscount)}
@@ -155,7 +155,7 @@ export async function quote(env:Env,input:any,tier='STANDARD',emergencyMultiplie
  }
  const emergencySurcharge=Math.max(0,discountedTotal*(emergencyMultiplier-1));
  const sources=[...new Set(breakdown.map(b=>b.discountSource).filter((x:string)=>x!=='NONE'))];
- const source=personal?'PERSONAL':referralDiscount>0?'REFERRAL':sources.length===0?'NONE':sources.length===1?sources[0]:'MIXED';
+ const source=personal&&referralDiscount>0?'MIXED':personal?'PERSONAL':referralDiscount>0?'REFERRAL':sources.length===0?'NONE':sources.length===1?sources[0]:'MIXED';
  return {
   service:serviceSlugs[0],services:serviceSlugs,serviceBreakdown:breakdown,
   standardBasePrice:round(totalStandardBase),basePrice:round(totalBaseAfter),standardTotal:round(standardTotal),discountedSubtotal:round(discountedTotal),
