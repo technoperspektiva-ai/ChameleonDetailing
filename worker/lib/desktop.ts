@@ -58,7 +58,7 @@ const notifyClientOrderChanges=async(env:Env,orderId:number,changes:Array<{key:s
  if(!env.DB||!env.BOT_TOKEN||!changes.length)return;
  try{
   const r=await env.DB.prepare("SELECT sr.id,sr.currency,u.telegram_user_id,u.language FROM service_requests sr JOIN users u ON u.id=sr.user_id WHERE sr.id=?").bind(orderId).first<any>();
-  if(!r?.telegram_user_id)return;
+  if(!r?.telegram_user_id||Number(r.telegram_user_id)<=0)return;
   const raw=String(r.language||'en').toLowerCase(),lang=['uk','pl','en','de','fr'].includes(raw)?raw:'en';
   const names:any={
    status:{uk:'Статус',pl:'Status',en:'Status',de:'Status',fr:'Statut'},
@@ -250,7 +250,7 @@ const orderDetail=async(env:Env,id:number)=>{
  return {...row,estimated_duration_min:duration,deadline_at:row.deadline_at||timingDeadline,duration_overridden:Number(row.duration_overridden||0),extras:ex.results||[]};
 };
 const campaignRecipients=async(env:Env,a:any)=>{
- const type=String(a?.type||'all');let sql="SELECT DISTINCT u.id,u.telegram_user_id,u.notifications_enabled,u.language FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";const binds:any[]=[];
+ const type=String(a?.type||'all');let sql="SELECT DISTINCT u.id,u.telegram_user_id,u.notifications_enabled,u.language FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id>0 AND COALESCE(u.bot_status,'ACTIVE')='ACTIVE'";const binds:any[]=[];
  if(type==='active')sql+=" AND EXISTS(SELECT 1 FROM service_requests sr WHERE sr.user_id=u.id AND sr.staff_deleted_at IS NULL AND sr.created_at>=datetime('now','-90 days'))";
  else if(type==='vip')sql+=" AND COALESCE(cp.client_tier,'STANDARD')<>'STANDARD'";
  else if(type==='new')sql+=" AND u.created_at>=datetime('now','-30 days')";
