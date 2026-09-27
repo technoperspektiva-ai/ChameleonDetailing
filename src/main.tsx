@@ -5,6 +5,7 @@ import { DesktopApp } from './DesktopApp';
 import './styles.css';
 
 const isDesktop=location.pathname==='/desktop'||location.pathname.startsWith('/desktop/');
+document.documentElement.classList.toggle('desktop-route',isDesktop);
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>{isDesktop?<DesktopApp/>:<App/>}</React.StrictMode>
