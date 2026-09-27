@@ -298,3 +298,25 @@ html.desktop-route[data-desktop-theme="light"] .topbar-mini-brand img,
 html.desktop-route[data-desktop-theme="light"] .desk-brand img{
  filter:sepia(.55) saturate(.9) hue-rotate(352deg) brightness(.78) contrast(1.05)!important;
 }
+
+
+/* LIGHT THEME FORM / DROPDOWN CONTRAST */
+html.desktop-route[data-desktop-theme="light"] .desktop-shell input:not([type="checkbox"]):not([type="radio"]),
+html.desktop-route[data-desktop-theme="light"] .desktop-shell select,
+html.desktop-route[data-desktop-theme="light"] .desktop-shell textarea{
+ background:#fffdf9!important;
+ color:#29261f!important;
+ border-color:rgba(70,52,27,.18)!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.85)!important;
+}
+html.desktop-route[data-desktop-theme="light"] .desktop-shell input::placeholder,
+html.desktop-route[data-desktop-theme="light"] .desktop-shell textarea::placeholder{color:#8b8377!important}
+html.desktop-route[data-desktop-theme="light"] .desktop-shell select option{
+ background:#fffdf9!important;
+ color:#29261f!important;
+}
+html.desktop-route[data-desktop-theme="light"] .desktop-shell .dropdown button{
+ color:#29261f!important;
+ background:transparent!important;
+}
+html.desktop-route[data-desktop-theme="light"] .desktop-shell .dropdown button:hover{background:rgba(117,83,36,.07)!important}
