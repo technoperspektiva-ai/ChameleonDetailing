@@ -43,7 +43,9 @@ export async function grantReferralRewardsIfEligible(env:Env,requestId:number,ev
   const msg=isReferrer
    ?l5(loc,'🎁 <b>Реферальний бонус активовано!</b>\n\nВаш бонус: <b>'+visibleReward+'</b>. Він уже активний у калькуляторі та застосовується автоматично до наступного відповідного розрахунку.','🎁 <b>Bonus polecający aktywowany!</b>\n\nTwój bonus: <b>'+visibleReward+'</b>. Jest już aktywny w kalkulatorze i zastosuje się automatycznie do następnej odpowiedniej wyceny.','🎁 <b>Referral reward activated!</b>\n\nYour reward: <b>'+visibleReward+'</b>. It is already active in the calculator and will apply automatically to the next eligible quote.','🎁 <b>Empfehlungsbonus aktiviert!</b>\n\nIhr Bonus: <b>'+visibleReward+'</b>. Er ist bereits im Rechner aktiv und wird automatisch auf die nächste passende Kalkulation angewendet.','🎁 <b>Bonus de parrainage activé !</b>\n\nVotre bonus : <b>'+visibleReward+'</b>. Il est déjà actif dans le calculateur et s’appliquera automatiquement au prochain calcul éligible.')
    :l5(loc,'🎁 <b>Бонус за запрошення активовано!</b>\n\nВаш бонус: <b>'+visibleReward+'</b>. Він уже доступний у калькуляторі.','🎁 <b>Bonus za polecenie aktywowany!</b>\n\nTwój bonus: <b>'+visibleReward+'</b>. Jest już dostępny w kalkulatorze.','🎁 <b>Invitation reward activated!</b>\n\nYour reward: <b>'+visibleReward+'</b>. It is already available in the calculator.','🎁 <b>Einladungsbonus aktiviert!</b>\n\nIhr Bonus: <b>'+visibleReward+'</b>. Er ist bereits im Rechner verfügbar.','🎁 <b>Bonus d’invitation activé !</b>\n\nVotre bonus : <b>'+visibleReward+'</b>. Il est déjà disponible dans le calculateur.');
-  await sendMessage(env,Number(person.telegram_user_id),msg).catch(()=>{});
+  const receivedLabel=l5(loc,'✅ Отримано','✅ Otrzymano','✅ Received','✅ Erhalten','✅ Reçu');
+  const ackMarkup={inline_keyboard:[[{text:receivedLabel,callback_data:`msgctl:read:${loc}`}]]};
+  await sendMessage(env,Number(person.telegram_user_id),msg,ackMarkup).catch(()=>{});
  }
  await event(env,req.user_id,'referral_rewards_granted',{referralId:ref.id,requestId,eventType,granted});
  return granted;
