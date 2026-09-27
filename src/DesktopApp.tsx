@@ -273,15 +273,15 @@ function AdminHub({role}:{role:Role}){
  const updateMultiplier=async(kind:string,x:any,next:any)=>{await post('/api/desktop/admin-hub/'+kind+'/'+x.id,{multiplier:Number(next.multiplier??x.multiplier),enabled:next.enabled??!!x.enabled,sortOrder:Number(next.sortOrder??x.sort_order)},'PATCH');await load()};
  const updateSchedule=async(x:any,next:any)=>{await post('/api/desktop/admin-hub/schedule/'+x.day_of_week,{enabled:next.enabled??!!x.enabled,openTime:next.openTime||x.open_time,closeTime:next.closeTime||x.close_time},'PATCH');await load()};
  const saveContent=async(key:string,locale:string,value:string)=>{await post('/api/desktop/admin-hub/content',{key,locale,value},'PUT');await load()};
- const tabs=[['access','Клієнти & доступ'],['calculator','Калькулятор'],['content','Контент & мови'],['commercial','Комерція'],['brand','Бренд & сезон'],['permissions','Права & сповіщення']];
+ const tabs=[['access','Клієнти & доступ'],['calculator','Калькулятор'],['content','Контент & мови'],['commercial','Комерція'],['brand','Бренд & сезон'],['permissions','Права & сповіщення'],...(role==='OWNER'?[['botmenu','Меню Telegram Bot']]:[])];
  return <><div className="control-hero"><div><span className="desk-eyebrow">BOT PANEL PARITY</span><h2>Control Hub</h2><p>Єдині дані D1 для Desktop і Telegram Bot Panel. Тут зібрані модулі, які раніше були доступні лише в боті.</p></div><button className="panel-icon-btn" onClick={load}><RefreshCw className={busy?'spin':''}/></button></div>
  <div className="control-tabs">{tabs.map(([id,label])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}>{label}</button>)}</div>{msg&&<div className="desk-banner">{msg}</div>}
  {tab==='access'&&<AccessControl clients={clients} data={data} action={userAction}/>}
  {tab==='calculator'&&<CalculatorControl data={data} settingMap={settingMap} updateSetting={updateSetting} updateMultiplier={updateMultiplier} updateSchedule={updateSchedule}/>}
  {tab==='content'&&<ContentControl data={data} saveContent={saveContent} settingMap={settingMap} updateSetting={updateSetting}/>}
- {tab==='commercial'&&<CommercialControl data={data} services={services} reload={load}/>}
+ {tab==='commercial'&&<CommercialControl data={data} services={services} clients={clients} settingMap={settingMap} updateSetting={updateSetting} reload={load}/>}
  {tab==='brand'&&<BrandControl data={data} settingMap={settingMap} updateSetting={updateSetting} reload={load}/>}
- {tab==='permissions'&&<PermissionsControl data={data} role={role} reload={load}/>}</>
+ {tab==='permissions'&&<PermissionsControl data={data} role={role} reload={load}/>}\n {tab==='botmenu'&&role==='OWNER'&&<BotMenuControl/>}</>
 }
 function AccessControl({clients,data,action}:{clients:any[];data:any;action:(id:number,a:string,e?:any)=>Promise<void>}){
  const [uid,setUid]=useState(''),[reason,setReason]=useState(''),selected=clients.find(x=>String(x.id)===uid);
@@ -305,7 +305,7 @@ function SettingLine({label,value,choices,save}:{label:string;value:any;choices?
  return <div className="setting-line"><span>{label}</span>{choices?<select value={v} onChange={e=>setV(e.target.value)}>{choices.map(x=><option key={x}>{x}</option>)}</select>:<input value={v} onChange={e=>setV(e.target.value)}/>}<button onClick={()=>save(v)}>Save</button></div>
 }
 function ContentControl({data,saveContent,settingMap,updateSetting}:{data:any;saveContent:(k:string,l:string,v:string)=>Promise<void>;settingMap:any;updateSetting:(k:string,v:any)=>Promise<void>}){
- const [edit,setEdit]=useState<any>({});const keys=Array.from(new Set((data.content||[]).map((x:any)=>x.key))) as string[];
+ const [edit,setEdit]=useState<any>({});const keys=['home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','bot.help_text','bot.client_menu_text','bot.client_settings_text','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description'];
  const value=(key:string,loc:string)=>edit[key+':'+loc]??(data.content||[]).find((x:any)=>x.key===key&&x.locale===loc)?.value??'';
  return <><Panel title="Мови продукту"><div className="settings-stack"><SettingLine label="Default locale" value={settingMap.default_locale||'en'} choices={['uk','pl','en','de','fr']} save={v=>updateSetting('default_locale',v)}/><SettingLine label="Available locales" value={settingMap.available_locales||'uk,pl,en,de,fr'} save={v=>updateSetting('available_locales',v)}/></div></Panel><div className="content-editor-grid">{keys.map(key=><Panel key={key} title={key}><div className="content-locale-list">{(['uk','pl','en','de','fr'] as DesktopLocale[]).map(loc=><div key={loc}><b>{desktopLocaleLabels[loc]}</b><textarea value={value(key,loc)} onChange={e=>setEdit({...edit,[key+':'+loc]:e.target.value})}/><button onClick={()=>saveContent(key,loc,value(key,loc))}>Save</button></div>)}</div></Panel>)}</div></>
 }
