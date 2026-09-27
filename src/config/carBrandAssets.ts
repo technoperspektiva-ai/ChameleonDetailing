@@ -27,6 +27,7 @@ import c25 from './carBrandSpriteChunks/chunk25';
 import c26 from './carBrandSpriteChunks/chunk26';
 
 export const carBrandSprite='data:image/webp;base64,'+[c0,c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,c11,c12,c13,c14,c15,c16,c17,c18,c19,c20,c21,c22,c23,c24,c25,c26].join('');
+
 export const carBrandIndex:Record<string,number>={
  'abarth':0,
  'alfa_romeo':1,
@@ -77,6 +78,100 @@ export const carBrandIndex:Record<string,number>={
  'toyota':46,
  'volkswagen':47,
  'volvo':48
+};
+
+const standaloneCarBrandIcons=new Set([
+ 'abarth',
+ 'acura',
+ 'alfa_romeo',
+ 'aston_martin',
+ 'audi',
+ 'bentley',
+ 'bmw',
+ 'byd',
+ 'chery',
+ 'chevrolet',
+ 'chrysler',
+ 'citroen',
+ 'cupra',
+ 'dacia',
+ 'dodge',
+ 'ds_automobiles',
+ 'ferrari',
+ 'fiat',
+ 'ford',
+ 'genesis',
+ 'gmc',
+ 'hyundai',
+ 'infiniti',
+ 'jaguar',
+ 'jeep',
+ 'kia',
+ 'lamborghini',
+ 'land_rover',
+ 'lexus',
+ 'maserati',
+ 'mazda',
+ 'mclaren',
+ 'mercedes_benz',
+ 'mg',
+ 'mini',
+ 'mitsubishi',
+ 'nissan',
+ 'opel',
+ 'peugeot',
+ 'polestar',
+ 'porsche',
+ 'renault',
+ 'rolls_royce',
+ 'seat',
+ 'skoda',
+ 'smart',
+ 'subaru',
+ 'suzuki',
+ 'tesla',
+ 'toyota',
+ 'volkswagen',
+ 'volvo'
+]);
+
+export const normalizeBrandAssetKey=(brand?:string)=>{
+ const raw=String(brand||'')
+  .trim()
+  .toLowerCase()
+  .normalize('NFKD')
+  .replace(/[\u0300-\u036f]/g,'')
+  .replace(/&/g,'and')
+  .replace(/[^a-z0-9]+/g,'_')
+  .replace(/^_+|_+$/g,'');
+ const aliases:Record<string,string>={
+  'mercedes':'mercedes_benz',
+  'mercedes_benz':'mercedes_benz',
+  'vw':'volkswagen',
+  'range_rover':'land_rover',
+  'land_rover':'land_rover',
+  'alfa_romeo':'alfa_romeo',
+  'ds':'ds_automobiles',
+  'ds_automobiles':'ds_automobiles',
+  'rolls_royce':'rolls_royce',
+  'aston_martin':'aston_martin',
+  'mclaren':'mclaren'
+ };
+ const key=aliases[raw]||raw;
+ if(standaloneCarBrandIcons.has(key)||Object.prototype.hasOwnProperty.call(carBrandIndex,key))return key;
+ return 'other_brand';
+};
+
+export const carBrandSpriteStyle=(brand?:string)=>{
+ const key=normalizeBrandAssetKey(brand);
+ const index=carBrandIndex[key]??carBrandIndex.other_brand;
+ const col=index%8,row=Math.floor(index/8);
+ return {
+  backgroundImage:`url("${carBrandSprite}")`,
+  backgroundSize:'800% 700%',
+  backgroundPosition:`${col*(100/7)}% ${row*(100/6)}%`,
+  backgroundRepeat:'no-repeat'
+ } as const;
 };
 
 export const carBrandStandaloneIconSrc=(brand?:string)=>{
