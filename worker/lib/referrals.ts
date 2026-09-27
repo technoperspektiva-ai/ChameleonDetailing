@@ -8,13 +8,14 @@ const l5=(locale:ReferralLocale,uk:string,pl:string,en:string,de:string,fr:strin
 export async function grantReferralRewardsIfEligible(env:Env,requestId:number,eventType:'COMPLETED'|'PAID'){
  if(!env.DB)return 0;
  await ensureDb(env);
- if((await getSetting(env,'referral_enabled','1'))!=='1')return 0;
- const expected=String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase();
- if(expected!==eventType)return 0;
  const req=await env.DB.prepare('SELECT id,user_id FROM service_requests WHERE id=? AND staff_deleted_at IS NULL').bind(requestId).first<any>();
  if(!req?.user_id)return 0;
  const ref=await env.DB.prepare('SELECT id,referrer_user_id,referred_user_id,first_paid_job_at FROM referrals WHERE referred_user_id=? ORDER BY id LIMIT 1').bind(req.user_id).first<any>();
  if(!ref?.id||!ref.referrer_user_id)return 0;
+ if(eventType==='PAID')await env.DB.prepare('UPDATE referrals SET first_paid_job_at=COALESCE(first_paid_job_at,CURRENT_TIMESTAMP) WHERE id=?').bind(ref.id).run().catch(()=>{});
+ if((await getSetting(env,'referral_enabled','1'))!=='1')return 0;
+ const expected=String(await getSetting(env,'referral_success_status','COMPLETED')).toUpperCase();
+ if(expected!==eventType)return 0;
 
  const type=String(await getSetting(env,'referral_referrer_bonus_type','PERCENT')).toUpperCase();
  const value=Math.max(0,Number(await getSetting(env,'referral_referrer_bonus_value','10'))||0);
@@ -30,7 +31,6 @@ export async function grantReferralRewardsIfEligible(env:Env,requestId:number,ev
   const exists=await env.DB.prepare("SELECT 1 ok FROM referral_rewards WHERE referral_id=? AND beneficiary='FRIEND' LIMIT 1").bind(ref.id).first<any>();
   if(!exists){await env.DB.prepare("INSERT INTO referral_rewards(referral_id,user_id,beneficiary,reward_type,reward_service_id,status) VALUES(?,?,?,'FREE_SERVICE',?,'AVAILABLE')").bind(ref.id,req.user_id,'FRIEND',friendServiceId).run();granted++}
  }
- if(eventType==='PAID')await env.DB.prepare('UPDATE referrals SET first_paid_job_at=COALESCE(first_paid_job_at,CURRENT_TIMESTAMP) WHERE id=?').bind(ref.id).run().catch(()=>{});
  if(!granted)return 0;
 
  const people=await env.DB.prepare('SELECT id,telegram_user_id,language FROM users WHERE id IN (?,?)').bind(ref.referrer_user_id,req.user_id).all<any>();
