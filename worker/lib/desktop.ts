@@ -401,6 +401,8 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(orderMatch&&request.method==='PATCH'){
   if(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders')))return reply({error:'Orders management is disabled for Manager.'},403);
   await writable(env);const id=Number(orderMatch[1]),b=await body(request),old=await orderDetail(env,id);if(!old)return reply({error:'Order not found.'},404);
+  const canDeadline=staff.role!=='MANAGER'||await desktopPermission(env,staff.role,'order_deadline_access');
+  if((Object.prototype.hasOwnProperty.call(b,'estimatedDurationMin')||b.resetDuration)&&!canDeadline)return reply({error:'Deadline editing is disabled for Manager.'},403);
   if(b.status&&!['REQUESTED','PENDING_CONFIRMATION','CONFIRMED','CAR_ACCEPTED','IN_PROGRESS','INSPECTION','READY','COMPLETED','CANCELLED','REJECTED'].includes(b.status))return reply({error:'Некоректний статус.'},400);
   if(b.paymentStatus&&!['PENDING','UNPAID','PAID','REFUNDED'].includes(b.paymentStatus))return reply({error:'Некоректний статус оплати.'},400);
   if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
@@ -412,6 +414,15 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   if(Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET final_job_price=?,price_adjustment_reason=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(Number(b.finalPrice),String(b.priceReason||'Desktop adjustment').slice(0,300),id).run();
   if(Object.prototype.hasOwnProperty.call(b,'accelerated')&&Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET accelerated=?,accelerated_surcharge=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.accelerated?1:0,Number(b.acceleratedSurcharge||0),id).run();
   if(Object.prototype.hasOwnProperty.call(b,'accelerated')&&!Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET accelerated=?,accelerated_surcharge=?,final_job_price=COALESCE(calculated_price,0)+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.accelerated?1:0,Number(b.acceleratedSurcharge||0),b.accelerated?Number(b.acceleratedSurcharge||0):0,id).run();
+  if(Object.prototype.hasOwnProperty.call(b,'estimatedDurationMin')){
+   const duration=Number(b.estimatedDurationMin);
+   if(!Number.isFinite(duration)||duration<5||duration>10080)return reply({error:'Час виконання має бути від 5 хв до 7 днів.'},400);
+   await env.DB!.prepare('UPDATE service_requests SET estimated_duration_min=?,duration_overridden=1,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(Math.round(duration),id).run();
+   await syncOrderTiming(env,id,false);
+  }else if(b.resetDuration){
+   await env.DB!.prepare('UPDATE service_requests SET estimated_duration_min=NULL,duration_overridden=0,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(id).run();
+   await syncOrderTiming(env,id,true);
+  }else if(Object.prototype.hasOwnProperty.call(b,'scheduledFor'))await syncOrderTiming(env,id,false);
   const now=await orderDetail(env,id);await log(env,staff.user_id,'desktop.order.update','service_request',String(id),old,now);if(Object.prototype.hasOwnProperty.call(b,'status')&&String(old.status)!==String(now?.status))await notifyClientOrderNeutral(env,id,String(now?.status||b.status));return reply({ok:true,order:now});
  }
  const orderSelectionMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)\/catalog-selection$/);
