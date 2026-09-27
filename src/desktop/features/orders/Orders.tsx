@@ -111,7 +111,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
          <div className="orders-card-footer"><strong>{money(o.final_job_price??o.calculated_price,o.currency)}</strong><span>{o.responsible_name||'Без відповідального'}</span></div>
         </button>
         <div className="card-actions orders-card-actions">
-         <button disabled={boot.mode!=='ONLINE'} onClick={async()=>{try{await post('/api/desktop/orders/'+o.id,{responsibleStaffId:boot.user.id},'PATCH');reload();notify('Ви відповідальні за замовлення')}catch(e){showError(e)}}}>Мені</button>
+         {!o.responsible_staff_id?<button disabled={boot.mode!=='ONLINE'} onClick={async()=>{try{await post('/api/desktop/orders/'+o.id,{responsibleStaffId:boot.user.id},'PATCH');reload();notify('Замовлення закріплено за вами')}catch(e){showError(e)}}}>Взяти</button>:<span className="orders-assignee-lock" title="Після призначення відповідального змінити його може лише адміністратор або власник">🔒 {o.responsible_name||'Закріплено'}</span>}
          {statusMeta[String(o.status||'').toUpperCase()]?.next&&<button className="orders-next-action" disabled={busy.includes(o.id)||boot.mode!=='ONLINE'} onClick={()=>move(o,statusMeta[String(o.status||'').toUpperCase()].next!)}>{statusLabel(statusMeta[String(o.status||'').toUpperCase()].next!)} →</button>}
         </div>
        </article>)}
