@@ -99,19 +99,10 @@ export const carBrandSpriteStyle=(brand?:string)=>{
  } as const;
 };
 
-const standaloneCarBrandIconFiles:Record<string,string>={
- audi:'Audi.png',
- bmw:'bmw.png',
- mercedes_benz:'mersedes.png',
- volkswagen:'volkswagen.png',
- toyota:'Toyota.png',
- lexus:'lexus.png',
- porsche:'porshe.png',
- tesla:'tesla.png',
- kia:'kia.png'
-};
+const standaloneCarBrandIcons=new Set([
+ 'audi','bmw','mercedes_benz','volkswagen','toyota','lexus','porsche','tesla','kia'
+]);
 export const carBrandStandaloneIconSrc=(brand?:string)=>{
  const key=normalizeBrandAssetKey(brand);
- const file=standaloneCarBrandIconFiles[key];
- return file?`/car-brand-icons/${file}`:null;
+ return standaloneCarBrandIcons.has(key)?`/car-brand-icons/${key}.png`:null;
 };
