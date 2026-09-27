@@ -1,5 +1,5 @@
 import {useEffect,useState} from 'react';
-import {ArrowUpRight,Banknote,BarChart3,CalendarDays,CarFront,CheckCircle2,Clock3,MessageCircle,MoreHorizontal,Package,Phone,Plus,Users,UsersRound,Wrench} from 'lucide-react';
+import {ArrowUpRight,Banknote,BarChart3,CalendarDays,CarFront,CheckCircle2,ChevronLeft,ChevronRight,Clock3,MessageCircle,MoreHorizontal,Package,Phone,Plus,Users,UsersRound,Wrench} from 'lucide-react';
 import {useData,usePreference} from '../../hooks';
 import {api} from '../../api/desktopApi';
 import type {Order,Bootstrap} from '../../types/desktop';
@@ -43,7 +43,10 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
  const {rows,loading,updated}=useData<Order>('/api/desktop/orders','orders');
  const [currency]=usePreference('currency',boot.personal?.currency||'PLN');
  const [dashboard,setDashboard]=useState<any>(null);
+ const [focusIndex,setFocusIndex]=useState(0);
  useEffect(()=>{let live=true;api('/api/desktop/dashboard?currency='+encodeURIComponent(currency)).then(d=>{if(live)setDashboard(d)}).catch(()=>{});return()=>{live=false}},[currency,rows.length]);
+ const availableFocusCount=rows.filter(x=>!closed.has(x.status)).length||rows.length;
+ useEffect(()=>{setFocusIndex(i=>Math.max(0,Math.min(i,Math.max(0,availableFocusCount-1))))},[availableFocusCount]);
  if(loading)return <Skeleton/>;
 
  const now=new Date();
@@ -51,7 +54,9 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
  const scheduled=rows.filter(x=>x.scheduled_for&&businessDate(x.scheduled_for)===today).sort((a,b)=>String(a.scheduled_for).localeCompare(String(b.scheduled_for)));
  const active=rows.filter(x=>!closed.has(x.status));
  const attention=rows.filter(x=>x.status==='READY'||(x.status==='COMPLETED'&&x.payment_status!=='PAID')||(!x.responsible_staff_id&&active.includes(x))).slice(0,6);
- const focus=scheduled.find(x=>working.has(x.status))||active.find(x=>working.has(x.status))||scheduled[0]||active[0]||rows[0];
+ const focusPool=(active.length?active:rows).slice().sort((a,b)=>{const rank=(x:Order)=>working.has(x.status)?0:(x.scheduled_for&&businessDate(x.scheduled_for)===today?1:2);return rank(a)-rank(b)||String(a.scheduled_for||a.created_at).localeCompare(String(b.scheduled_for||b.created_at))});
+ const focus=focusPool[focusIndex]||focusPool[0]||rows[0];
+ const stepFocus=(delta:number)=>{if(!focusPool.length)return;setFocusIndex(i=>(i+delta+focusPool.length)%focusPool.length)};
 
  const monthlyRevenue=Number(dashboard?.kpi?.revenue||0);
 
@@ -113,7 +118,8 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
     <section className="premium-focus-card premium-surface">
      {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><img className="premium-focus-car-image" src={vehicleImage(focus.body_type)} alt={[focus.brand,focus.model].filter(Boolean).join(' ')||'Автомобіль'}/><span>{focus.plate||'CHAMELEON'}</span></div>
       <div className="premium-focus-content">
-       <header><div><span className="premium-eyebrow">Активне замовлення</span><h2>{[focus.brand,focus.model].filter(Boolean).join(' ')||'Замовлення CHD-'+focus.id}</h2></div><StatusBadge status={focus.status}/></header>
+       {focusPool.length>1&&<div className="premium-focus-switcher" aria-label="Швидкий перехід між замовленнями"><button aria-label="Попереднє замовлення" onClick={()=>stepFocus(-1)}><ChevronLeft/></button><div>{focusPool.map((x,i)=><button key={x.id} className={i===focusIndex?'active':''} onClick={()=>setFocusIndex(i)}>CHD-{x.id}</button>)}</div><button aria-label="Наступне замовлення" onClick={()=>stepFocus(1)}><ChevronRight/></button></div>}
+       <header><div><span className="premium-eyebrow">Активне замовлення</span><h2>{[focus.brand,focus.model].filter(Boolean).join(' ')||'Замовлення CHD-'+focus.id}</h2></div><div className="premium-focus-status-stack"><StatusBadge status={focus.status}/><span className="premium-master-pill"><UsersRound/>{focus.responsible_name||'Майстер не призначений'}</span></div></header>
        <div className="premium-focus-tabs" aria-label="Розділи замовлення"><button className="active" onClick={()=>goto('orders/'+focus.id+'/overview')}>Деталі</button><button onClick={()=>goto('orders/'+focus.id+'/services')}>Послуги</button><button onClick={()=>goto('orders/'+focus.id+'/checklist')}>Чек-лист</button><button onClick={()=>goto('orders/'+focus.id+'/photos')}>Фото</button></div>
        <dl className="premium-focus-details">
         <div><dt><Users/>Клієнт</dt><dd>{focus.first_name}</dd></div>
