@@ -51,6 +51,7 @@ export const defaultWorkspace={
   {id:'staff',label:'Персонал',icon:'badge',group:'Management',roles:['OWNER','ADMIN'],hidden:false},
   {id:'audit',label:'Audit Log',icon:'history',group:'System',roles:['OWNER','ADMIN'],hidden:false},
   {id:'workspace',label:'Layout Editor',icon:'layout',group:'System',roles:['OWNER','ADMIN'],hidden:false},
+  {id:'control',label:'Control Hub',icon:'settings',group:'System',roles:['OWNER','ADMIN'],hidden:false},
   {id:'settings',label:'Налаштування',icon:'settings',group:'System',roles:['OWNER','ADMIN'],hidden:false}
  ],
  widgets:[
