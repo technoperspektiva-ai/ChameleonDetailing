@@ -572,7 +572,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const search=String(url.searchParams.get('q')||'').trim().replace(/^@/,'').slice(0,80),binds:any[]=[];
   let where="u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";
   if(search){where+=" AND (lower(COALESCE(u.first_name,'')) LIKE lower(?) OR lower(COALESCE(u.username,'')) LIKE lower(?) OR CAST(u.telegram_user_id AS TEXT) LIKE ? OR COALESCE(cp.phone_number,'') LIKE ?)";const like='%'+search+'%';binds.push(like,like,like,like)}
-  const r=await env.DB!.prepare("SELECT u.id,u.first_name,u.username,u.telegram_user_id,u.notifications_enabled,u.last_seen_at,cp.phone_number,COALESCE(cp.client_tier,'STANDARD') client_tier FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE "+where+" ORDER BY u.last_seen_at DESC,u.id DESC LIMIT 200").bind(...binds).all<any>();
+  const r=await env.DB!.prepare("SELECT u.id,u.first_name,u.username,u.telegram_user_id,u.notifications_enabled,u.last_seen_at,cp.phone_number,COALESCE(cp.client_tier,'STANDARD') client_tier FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE "+where+" ORDER BY u.last_seen_at DESC,u.id DESC LIMIT 500").bind(...binds).all<any>();
   return reply({recipients:r.results||[]});
  }
  if(url.pathname==='/api/desktop/campaigns/photo'&&request.method==='POST'){
