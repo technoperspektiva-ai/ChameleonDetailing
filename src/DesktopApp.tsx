@@ -3,7 +3,7 @@ import {
  Home,ClipboardList,Search,Car,Users,CalendarDays,Wrench,CreditCard,Megaphone,
  BarChart3,FileText,BadgeCheck,Settings,History,LayoutDashboard,LogOut,RefreshCw,
  ChevronRight,Lock,Unlock,Save,Upload,Download,RotateCcw,Send,Pause,Play,Eye,
- Monitor,Tablet,Menu,X,Check,AlertTriangle
+ Monitor,Tablet,X,Check,AlertTriangle,Sun,Moon
 } from 'lucide-react';
 import './desktop.css';
 
@@ -33,7 +33,8 @@ const post=(path:string,data:any,method='POST')=>api(path,{method,body:JSON.stri
 
 export function DesktopApp(){
  const phoneBlocked=useMemo(()=>isPhoneClient(),[]);
- const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard'),[mobile,setMobile]=useState(false);
+ const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard');
+ const [theme,setTheme]=useState<'dark'|'light'>(()=>localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark');
  const load=async()=>{
   setLoading(true);setError('');
   try{
@@ -45,12 +46,14 @@ export function DesktopApp(){
     history.replaceState({},'',location.pathname);
    }
    const b=await api('/api/desktop/bootstrap') as Bootstrap;setBoot(b);
+   const storedTheme=b.personal?.theme==='light'?'light':b.personal?.theme==='dark'?'dark':localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark';setTheme(storedTheme);
    const hash=location.hash.replace(/^#/,'') as Page;if(hash&&labels[hash])setPage(hash);else setPage((b.workspace?.config?.defaultPage||'dashboard') as Page);
   }catch(e:any){setError(String(e?.message||e));setBoot(null)}
   finally{setLoading(false)}
  };
  useEffect(()=>{if(!phoneBlocked)load();else setLoading(false)},[phoneBlocked]);
  useEffect(()=>{location.hash=page==='dashboard'?'':page},[page]);
+ useEffect(()=>{document.documentElement.dataset.desktopTheme=theme;localStorage.setItem('chameleon.desktop.theme',theme)},[theme]);
  if(phoneBlocked)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>Вхід з телефону заблокований.</p><p className="desk-muted">Відкрийте панель на PC, Mac, ноутбуці або iPad / планшеті.</p></div>;
  if(loading)return <div className="desk-state"><div className="desk-spinner"/><h1>Chameleon Control Center</h1><p>Завантаження робочого простору…</p></div>;
  if(!boot)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>{error||'Сесія недоступна.'}</p><p className="desk-muted">Відкрийте Telegram Bot та надішліть команду <b>/desktop</b>, щоб отримати нове одноразове посилання.</p></div>;
@@ -66,15 +69,10 @@ export function DesktopApp(){
   return true;
  };
  const sidebar=(boot.workspace?.config?.sidebar||[]).filter((x:any)=>x&&labels[x.id as Page]&&allowed(x.id)&&(!x.roles||x.roles.includes(boot.user.role)));
- const groups=Array.from(new Set(sidebar.map((x:any)=>x.group||'Workspace')));
- return <div className={'desktop-shell '+(mobile?'sidebar-open':'')}>
-  <aside className="desktop-sidebar">
-   <div className="desk-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><b>Chameleon</b><span>Control Center</span></div><button className="desk-close-mobile" onClick={()=>setMobile(false)}><X/></button></div>
-   <nav>{groups.map((g:any)=><div className="desk-nav-group" key={g}><small>{g}</small>{sidebar.filter((x:any)=>(x.group||'Workspace')===g).map((x:any)=>{const id=x.id as Page,I=icons[id]||ChevronRight;return <button className={page===id?'active':''} onClick={()=>{setPage(id);setMobile(false)}} key={id}><I/><span>{x.label||labels[id]}</span></button>})}</div>)}</nav>
-   <div className="desk-user"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}{boot.user.username?' · @'+boot.user.username:''}</span></div><button onClick={logout} title="Вийти"><LogOut/></button></div>
-  </aside>
+ const toggleTheme=async()=>{const next=theme==='dark'?'light':'dark';setTheme(next);const personal={...(boot.personal||{}),theme:next};setBoot({...boot,personal});try{await post('/api/desktop/personal-workspace',personal,'PUT')}catch{}};
+ return <div className={'desktop-shell theme-'+theme} data-theme={theme}>
   <main className="desktop-main">
-   <header className="desk-topbar"><button className="desk-menu" onClick={()=>setMobile(true)}><Menu/></button><div><small>CHAMELEON DETAILING</small><h1>{labels[page]}</h1></div><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div></header>
+   <header className="desk-topbar"><div className="desk-top-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><small>CHAMELEON DETAILING</small><h1>{labels[page]}</h1></div></div><div className="desk-top-actions"><button className="desk-theme-toggle" onClick={toggleTheme} title={theme==='dark'?'Світла тема':'Темна тема'}>{theme==='dark'?<Sun/>:<Moon/>}<span>{theme==='dark'?'Light':'Dark'}</span></button><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div><div className="desk-user-top"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}</span></div><button onClick={logout} title="Вийти"><LogOut/></button></div></div></header>
    {boot.mode==='READ_ONLY'&&<div className="desk-banner warning">Read Only: перегляд доступний, зміни заблоковані backend.</div>}
    <div className="desktop-content">
     {page==='dashboard'&&<Dashboard boot={boot} goto={setPage}/>}
@@ -83,7 +81,7 @@ export function DesktopApp(){
     {page==='cars'&&<SimpleTable endpoint="/api/desktop/cars" keyName="cars" title="Cars CRM" type="cars"/>}
     {page==='clients'&&<SimpleTable endpoint="/api/desktop/clients" keyName="clients" title="Clients CRM" type="clients"/>}
     {page==='calendar'&&<CalendarView/>}
-    {page==='services'&&<SimpleTable endpoint="/api/desktop/services" keyName="services" title="Services" type="services"/>}
+    {page==='services'&&<ServicesCatalog/>}
     {page==='payments'&&<Payments/>}
     {page==='broadcasts'&&<Broadcasts/>}
     {page==='analytics'&&<Analytics/>}
@@ -93,6 +91,7 @@ export function DesktopApp(){
     {page==='workspace'&&<WorkspaceEditor boot={boot} onPublished={load}/>}
     {page==='settings'&&<DesktopSettings boot={boot} reload={load}/>}
    </div>
+   <nav className="desktop-bottom-nav" aria-label="Desktop navigation"><div className="desktop-bottom-scroll">{sidebar.map((x:any)=>{const id=x.id as Page,I=icons[id]||ChevronRight;return <button key={id} className={page===id?'active':''} onClick={()=>setPage(id)} title={(x.group||'')+' · '+(x.label||labels[id])}><I/><span>{x.label||labels[id]}</span><small>{x.group||''}</small></button>})}</div></nav>
   </main>
  </div>
 }
@@ -140,6 +139,17 @@ function Sales(){
  const search=async()=>{setBusy(true);try{const d=await api('/api/desktop/search?q='+encodeURIComponent(q));setR(d.results||[])}finally{setBusy(false)}};
  return <><Panel title="Sales Search"><div className="desk-sales-search"><Search/><input autoFocus value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="+380…, CHD-10482, @username, номер авто"/><button onClick={search}>{busy?'Пошук…':'Знайти'}</button></div></Panel><div className="desk-search-results">{r.map(x=><button key={x.id} onClick={()=>setOpen(x.id)}><div><b>CHD-{x.id}</b><span>{x.first_name||x.username||'Client'} · {x.phone_number||'—'}</span><small>{[x.brand,x.model,x.plate].filter(Boolean).join(' · ')}</small></div><div><strong>{money(x.final_job_price??x.calculated_price,x.currency)}</strong><span className="desk-status">{x.status}</span></div></button>)}</div>{open&&<OrderDrawer id={open} close={()=>setOpen(null)} changed={search}/>}</>
 }
+function ServicesCatalog(){
+ const [data,setData]=useState<{services:any[];options:any[];total:number}>({services:[],options:[],total:0}),[q,setQ]=useState('');
+ const load=()=>api('/api/desktop/services').then(d=>setData({services:d.services||[],options:d.options||[],total:Number(d.total||0)})).catch(()=>{});
+ useEffect(()=>{load()},[]);
+ const term=q.trim().toLowerCase(),main=data.services.filter(x=>!term||String(x.title+' '+x.slug+' '+x.category).toLowerCase().includes(term)),extras=data.options.filter(x=>!term||String(x.title+' '+x.slug+' '+x.service_slugs).toLowerCase().includes(term));
+ return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Пошук по всіх послугах та додаткових опціях…"/></div><button onClick={load}><RefreshCw/>Оновити</button><span className="desk-catalog-count">Всього: <b>{data.total}</b></span></div>
+ <div className="service-catalog-summary"><div><Wrench/><span>Основні послуги</span><b>{data.services.length}</b></div><div><Check/><span>Додаткові опції</span><b>{data.options.length}</b></div><p>Desktop показує той самий каталог, що й Bot Panel: основні послуги + усі додаткові опції калькулятора.</p></div>
+ <Panel title={'Основні послуги · '+main.length}><div className="desk-table-wrap"><table><thead><tr><th>Послуга</th><th>Категорія</th><th>Ціна</th><th>Валюта</th><th>Тривалість</th><th>Стан</th></tr></thead><tbody>{main.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{x.category||'—'}</td><td>{Number(x.base_price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.duration_min||0} min</td><td><span className="desk-status">{x.archived?'ARCHIVED':x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
+ <Panel title={'Додаткові опції · '+extras.length}><div className="desk-table-wrap"><table><thead><tr><th>Опція</th><th>Для послуг</th><th>Ціна</th><th>Валюта</th><th>Тип ціни</th><th>Стан</th></tr></thead><tbody>{extras.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{String(x.service_slugs||'').split(',').filter(Boolean).join(', ')||'Усі / без привʼязки'}</td><td>{Number(x.price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.pricing_type||'FIXED'}</td><td><span className="desk-status">{x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel></>
+}
+
 function SimpleTable({endpoint,keyName,title,type}:{endpoint:string;keyName:string;title:string;type:string}){
  const [rows,setRows]=useState<any[]>([]);useEffect(()=>{api(endpoint).then(d=>setRows(d[keyName]||[])).catch(()=>{})},[endpoint]);
  const heads=type==='cars'?['Авто','Власник','Телефон','Номер','Останній сервіс','Візити']:type==='clients'?['Клієнт','Телефон','Tier','Авто','Візит','LTV']:type==='services'?['Послуга','Slug','Ціна','Валюта','Тривалість','Статус']:type==='staff'?['Співробітник','Username','Role','Status','Last seen']:['Час','Actor','Role','Дія','Entity','ID'];
