@@ -16,6 +16,14 @@ const randomToken=()=>crypto.randomUUID().replace(/-/g,'')+crypto.randomUUID().r
 const safeAlter=async(env:Env,sql:string)=>{try{await env.DB?.exec(sql)}catch{}};
 const parse=(v:any,fallback:any)=>{try{return JSON.parse(String(v||''))}catch{return fallback}};
 const htmlEscape=(s:any)=>String(s??'').replace(/[&<>]/g,c=>c==='&'?'&amp;':c==='<'?'&lt;':'&gt;');
+const isPhoneRequest=(request:Request)=>{
+ const ua=String(request.headers.get('user-agent')||'');
+ const phoneUa=/iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|BB10|Android[^)]*Mobile/i.test(ua);
+ const chMobile=String(request.headers.get('sec-ch-ua-mobile')||'')==='?1';
+ // iPad / iPadOS and Android tablets remain allowed; phones are blocked.
+ const tablet=/iPad|Tablet|Android(?![^)]*Mobile)/i.test(ua);
+ return !tablet&&(phoneUa||chMobile);
+};
 const log=async(env:Env,actor:number,action:string,type?:string,id?:string,oldValue?:any,newValue?:any)=>{
  if(!env.DB)return;
  await env.DB.prepare('INSERT INTO audit_log(actor_user_id,action,entity_type,entity_id,old_data_json,new_data_json) VALUES(?,?,?,?,?,?)')
@@ -131,6 +139,7 @@ const permissionSnapshot=async(env:Env,role:string)=>{
 };
 const auth=async(env:Env,request:Request)=>{
  await ensureDesktopDb(env);
+ if(isPhoneRequest(request))return null;
  const raw=(request.headers.get('authorization')||'').replace(/^Bearer\s+/i,'').trim();
  if(!raw)return null;
  const h=await digest(raw);
@@ -230,6 +239,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(!url.pathname.startsWith('/api/desktop/'))return null;
  await ensureDesktopDb(env);
  if(url.pathname==='/api/desktop/login'&&request.method==='POST'){
+  if(isPhoneRequest(request))return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center доступний лише з PC, Mac, ноутбука або планшета.'},403);
   const b=await body(request),raw=String(b.token||'');if(!raw)return reply({error:'Login token is required.'},400);
   const h=await digest(raw),row=await env.DB!.prepare("SELECT lt.*,u.first_name,u.username,u.role,u.status FROM desktop_login_tokens lt JOIN users u ON u.id=lt.user_id WHERE lt.token_hash=? AND lt.used_at IS NULL AND lt.expires_at>CURRENT_TIMESTAMP").bind(h).first<any>();
   if(!row||row.status!=='ACTIVE'||!['OWNER','ADMIN','MANAGER'].includes(row.role))return reply({error:'Login token is invalid or expired.'},401);
@@ -240,6 +250,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   await log(env,row.user_id,'desktop.login','desktop_session',undefined,null,{device});
   return reply({ok:true,session,user:{id:row.user_id,firstName:row.first_name,username:row.username,role:row.role}});
  }
+ if(isPhoneRequest(request))return reply({error:'DESKTOP_MOBILE_BLOCKED',message:'Desktop Control Center доступний лише з PC, Mac, ноутбука або планшета.'},403);
  const staff=await auth(env,request);if(!staff)return reply({error:'Desktop session is missing, expired or revoked.'},401);
  const m=await mode(env);if(m==='DISABLED')return reply({error:'DESKTOP_DISABLED',mode:m},503);if(m==='MAINTENANCE'&&url.pathname!=='/api/desktop/bootstrap')return reply({error:'DESKTOP_MAINTENANCE',mode:m},503);
  const perms=await permissionSnapshot(env,staff.role);
