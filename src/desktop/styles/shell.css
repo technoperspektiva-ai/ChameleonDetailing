@@ -382,3 +382,69 @@ html.desktop-route[data-desktop-theme="light"] .desktop-shell .dropdown button:h
  .desktop-shell.sidebar-open>.desktop-sidebar.compact .desk-nav-group button,
  .desktop-shell.sidebar-open>.desktop-sidebar.compact .sidebar-collapse{justify-content:flex-start!important}
 }
+
+
+/* EXTRA TIME TOPBAR 2026-09-27 */
+.extra-time-button{
+ min-height:40px;
+ display:inline-flex!important;
+ align-items:center!important;
+ justify-content:center!important;
+ gap:7px!important;
+ padding:0 10px!important;
+ border:1px solid var(--border)!important;
+ border-radius:10px!important;
+ background:rgba(255,255,255,.018)!important;
+ color:var(--text-muted)!important;
+ font-size:8.5px!important;
+ font-weight:780!important;
+ letter-spacing:.015em;
+ white-space:nowrap;
+ transition:.18s ease;
+}
+.extra-time-button svg{width:14px;height:14px}
+.extra-time-button b{
+ min-width:25px;
+ height:18px;
+ display:grid;
+ place-items:center;
+ padding:0 5px;
+ border-radius:999px;
+ background:rgba(255,255,255,.035);
+ color:var(--text-muted);
+ font-size:6.5px;
+ letter-spacing:.08em;
+}
+.extra-time-button:hover{
+ border-color:rgba(221,184,111,.22)!important;
+ color:var(--accent-strong)!important;
+ background:var(--accent-soft)!important;
+}
+.extra-time-button.active{
+ color:#d9ffae!important;
+ border-color:rgba(120,235,72,.25)!important;
+ background:
+  radial-gradient(circle at 16% 50%,rgba(111,255,55,.10),transparent 42%),
+  rgba(89,143,43,.08)!important;
+ box-shadow:inset 0 0 0 1px rgba(111,255,55,.025),0 0 18px rgba(106,225,49,.055);
+}
+.extra-time-button.active svg{color:#98ef56}
+.extra-time-button.active b{
+ color:#aef174;
+ background:rgba(116,230,63,.10);
+}
+.extra-time-button:disabled{opacity:.48;cursor:not-allowed}
+:root[data-desktop-theme="light"] .extra-time-button{
+ background:#fffdf9!important;
+ border-color:rgba(81,61,31,.14)!important;
+ color:#746b5e!important;
+}
+:root[data-desktop-theme="light"] .extra-time-button.active{
+ color:#467c24!important;
+ border-color:rgba(92,151,47,.24)!important;
+ background:#f0f7e9!important;
+}
+@media(max-width:1180px){
+ .extra-time-button span{display:none}
+ .extra-time-button{padding-inline:9px!important}
+}
