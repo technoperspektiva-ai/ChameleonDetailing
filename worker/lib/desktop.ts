@@ -6,7 +6,7 @@ import {buildReport,type ReportType} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
 
-export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'reports_access'|'financial_access'|'clients_access'|'workspace_editor';
+export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'broadcast_forced_access'|'reports_access'|'financial_access'|'clients_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
 
 let ready=false;
@@ -112,10 +112,17 @@ export async function ensureDesktopDb(env:Env){
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN responsible_staff_id INTEGER');
  await safeAlter(env,'ALTER TABLE desktop_campaign_deliveries ADD COLUMN read_at TEXT');
  await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN photo_file_id TEXT');
+ await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN skipped_dnd_count INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN telegram_error_count INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN other_error_count INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE desktop_campaign_runs ADD COLUMN skipped_dnd_count INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE desktop_campaign_runs ADD COLUMN telegram_error_count INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE desktop_campaign_runs ADD COLUMN other_error_count INTEGER NOT NULL DEFAULT 0');
  const defs:{role:string,key:DesktopPermission,value:number}[]=[];
  (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'ADMIN',key,value:1}));
+ defs.push({role:'ADMIN',key:'broadcast_forced_access',value:0});
  defs.push({role:'ADMIN',key:'workspace_editor',value:0});
- (['desktop_access','sales_access','broadcast_access','reports_access','financial_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'MANAGER',key,value:0}));
+ (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','broadcast_forced_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'MANAGER',key,value:0}));
  defs.push({role:'MANAGER',key:'clients_access',value:1},{role:'MANAGER',key:'workspace_editor',value:0});
  for(const d of defs)await env.DB.prepare('INSERT OR IGNORE INTO staff_role_permissions(role,permission_key,enabled) VALUES(?,?,?)').bind(d.role,d.key,d.value).run();
  for(const d of [['desktop',0],['sales',0],['campaigns',0],['financial',0],['clients',1]])await env.DB.prepare('INSERT OR IGNORE INTO manager_permissions(permission_key,enabled) VALUES(?,?)').bind(d[0],d[1]).run();
@@ -125,7 +132,7 @@ export async function ensureDesktopDb(env:Env){
  ready=true;
 }
 
-const legacyKey=(key:DesktopPermission)=>({desktop_access:'desktop',sales_access:'sales',broadcast_access:'campaigns',reports_access:'reports',financial_access:'financial',clients_access:'clients',workspace_editor:'workspace'} as Record<DesktopPermission,string>)[key];
+const legacyKey=(key:DesktopPermission)=>({desktop_access:'desktop',sales_access:'sales',broadcast_access:'campaigns',broadcast_forced_access:'campaigns_forced',reports_access:'reports',financial_access:'financial',clients_access:'clients',workspace_editor:'workspace'} as Record<DesktopPermission,string>)[key];
 export async function desktopPermission(env:Env,role:string,key:DesktopPermission){
  if(role==='OWNER')return true;
  if(role!=='ADMIN'&&role!=='MANAGER')return false;
@@ -159,7 +166,7 @@ export async function desktopSalesSearch(env:Env,q:string,limit=10){
 
 const mode=async(env:Env)=>String(await getSetting(env,'desktop.mode','ONLINE')).toUpperCase();
 const permissionSnapshot=async(env:Env,role:string)=>{
- const keys:DesktopPermission[]=['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access','workspace_editor'];
+ const keys:DesktopPermission[]=['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','workspace_editor'];
  const out:any={};for(const k of keys)out[k]=await desktopPermission(env,role,k);return out;
 };
 const auth=async(env:Env,request:Request)=>{
@@ -190,12 +197,15 @@ const orderDetail=async(env:Env,id:number)=>{
  return {...row,extras:ex.results||[]};
 };
 const campaignRecipients=async(env:Env,a:any)=>{
- const type=String(a?.type||'all');let sql="SELECT DISTINCT u.id,u.telegram_user_id,u.notifications_enabled FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";const binds:any[]=[];
- if(type==='vip')sql+=" AND COALESCE(cp.client_tier,'STANDARD')<>'STANDARD'";
+ const type=String(a?.type||'all');let sql="SELECT DISTINCT u.id,u.telegram_user_id,u.notifications_enabled,u.language FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";const binds:any[]=[];
+ if(type==='active')sql+=" AND EXISTS(SELECT 1 FROM service_requests sr WHERE sr.user_id=u.id AND sr.staff_deleted_at IS NULL AND sr.created_at>=datetime('now','-90 days'))";
+ else if(type==='vip')sql+=" AND COALESCE(cp.client_tier,'STANDARD')<>'STANDARD'";
  else if(type==='new')sql+=" AND u.created_at>=datetime('now','-30 days')";
  else if(type==='returning')sql+=" AND COALESCE(cp.paid_jobs_count,0)>1";
  else if(type==='active_order')sql+=" AND EXISTS(SELECT 1 FROM service_requests sr WHERE sr.user_id=u.id AND sr.status NOT IN ('COMPLETED','PAID','REJECTED','CANCELLED') AND sr.staff_deleted_at IS NULL)";
  else if(type==='completed')sql+=" AND EXISTS(SELECT 1 FROM service_requests sr WHERE sr.user_id=u.id AND sr.status IN ('COMPLETED','PAID') AND sr.staff_deleted_at IS NULL)";
+ else if(type==='language'){sql+=" AND lower(COALESCE(u.language,'en'))=lower(?)";binds.push(String(a.value||'en'))}
+ else if(type==='custom'){const ids=(Array.isArray(a.userIds)?a.userIds:[]).map((x:any)=>Number(x)).filter((x:number)=>Number.isFinite(x)&&x>0).slice(0,500);if(!ids.length)return [];sql+=" AND u.id IN ("+ids.map(()=>'?').join(',')+")";binds.push(...ids)}
  else if(type==='brand'){sql+=" AND EXISTS(SELECT 1 FROM client_cars c WHERE c.user_id=u.id AND lower(c.brand)=lower(?))";binds.push(String(a.value||''))}
  else if(type==='phone'){sql+=" AND COALESCE(cp.phone_number,'') LIKE ?";binds.push('%'+String(a.value||'')+'%')}
  else if(type==='user'){sql+=" AND (u.id=? OR u.telegram_user_id=? OR lower(u.username)=lower(?))";const v=String(a.value||'').replace(/^@/,'');binds.push(Number(v)||-1,Number(v)||-1,v)}
@@ -212,30 +222,48 @@ const nextCampaignTime=(row:any)=>{
 async function runCampaign(env:Env,row:any){
  if(!env.DB||!env.BOT_TOKEN)return;
  const recipients=await campaignRecipients(env,parse(row.audience_json,{type:'all'}));
+ const systemType=['SYSTEM','IMPORTANT','FORCED'].includes(String(row.type||'STANDARD').toUpperCase());
  let run=await env.DB.prepare("SELECT * FROM desktop_campaign_runs WHERE campaign_id=? AND status='RUNNING' ORDER BY id DESC LIMIT 1").bind(row.id).first<any>();
  if(!run){
   const created=await env.DB.prepare('INSERT INTO desktop_campaign_runs(campaign_id,recipient_count) VALUES(?,?)').bind(row.id,recipients.length).run();
-  run={id:Number(created.meta.last_row_id),sent_count:0,failed_count:0,blocked_count:0};
+  run={id:Number(created.meta.last_row_id)};
  }
  const runId=Number(run.id);
- const delivered=await env.DB.prepare('SELECT user_id FROM desktop_campaign_deliveries WHERE run_id=?').bind(runId).all<any>();
- const doneIds=new Set((delivered.results||[]).map((x:any)=>Number(x.user_id)));
- const eligible=recipients.filter((u:any)=>String(row.type).toUpperCase()==='IMPORTANT'||Number(u.notifications_enabled||0)===1);
- const pending=eligible.filter((u:any)=>!doneIds.has(Number(u.id)));
+ const doneRows=await env.DB.prepare('SELECT user_id,status FROM desktop_campaign_deliveries WHERE run_id=?').bind(runId).all<any>();
+ const doneIds=new Set((doneRows.results||[]).map((x:any)=>Number(x.user_id)));
+
+ // Record internal DND skips once; system/forced messages never use this path.
+ let skippedDnd=0;
+ if(!systemType){
+  const muted=recipients.filter((u:any)=>Number(u.notifications_enabled||0)!==1&&!doneIds.has(Number(u.id)));
+  for(const u of muted){
+   await env.DB.prepare("INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status,error) VALUES(?,?,?,?,?)").bind(runId,row.id,u.id,'SKIPPED_DND','Internal Chameleon notification preference is disabled').run();
+   doneIds.add(Number(u.id));skippedDnd++;
+  }
+ }
+ const pending=recipients.filter((u:any)=>!doneIds.has(Number(u.id)));
  const batch=pending.slice(0,40);
- let sent=0,failed=0,blocked=0;
+ let sent=0,blocked=0,telegramError=0,otherError=0;
  for(const u of batch){
   try{
    if(row.photo_file_id)await sendPhoto(env,Number(u.telegram_user_id),String(row.photo_file_id),htmlEscape(row.text));else await sendMessage(env,Number(u.telegram_user_id),htmlEscape(row.text));
    sent++;
    await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status) VALUES(?,?,?,?)').bind(runId,row.id,u.id,'SENT').run();
   }catch(e:any){
-   failed++;const message=String(e?.message||e);if(/blocked|chat not found|deactivated/i.test(message))blocked++;
-   await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status,error) VALUES(?,?,?,?,?)').bind(runId,row.id,u.id,'FAILED',message.slice(0,500)).run();
+   const message=String(e?.message||e);
+   const isBlocked=/blocked|chat not found|deactivated|bot was blocked|forbidden/i.test(message);
+   const isTelegram=/telegram|bad request|too many requests|retry after|chat|user not found/i.test(message);
+   const status=isBlocked?'BLOCKED':isTelegram?'TELEGRAM_ERROR':'OTHER_ERROR';
+   if(isBlocked)blocked++;else if(isTelegram)telegramError++;else otherError++;
+   await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status,error) VALUES(?,?,?,?,?)').bind(runId,row.id,u.id,status,message.slice(0,500)).run();
   }
  }
- await env.DB.prepare('UPDATE desktop_campaign_runs SET sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+? WHERE id=?').bind(sent,failed,blocked,runId).run();
- await env.DB.prepare('UPDATE desktop_campaigns SET recipient_count=?,sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+?,last_run_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(eligible.length,sent,failed,blocked,row.id).run();
+ const failed=blocked+telegramError+otherError;
+ await env.DB.prepare('UPDATE desktop_campaign_runs SET sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+?,skipped_dnd_count=skipped_dnd_count+?,telegram_error_count=telegram_error_count+?,other_error_count=other_error_count+? WHERE id=?')
+  .bind(sent,failed,blocked,skippedDnd,telegramError,otherError,runId).run();
+ await env.DB.prepare('UPDATE desktop_campaigns SET recipient_count=?,sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+?,skipped_dnd_count=skipped_dnd_count+?,telegram_error_count=telegram_error_count+?,other_error_count=other_error_count+?,last_run_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?')
+  .bind(recipients.length,sent,failed,blocked,skippedDnd,telegramError,otherError,row.id).run();
+
  const remaining=pending.length-batch.length;
  if(remaining>0){
   await env.DB.prepare("UPDATE desktop_campaigns SET status='ACTIVE',next_run_at=datetime('now','+1 minute') WHERE id=?").bind(row.id).run();
@@ -265,10 +293,21 @@ export async function runDesktopScheduledJobs(env:Env){
 
 const cleanWorkspace=(input:any)=>{
  const x=input&&typeof input==='object'?input:{};
- const sidebar=Array.isArray(x.sidebar)?x.sidebar.slice(0,40).map((i:any)=>({id:String(i.id||'').slice(0,40),label:String(i.label||i.id||'').slice(0,60),icon:String(i.icon||'circle').slice(0,30),group:String(i.group||'Other').slice(0,40),hidden:!!i.hidden,roles:(Array.isArray(i.roles)?i.roles:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)))})).filter((i:any)=>i.id):defaultWorkspace.sidebar;
- const widgets=Array.isArray(x.widgets)?x.widgets.slice(0,60).map((w:any)=>({id:String(w.id||'').slice(0,50),type:String(w.type||'kpi').slice(0,30),title:String(w.title||w.id||'').slice(0,80),x:Math.max(0,Math.min(11,Number(w.x)||0)),y:Math.max(0,Number(w.y)||0),width:Math.max(1,Math.min(12,Number(w.width)||3)),height:Math.max(1,Math.min(12,Number(w.height)||1)),minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),roles:(Array.isArray(w.roles)?w.roles:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)))})).filter((w:any)=>w.id):defaultWorkspace.widgets;
- return {schemaVersion:1,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings,kanbanLabels:x.kanbanLabels&&typeof x.kanbanLabels==='object'?x.kanbanLabels:{}};
+ const roles=(value:any)=>(Array.isArray(value)?value:['OWNER']).filter((r:any)=>['OWNER','ADMIN','MANAGER'].includes(String(r)));
+ const sidebar=Array.isArray(x.sidebar)?x.sidebar.slice(0,60).map((i:any,position:number)=>({
+  id:String(i.id||'').slice(0,40),type:String(i.type||'page').slice(0,30),parentId:i.parentId==null?null:String(i.parentId).slice(0,40),position:Number.isFinite(Number(i.position))?Number(i.position):position,
+  label:String(i.label||i.title||i.id||'').slice(0,80),title:String(i.title||i.label||i.id||'').slice(0,80),description:String(i.description||'').slice(0,300),icon:String(i.icon||'circle').slice(0,30),group:String(i.group||'Other').slice(0,40),
+  hidden:!!i.hidden,visible:i.visible!==false,desktopVisible:i.desktopVisible!==false,telegramVisible:!!i.telegramVisible,roles:roles(i.roles),systemCritical:i.systemCritical!==false
+ })).filter((i:any)=>i.id):defaultWorkspace.sidebar;
+ const widgets=Array.isArray(x.widgets)?x.widgets.slice(0,100).map((w:any,position:number)=>({
+  id:String(w.id||'').slice(0,50),type:String(w.type||'kpi').slice(0,30),parentId:w.parentId==null?null:String(w.parentId).slice(0,50),position:Number.isFinite(Number(w.position))?Number(w.position):position,
+  title:String(w.title||w.id||'').slice(0,100),description:String(w.description||'').slice(0,300),icon:String(w.icon||'').slice(0,30),
+  x:Math.max(0,Math.min(11,Number(w.x)||0)),y:Math.max(0,Number(w.y)||0),width:Math.max(1,Math.min(12,Number(w.width)||3)),height:Math.max(1,Math.min(12,Number(w.height)||1)),
+  minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),hidden:!!w.hidden,visible:w.visible!==false,desktopVisible:w.desktopVisible!==false,telegramVisible:!!w.telegramVisible,roles:roles(w.roles),systemCritical:w.systemCritical!==false
+ })).filter((w:any)=>w.id):defaultWorkspace.widgets;
+ return {schemaVersion:2,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:Array.isArray(x.presets)?x.presets.slice(0,30):defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings,kanbanLabels:x.kanbanLabels&&typeof x.kanbanLabels==='object'?x.kanbanLabels:{},telegramMenu:x.telegramMenu&&typeof x.telegramMenu==='object'?x.telegramMenu:{}};
 };
+
 
 export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<Response|null>{
  if(!url.pathname.startsWith('/api/desktop/'))return null;
@@ -451,7 +490,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
  }
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='GET'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);const r=await env.DB!.prepare('SELECT * FROM desktop_campaigns ORDER BY id DESC LIMIT 100').all<any>();return reply({campaigns:r.results||[]});}
- if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const scheduleAt=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');if(!b.sendNow&&!scheduleAt)return reply({error:'Schedule date/time is required.'},400);const queued=await enqueueDesktopCampaign(env,staff.user_id,text,{type:b.type||'STANDARD',audience:b.audience||{type:'all'},scheduleAt,timezone:b.timezone||'Europe/Warsaw',repeatType:b.repeatType||'ONCE',repeatInterval:Number(b.repeatInterval||1),repeatCount:b.repeatCount?Number(b.repeatCount):null,repeatUntil:b.repeatUntil||null,photoFileId:b.photoFileId||null});await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(queued.id),null,{status:'SCHEDULED',recipients:queued.recipients});if(b.sendNow)await runDesktopScheduledJobs(env);const row=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(queued.id).first<any>();return reply({ok:true,id:queued.id,recipients:queued.recipients,campaign:row});}
+ if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const type=['SYSTEM','IMPORTANT','FORCED'].includes(String(b.type||'').toUpperCase())?'SYSTEM':'STANDARD';if(type==='SYSTEM'&&!perms.broadcast_forced_access)return reply({error:'System/forced broadcast permission is required.'},403);const scheduleAt=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');if(!b.sendNow&&!scheduleAt)return reply({error:'Schedule date/time is required.'},400);const queued=await enqueueDesktopCampaign(env,staff.user_id,text,{type,audience:b.audience||{type:'all'},scheduleAt,timezone:b.timezone||'Europe/Warsaw',repeatType:b.repeatType||'ONCE',repeatInterval:Number(b.repeatInterval||1),repeatCount:b.repeatCount?Number(b.repeatCount):null,repeatUntil:b.repeatUntil||null,photoFileId:b.photoFileId||null});await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(queued.id),null,{status:'SCHEDULED',type,recipients:queued.recipients});if(b.sendNow)await runDesktopScheduledJobs(env);const row=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(queued.id).first<any>();return reply({ok:true,id:queued.id,recipients:queued.recipients,campaign:row});}
  const campaignMatch=url.pathname.match(/^\/api\/desktop\/campaigns\/(\d+)$/);
  if(campaignMatch&&request.method==='PATCH'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const id=Number(campaignMatch[1]),b=await body(request),old=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(id).first<any>();if(!old)return reply({error:'Campaign not found.'},404);let status=String(old.status),next=old.next_run_at;if(b.action==='pause')status='PAUSED';if(b.action==='resume'){status='SCHEDULED';next=old.next_run_at||new Date().toISOString()}if(b.action==='cancel'){status='CANCELLED';next=null}if(b.action==='send_now'){status='SCHEDULED';next=new Date().toISOString()}await env.DB!.prepare('UPDATE desktop_campaigns SET status=?,next_run_at=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(status,next,staff.user_id,id).run();await log(env,staff.user_id,'desktop.campaign.update','desktop_campaign',String(id),old,{status,next});return reply({ok:true});}
  if(url.pathname==='/api/desktop/admin-hub/staff-role'&&request.method==='POST'){
@@ -607,16 +646,27 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   await env.DB!.prepare("INSERT OR IGNORE INTO client_profiles(user_id) SELECT id FROM users WHERE role IN ('OWNER','ADMIN','MANAGER')").run().catch(()=>{});
   await env.DB!.prepare('INSERT INTO audit_log(actor_user_id,action,entity_type,entity_id,old_data_json,new_data_json) VALUES(?,?,?,?,?,?)').bind(staff.user_id,'project.data.reset','system','project',JSON.stringify(before),JSON.stringify({preserved:'staff, settings, services, pricing, themes, schedules, menu layouts, desktop workspaces'})).run();return reply({ok:true,before});
  }
- if(url.pathname==='/api/desktop/workspace'&&request.method==='GET'){const [draft,active,versions]=await Promise.all([env.DB!.prepare('SELECT * FROM desktop_workspace_draft WHERE id=1').first<any>(),env.DB!.prepare('SELECT * FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>(),env.DB!.prepare('SELECT id,version_number,comment,created_by,created_at,is_active FROM desktop_workspace_versions ORDER BY version_number DESC LIMIT 30').all<any>()]);return reply({draft:{config:parse(draft?.config_json,defaultWorkspace),locked:Number(draft?.locked||0)===1},active:{version:Number(active?.version_number||1),config:parse(active?.config_json,defaultWorkspace)},versions:versions.results||[]});}
- if(url.pathname==='/api/desktop/workspace/draft'&&request.method==='PUT'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request),d=await env.DB!.prepare('SELECT locked FROM desktop_workspace_draft WHERE id=1').first<any>();if(Number(d?.locked||0)===1&&!b.unlock)return reply({error:'Workspace is locked.'},409);const cfg=cleanWorkspace(b.config);await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(cfg),b.locked?1:0,staff.user_id).run();return reply({ok:true,config:cfg});}
+ if(url.pathname==='/api/desktop/workspace'&&request.method==='GET'){const [draft,active,versions]=await Promise.all([env.DB!.prepare('SELECT * FROM desktop_workspace_draft WHERE id=1').first<any>(),env.DB!.prepare('SELECT * FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>(),env.DB!.prepare('SELECT id,version_number,comment,created_by,created_at,is_active FROM desktop_workspace_versions ORDER BY version_number DESC LIMIT 30').all<any>()]);const draftConfig=cleanWorkspace(parse(draft?.config_json,defaultWorkspace)),activeConfig=cleanWorkspace(parse(active?.config_json,defaultWorkspace)),draftJson=JSON.stringify(draftConfig),activeJson=JSON.stringify(activeConfig);return reply({draft:{config:draftConfig,locked:Number(draft?.locked||0)===1,updatedAt:draft?.updated_at||null},active:{version:Number(active?.version_number||1),config:activeConfig},draftDirty:draftJson!==activeJson,versions:versions.results||[]});}
+ if(url.pathname==='/api/desktop/workspace/draft'&&request.method==='PUT'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request),d=await env.DB!.prepare('SELECT locked FROM desktop_workspace_draft WHERE id=1').first<any>();if(Number(d?.locked||0)===1&&!b.unlock)return reply({error:'Workspace is locked.'},409);const cfg=cleanWorkspace(b.config);await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(cfg),b.locked?1:0,staff.user_id).run();const persisted=await env.DB!.prepare('SELECT config_json,updated_at,locked FROM desktop_workspace_draft WHERE id=1').first<any>();return reply({ok:true,config:cleanWorkspace(parse(persisted?.config_json,defaultWorkspace)),updatedAt:persisted?.updated_at||null,locked:Number(persisted?.locked||0)===1});}
  if(url.pathname==='/api/desktop/workspace/lock'&&request.method==='POST'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request);await env.DB!.prepare('UPDATE desktop_workspace_draft SET locked=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(b.locked===false?0:1,staff.user_id).run();return reply({ok:true});}
- if(url.pathname==='/api/desktop/workspace/publish'&&request.method==='POST'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request),d=await env.DB!.prepare('SELECT config_json FROM desktop_workspace_draft WHERE id=1').first<any>(),cfg=cleanWorkspace(parse(d?.config_json,defaultWorkspace)),mx=await env.DB!.prepare('SELECT COALESCE(MAX(version_number),0)+1 n FROM desktop_workspace_versions').first<any>(),v=Number(mx?.n||1);await env.DB!.prepare('UPDATE desktop_workspace_versions SET is_active=0').run();await env.DB!.prepare('INSERT INTO desktop_workspace_versions(version_number,config_json,comment,created_by,is_active) VALUES(?,?,?,?,1)').bind(v,JSON.stringify(cfg),String(b.comment||'Published from Layout Editor').slice(0,300),staff.user_id).run();await env.DB!.prepare('UPDATE desktop_workspace_draft SET locked=1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(staff.user_id).run();await log(env,staff.user_id,'desktop.workspace.publish','workspace',String(v),null,{version:v});return reply({ok:true,version:v});}
+ if(url.pathname==='/api/desktop/workspace/publish'&&request.method==='POST'){
+  if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);
+  await writable(env);
+  const b=await body(request),d=await env.DB!.prepare('SELECT config_json FROM desktop_workspace_draft WHERE id=1').first<any>(),cfg=cleanWorkspace(parse(d?.config_json,defaultWorkspace)),mx=await env.DB!.prepare('SELECT COALESCE(MAX(version_number),0)+1 n FROM desktop_workspace_versions').first<any>(),v=Number(mx?.n||1);
+  await env.DB!.prepare('UPDATE desktop_workspace_versions SET is_active=0').run();
+  await env.DB!.prepare('INSERT INTO desktop_workspace_versions(version_number,config_json,comment,created_by,is_active) VALUES(?,?,?,?,1)').bind(v,JSON.stringify(cfg),String(b.comment||'Published from Layout Editor').slice(0,300),staff.user_id).run();
+  const verify=await env.DB!.prepare('SELECT version_number,config_json FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>(),published=cleanWorkspace(parse(verify?.config_json,defaultWorkspace)),verified=Number(verify?.version_number||0)===v&&JSON.stringify(published)===JSON.stringify(cfg);
+  if(!verified)return reply({error:'Published configuration verification failed. Draft was kept.'},500);
+  await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(published),staff.user_id).run();
+  await log(env,staff.user_id,'desktop.workspace.publish','workspace',String(v),null,{version:v});
+  return reply({ok:true,version:v,config:published,verified:true});
+ }
  if(url.pathname==='/api/desktop/workspace/revert'&&request.method==='POST'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request),v=await env.DB!.prepare('SELECT * FROM desktop_workspace_versions WHERE version_number=?').bind(Number(b.version)).first<any>();if(!v)return reply({error:'Version not found.'},404);await env.DB!.prepare('UPDATE desktop_workspace_versions SET is_active=CASE WHEN version_number=? THEN 1 ELSE 0 END').bind(Number(b.version)).run();await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(v.config_json,staff.user_id).run();await log(env,staff.user_id,'desktop.workspace.revert','workspace',String(b.version));return reply({ok:true});}
  if(url.pathname==='/api/desktop/workspace/export'&&request.method==='GET'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);const v=await env.DB!.prepare('SELECT version_number,config_json FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>();return new Response(JSON.stringify({template:'ChameleonDesktopWorkspace',templateVersion:1,exportedAt:new Date().toISOString(),workspaceVersion:Number(v?.version_number||1),config:cleanWorkspace(parse(v?.config_json,defaultWorkspace))},null,2),{headers:{'content-type':'application/json','content-disposition':'attachment; filename="chameleon-desktop-template.json"'}})}
  if(url.pathname==='/api/desktop/workspace/import'&&request.method==='POST'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),cfg=cleanWorkspace(b.config||b);await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(cfg),staff.user_id).run();await log(env,staff.user_id,'desktop.workspace.import','workspace','1');return reply({ok:true,preview:cfg});}
  if(url.pathname==='/api/desktop/system/mode'&&request.method==='PATCH'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const b=await body(request),next=String(b.mode||'').toUpperCase();if(!['ONLINE','READ_ONLY','MAINTENANCE','DISABLED'].includes(next))return reply({error:'Invalid desktop mode.'},400);const old=await mode(env);await setSetting(env,'desktop.mode',next);await log(env,staff.user_id,'desktop.mode.update','settings','desktop.mode',{mode:old},{mode:next});return reply({ok:true,mode:next});}
  if(url.pathname==='/api/desktop/permissions'&&request.method==='GET'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);const r=await env.DB!.prepare('SELECT * FROM staff_role_permissions ORDER BY role,permission_key').all<any>();return reply({permissions:r.results||[]});}
- if(url.pathname==='/api/desktop/permissions'&&request.method==='PUT'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),role=String(b.role||'').toUpperCase(),key=String(b.key||'') as DesktopPermission;if(!['ADMIN','MANAGER'].includes(role)||!['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access','workspace_editor'].includes(key))return reply({error:'Invalid permission.'},400);if(role==='MANAGER'&&key==='workspace_editor')return reply({error:'Manager cannot access Workspace Editor.'},400);await env.DB!.prepare('INSERT INTO staff_role_permissions(role,permission_key,enabled,updated_by) VALUES(?,?,?,?) ON CONFLICT(role,permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(role,key,b.enabled?1:0,staff.user_id).run();if(role==='MANAGER'){const lk=legacyKey(key);if(lk)await env.DB!.prepare('INSERT INTO manager_permissions(permission_key,enabled,updated_by) VALUES(?,?,?) ON CONFLICT(permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(lk,b.enabled?1:0,staff.user_id).run()}if(!b.enabled&&key==='desktop_access')await env.DB!.prepare("UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id IN (SELECT id FROM users WHERE role=?) AND revoked_at IS NULL").bind(role).run();await log(env,staff.user_id,'desktop.permission.update','permission',role+':'+key,null,{enabled:!!b.enabled});return reply({ok:true});}
+ if(url.pathname==='/api/desktop/permissions'&&request.method==='PUT'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),role=String(b.role||'').toUpperCase(),key=String(b.key||'') as DesktopPermission;if(!['ADMIN','MANAGER'].includes(role)||!['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','workspace_editor'].includes(key))return reply({error:'Invalid permission.'},400);if(role==='MANAGER'&&key==='workspace_editor')return reply({error:'Manager cannot access Workspace Editor.'},400);await env.DB!.prepare('INSERT INTO staff_role_permissions(role,permission_key,enabled,updated_by) VALUES(?,?,?,?) ON CONFLICT(role,permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(role,key,b.enabled?1:0,staff.user_id).run();if(role==='MANAGER'){const lk=legacyKey(key);if(lk)await env.DB!.prepare('INSERT INTO manager_permissions(permission_key,enabled,updated_by) VALUES(?,?,?) ON CONFLICT(permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(lk,b.enabled?1:0,staff.user_id).run()}if(!b.enabled&&key==='desktop_access')await env.DB!.prepare("UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id IN (SELECT id FROM users WHERE role=?) AND revoked_at IS NULL").bind(role).run();await log(env,staff.user_id,'desktop.permission.update','permission',role+':'+key,null,{enabled:!!b.enabled});return reply({ok:true});}
  if(url.pathname==='/api/desktop/sessions'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT ds.id,ds.user_id,ds.device_label,ds.user_agent,ds.created_at,ds.last_seen_at,ds.expires_at,u.first_name,u.username,u.role FROM desktop_sessions ds JOIN users u ON u.id=ds.user_id WHERE ds.revoked_at IS NULL AND ds.expires_at>CURRENT_TIMESTAMP ORDER BY ds.last_seen_at DESC").all<any>();return reply({sessions:r.results||[]});}
  const sm=url.pathname.match(/^\/api\/desktop\/sessions\/(\d+)$/);if(sm&&request.method==='DELETE'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);await env.DB!.prepare('UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?').bind(Number(sm[1])).run();await log(env,staff.user_id,'desktop.session.revoke','desktop_session',sm[1]);return reply({ok:true});}
  if(url.pathname==='/api/desktop/logout'&&request.method==='POST'){await env.DB!.prepare('UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?').bind(staff.session_id).run();return reply({ok:true});}
