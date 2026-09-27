@@ -10,7 +10,7 @@ import {api,post} from '../../api/desktopApi';
 import {money,dt} from '../../format';
 import type {Role,Bootstrap,Page} from '../../types/desktop';
 import {statusLabel,statusMeta} from '../../config/statusMeta';
-import {Drawer,Tabs} from '../../components/primitives';
+import {Drawer,Tabs,StatusBadge} from '../../components/primitives';
 import {showError} from '../../components/Toast';
 import {businessDate,businessTime,fromBusinessLocal} from '../../format';
 import {Panel} from '../../components/Panel';
