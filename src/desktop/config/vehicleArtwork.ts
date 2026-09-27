@@ -1,8 +1,8 @@
-import sedanUrl from '../assets/vehicles/sedan.webp';
-import hatchbackUrl from '../assets/vehicles/hatchback.webp';
-import suvUrl from '../assets/vehicles/suv.webp';
-import largeSuvUrl from '../assets/vehicles/large-suv.webp';
-import vanUrl from '../assets/vehicles/van.webp';
+import sedanUrl from '../assets/vehicles/sedan.png';
+import hatchbackUrl from '../assets/vehicles/hatchback.png';
+import suvUrl from '../assets/vehicles/suv.png';
+import largeSuvUrl from '../assets/vehicles/large-suv.png';
+import vanUrl from '../assets/vehicles/van.png';
 
 const artwork={
  sedan:sedanUrl,
