@@ -2,7 +2,7 @@ import type {Env} from './types';
 import {ensureDb,getSetting,setSetting} from './db';
 import {managerBlockEnabled} from './permissions';
 import {sendMessage,sendPhoto,tgApi,uploadPhoto} from './telegram';
-import {buildReport,type ReportType} from './reports';
+import {buildReport,buildStaffMemberReport,type ReportType,type ReportLocale} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
 
@@ -583,13 +583,20 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   return reply({person,currency:target,revenue:Math.round(total*100)/100,revenueByCurrency:revenue.results||[],orders:orders.results||[],offers:offers.results||[],activity:activity.results||[]});
  }
  if(url.pathname==='/api/desktop/audit'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT a.*,u.first_name,u.username,u.role FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.id DESC LIMIT 300").all<any>();return reply({events:r.results||[]});}
+ const staffReportMatch=url.pathname.match(/^\/api\/desktop\/reports\/staff\/(\d+)$/);
+ if(staffReportMatch&&request.method==='GET'){
+  if(!perms.reports_access||!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin report access required.'},403);
+  const id=Number(staffReportMatch[1]),days=Math.max(0,Math.min(3650,Number(url.searchParams.get('days')||0))),raw=String(url.searchParams.get('locale')||'uk').toLowerCase(),locale=(['uk','pl','en','de','fr'].includes(raw)?raw:'uk') as ReportLocale;
+  const {filename,buffer,summary}=await buildStaffMemberReport(env,id,days,locale);await log(env,staff.user_id,'desktop.staff.report.export','user',String(id),null,{days,filename,locale,summary});
+  return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
+ }
  if(url.pathname.startsWith('/api/desktop/reports/')&&request.method==='GET'){
   if(!perms.reports_access)return reply({error:'Reports access is disabled.'},403);
   const type=String(url.pathname.split('/').pop()||'business') as ReportType;
   const allowed=['users','vip','orders','payments','revenue','referrals','retention','blacklist','whitelist','staff','reviews','suggestions','business'];
   if(!allowed.includes(type))return reply({error:'Unsupported report type.'},400);
   const days=Math.max(0,Math.min(3650,Number(url.searchParams.get('days')||30)));
-  const localeRaw=String(url.searchParams.get('locale')||'uk').toLowerCase(),locale=(localeRaw==='pl'?'pl':localeRaw==='en'?'en':'uk') as 'uk'|'pl'|'en';
+  const localeRaw=String(url.searchParams.get('locale')||'uk').toLowerCase(),locale=(['uk','pl','en','de','fr'].includes(localeRaw)?localeRaw:'uk') as ReportLocale;
   const {filename,buffer}=await buildReport(env,type,days,locale);
   await log(env,staff.user_id,'desktop.report.export','report',type,null,{days,filename,locale});
   return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
