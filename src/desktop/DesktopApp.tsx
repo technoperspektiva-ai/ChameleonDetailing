@@ -18,6 +18,7 @@ import {normalizeDesktopLocale,desktopLocaleNames,desktopT,type DesktopLocale} f
 import './styles/tokens.css';
 import './styles/components.css';
 import './styles/shell.css';
+import './styles/mobile.css';
 import {ServicesCatalog as Services} from './features/services';
 import {Payments,Reports,Analytics} from './features/finance';
 import {Broadcasts} from './features/marketing';
