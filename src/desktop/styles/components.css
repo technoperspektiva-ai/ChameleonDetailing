@@ -4367,3 +4367,42 @@
  .calendar-grid{max-height:68dvh!important}
  .system-brand .control-form{grid-template-columns:1fr}
 }
+
+
+/* LIGHT COMMERCIAL CONSISTENCY 2026-09-27 */
+:root[data-desktop-theme="light"] .commercial-dashboard{
+ color:#211f1b!important;
+}
+:root[data-desktop-theme="light"] .commercial-hero,
+:root[data-desktop-theme="light"] .commercial-card{
+ background:linear-gradient(180deg,#fffefa,#faf5ed)!important;
+ border-color:rgba(71,52,27,.14)!important;
+ color:#211f1b!important;
+ box-shadow:0 14px 36px rgba(70,49,20,.07)!important;
+}
+:root[data-desktop-theme="light"] .commercial-card>header{
+ background:transparent!important;
+ border-bottom-color:rgba(71,52,27,.12)!important;
+ color:#211f1b!important;
+}
+:root[data-desktop-theme="light"] .commercial-card>header h3,
+:root[data-desktop-theme="light"] .commercial-card>header b{
+ color:#211f1b!important;
+}
+:root[data-desktop-theme="light"] .commercial-card>header p,
+:root[data-desktop-theme="light"] .commercial-card .desk-eyebrow{
+ color:#746b5e!important;
+}
+:root[data-desktop-theme="light"] .commercial-summary>div,
+:root[data-desktop-theme="light"] .offer-extra-picker,
+:root[data-desktop-theme="light"] .compact-list>div,
+:root[data-desktop-theme="light"] .offer-list>div,
+:root[data-desktop-theme="light"] .reactivation-photo-control{
+ background:#fbf6ee!important;
+ border-color:rgba(71,52,27,.12)!important;
+ color:#211f1b!important;
+}
+:root[data-desktop-theme="light"] .setting-line>span,
+:root[data-desktop-theme="light"] .commercial-card small{
+ color:#6d655a!important;
+}
