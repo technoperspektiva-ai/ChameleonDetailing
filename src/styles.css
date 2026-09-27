@@ -486,6 +486,9 @@ nav button.active::after{bottom:1px}
  .choice-icon .premium-main-service-icon{width:50px;height:50px;border-radius:12px}
 }
 
-/* standalone high-quality car brand icons */
-.brand-badge.standalone-brand-icon{overflow:hidden;background:#081208;padding:0;border-color:color-mix(in srgb,var(--neon-color) 26%,#273128)}
-.brand-badge.standalone-brand-icon img{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit}
+
+/* standalone high-quality car brand icons — original PNG, no recompression */
+.brand-badge.standalone-brand-icon{overflow:hidden;background:radial-gradient(circle at 50% 45%,color-mix(in srgb,var(--neon-color) 9%,#0b150b),#071007 72%);padding:7px;border-color:color-mix(in srgb,var(--neon-color) 24%,#2b352b);box-shadow:inset 0 0 18px color-mix(in srgb,var(--neon-color) 5%,transparent),0 0 16px rgba(0,0,0,.2)}
+.brand-badge.standalone-brand-icon img{display:block;width:100%;height:100%;object-fit:contain;border-radius:inherit;transform-origin:50% 50%;animation:carBrandTurn 5s cubic-bezier(.42,0,.2,1) infinite;will-change:transform;filter:drop-shadow(0 0 5px color-mix(in srgb,var(--neon-color) 18%,transparent))}
+@keyframes carBrandTurn{0%,76%{transform:rotate(0deg)}96%,100%{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.brand-badge.standalone-brand-icon img{animation:none!important}}
