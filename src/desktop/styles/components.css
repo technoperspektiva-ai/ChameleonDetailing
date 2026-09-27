@@ -4956,3 +4956,162 @@
  .order-car-card{grid-template-columns:92px minmax(0,1fr)!important}
  .order-car-art{width:92px;height:52px}
 }
+
+
+/* DESKTOP FORM + VEHICLE + KANBAN HOTFIX 2026-09-27 C */
+
+/* Keep desktop form controls visually consistent. Native browser field paint was
+   showing through as flat grey rectangles in some Chromium/iPad combinations. */
+:root:not([data-desktop-theme="light"]) .desktop-shell input:not([type=checkbox]):not([type=radio]):not([type=file]),
+:root:not([data-desktop-theme="light"]) .desktop-shell textarea,
+:root:not([data-desktop-theme="light"]) .desktop-shell select,
+:root:not([data-desktop-theme="light"]) .desk-drawer input:not([type=checkbox]):not([type=radio]):not([type=file]),
+:root:not([data-desktop-theme="light"]) .desk-drawer textarea,
+:root:not([data-desktop-theme="light"]) .desk-drawer select{
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.018),rgba(255,255,255,.010)),
+  #0d100e!important;
+ color:var(--text)!important;
+ border:1px solid rgba(255,255,255,.085)!important;
+ border-radius:10px!important;
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.018)!important;
+ outline:none;
+}
+:root:not([data-desktop-theme="light"]) .desktop-shell input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,
+:root:not([data-desktop-theme="light"]) .desktop-shell textarea:focus,
+:root:not([data-desktop-theme="light"]) .desktop-shell select:focus,
+:root:not([data-desktop-theme="light"]) .desk-drawer input:not([type=checkbox]):not([type=radio]):not([type=file]):focus,
+:root:not([data-desktop-theme="light"]) .desk-drawer textarea:focus,
+:root:not([data-desktop-theme="light"]) .desk-drawer select:focus{
+ border-color:rgba(221,184,111,.30)!important;
+ box-shadow:0 0 0 3px rgba(221,184,111,.055),inset 0 1px 0 rgba(255,255,255,.02)!important;
+}
+:root:not([data-desktop-theme="light"]) .desktop-shell input::placeholder,
+:root:not([data-desktop-theme="light"]) .desktop-shell textarea::placeholder,
+:root:not([data-desktop-theme="light"]) .desk-drawer input::placeholder,
+:root:not([data-desktop-theme="light"]) .desk-drawer textarea::placeholder{
+ color:#686d67!important;
+ opacity:1!important;
+}
+:root:not([data-desktop-theme="light"]) .desktop-shell input[type=datetime-local],
+:root:not([data-desktop-theme="light"]) .desk-drawer input[type=datetime-local]{color-scheme:dark}
+
+/* The generated car artwork must be the focal element, not a tiny dark thumbnail. */
+.orders-car-thumb{
+ width:86px!important;
+ height:54px!important;
+ border-radius:11px!important;
+ background:
+  radial-gradient(ellipse at 50% 72%,rgba(114,255,0,.10),transparent 58%),
+  rgba(255,255,255,.012)!important;
+}
+.orders-car-thumb img{
+ width:118%!important;
+ height:118%!important;
+ max-width:none!important;
+ max-height:none!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ transform:scale(1.08)!important;
+ filter:drop-shadow(0 7px 9px rgba(0,0,0,.42))!important;
+}
+.orders-card-car{
+ grid-template-columns:86px minmax(0,1fr)!important;
+ gap:10px!important;
+ min-height:58px;
+}
+
+.order-car-art{
+ width:138px!important;
+ height:74px!important;
+ border-radius:12px!important;
+}
+.order-car-art img{
+ width:116%!important;
+ height:116%!important;
+ max-width:none!important;
+ max-height:none!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ transform:scale(1.08)!important;
+ filter:drop-shadow(0 10px 13px rgba(0,0,0,.42))!important;
+}
+.order-car-card{
+ grid-template-columns:138px minmax(0,1fr)!important;
+ min-height:92px!important;
+}
+
+/* Override the older forced cover/2x crop on the dashboard hero. */
+.premium-focus-car-image{
+ position:relative!important;
+ z-index:2!important;
+ width:96%!important;
+ height:96%!important;
+ max-width:none!important;
+ max-height:none!important;
+ object-fit:contain!important;
+ object-position:center 58%!important;
+ transform:translateY(4px) scale(1.12)!important;
+ filter:drop-shadow(0 18px 24px rgba(0,0,0,.42))!important;
+ opacity:1!important;
+}
+.premium-car-thumb img{
+ width:112%!important;
+ height:112%!important;
+ max-width:none!important;
+ max-height:none!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ transform:scale(1.08)!important;
+ filter:drop-shadow(0 7px 8px rgba(0,0,0,.32))!important;
+}
+
+/* Jira-like board: fixed viewport per column + a clearly visible vertical scrollbar.
+   The page can keep scrolling, while each stage remains independently scrollable. */
+.orders-kanban{
+ height:clamp(420px,calc(100dvh - 315px),690px)!important;
+ max-height:none!important;
+ align-items:stretch!important;
+}
+.orders-kanban-col{
+ height:100%!important;
+ min-height:0!important;
+ max-height:none!important;
+ grid-template-rows:auto minmax(0,1fr)!important;
+}
+.orders-column-body{
+ min-height:0!important;
+ height:100%!important;
+ max-height:none!important;
+ overflow-y:scroll!important;
+ overflow-x:hidden!important;
+ scrollbar-gutter:stable;
+ padding-right:5px;
+ scrollbar-width:auto!important;
+ scrollbar-color:rgba(221,184,111,.42) rgba(255,255,255,.025)!important;
+}
+.orders-column-body::-webkit-scrollbar{width:8px!important}
+.orders-column-body::-webkit-scrollbar-track{
+ background:rgba(255,255,255,.025)!important;
+ border-radius:999px;
+}
+.orders-column-body::-webkit-scrollbar-thumb{
+ background:linear-gradient(180deg,rgba(178,130,58,.42),rgba(225,188,112,.70))!important;
+ border:2px solid transparent;
+ background-clip:padding-box;
+ border-radius:999px!important;
+}
+.orders-column-body::-webkit-scrollbar-thumb:hover{
+ background:linear-gradient(180deg,rgba(195,145,68,.58),rgba(235,199,126,.82))!important;
+ background-clip:padding-box!important;
+}
+
+@media(max-width:760px){
+ .orders-kanban{
+  height:clamp(390px,calc(100dvh - 250px),620px)!important;
+ }
+ .orders-car-thumb{width:76px!important;height:50px!important}
+ .orders-card-car{grid-template-columns:76px minmax(0,1fr)!important}
+ .order-car-art{width:106px!important;height:62px!important}
+ .order-car-card{grid-template-columns:106px minmax(0,1fr)!important}
+}
