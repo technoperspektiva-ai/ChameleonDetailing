@@ -1,5 +1,5 @@
 import {useMemo,useState} from 'react';
-import {Banknote,BookmarkPlus,CalendarDays,CarFront,CheckCircle2,Clock3,RefreshCw,Search,UserRound,Zap} from 'lucide-react';
+import {AlarmClock,Banknote,BookmarkPlus,CalendarDays,CarFront,CheckCircle2,Clock3,RefreshCw,Search,UserRound,Zap} from 'lucide-react';
 import {useData,usePreference} from '../../hooks';
 import {post} from '../../api/desktopApi';
 import {notify,showError} from '../../components/Toast';
@@ -13,6 +13,9 @@ const filterOptions:[string,string][]=[
  ['unscheduled','Без часу'],['express','Прискорені'],['unpaid','Неоплачені'],['mine','Мої'],
  ['unassigned','Без відповідального'],['ready','Готові'],['work','У роботі']
 ];
+const deadlineState=(o:Order)=>{const active=!['COMPLETED','CANCELLED','REJECTED'].includes(String(o.status||'').toUpperCase()),at=o.deadline_at?Date.parse(o.deadline_at):NaN;if(!active||!Number.isFinite(at))return 'none';const left=at-Date.now();return left<0?'overdue':left<=30*60_000?'soon':'ok'};
+const durationText=(value?:number)=>{const m=Math.max(0,Number(value||0));return m>=60?`${Math.floor(m/60)}г${m%60?' '+m%60+'хв':''}`:`${m}хв`};
+
 
 export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:string)=>void;initialFilter?:string}){
  const {rows,setRows,loading,reload}=useData<Order>('/api/desktop/orders','orders');
@@ -21,7 +24,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
 
  const filtered=useMemo(()=>rows
   .filter(x=>[x.id,x.brand,x.model,x.plate,x.first_name,x.username,x.phone_number].join(' ').toLowerCase().includes(q.toLowerCase().replace(/^chd-/i,'')))
-  .filter(x=>selectedFilter==='all'||selectedFilter==='today'&&!!x.scheduled_for&&businessDate(x.scheduled_for)===today||selectedFilter==='tomorrow'&&!!x.scheduled_for&&businessDate(x.scheduled_for)===tomorrow||selectedFilter==='unpaid'&&x.payment_status!=='PAID'&&!['CANCELLED','REJECTED'].includes(x.status)||selectedFilter==='mine'&&x.responsible_staff_id===boot.user.id||selectedFilter==='unassigned'&&!x.responsible_staff_id||selectedFilter==='unscheduled'&&!x.scheduled_for||selectedFilter==='express'&&!!x.accelerated||selectedFilter==='ready'&&boardStatus(x.status)==='READY'||selectedFilter==='work'&&boardStatus(x.status)==='IN_PROGRESS'||selectedFilter==='overdue'&&!!x.scheduled_for&&businessDate(x.scheduled_for)<today&&!['COMPLETED','CANCELLED','REJECTED'].includes(x.status)),
+  .filter(x=>selectedFilter==='all'||selectedFilter==='today'&&!!x.scheduled_for&&businessDate(x.scheduled_for)===today||selectedFilter==='tomorrow'&&!!x.scheduled_for&&businessDate(x.scheduled_for)===tomorrow||selectedFilter==='unpaid'&&x.payment_status!=='PAID'&&!['CANCELLED','REJECTED'].includes(x.status)||selectedFilter==='mine'&&x.responsible_staff_id===boot.user.id||selectedFilter==='unassigned'&&!x.responsible_staff_id||selectedFilter==='unscheduled'&&!x.scheduled_for||selectedFilter==='express'&&!!x.accelerated||selectedFilter==='ready'&&boardStatus(x.status)==='READY'||selectedFilter==='work'&&boardStatus(x.status)==='IN_PROGRESS'||selectedFilter==='overdue'&&deadlineState(x)==='overdue'),
  [rows,q,selectedFilter,today,tomorrow,boot.user.id]);
 
  const hiddenFromBoard=useMemo(()=>filtered.filter(o=>['CANCELLED','REJECTED'].includes(String(o.status||'').toUpperCase())),[filtered]);
@@ -30,7 +33,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
   today:rows.filter(x=>x.scheduled_for&&businessDate(x.scheduled_for)===today).length,
   work:rows.filter(x=>boardStatus(x.status)==='IN_PROGRESS').length,
   ready:rows.filter(x=>boardStatus(x.status)==='READY').length,
-  unpaid:rows.filter(x=>x.payment_status!=='PAID'&&!['CANCELLED','REJECTED'].includes(String(x.status||'').toUpperCase())).length
+  unpaid:rows.filter(x=>x.payment_status!=='PAID'&&!['CANCELLED','REJECTED'].includes(String(x.status||'').toUpperCase())).length,late:rows.filter(x=>deadlineState(x)==='overdue').length
  }),[rows,today]);
 
  const board=useMemo(()=>boardStatuses.map(status=>({status,rows:filtered.filter(o=>boardStatus(o.status)===status)})),[filtered]);
@@ -60,6 +63,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
     <button onClick={()=>selectFilter('work')}><span><Clock3/></span><small>У роботі</small><strong>{metrics.work}</strong></button>
     <button onClick={()=>selectFilter('ready')}><span><CheckCircle2/></span><small>Готові</small><strong>{metrics.ready}</strong></button>
     <button onClick={()=>selectFilter('unpaid')}><span><Banknote/></span><small>Неоплачені</small><strong>{metrics.unpaid}</strong></button>
+    <button className={metrics.late?'deadline-alert':''} onClick={()=>selectFilter('overdue')}><span><AlarmClock/></span><small>Дедлайн минув</small><strong>{metrics.late}</strong></button>
    </div>
   </section>
 
@@ -82,7 +86,8 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
      {key:'id',label:'Замовлення',render:x=><b>CHD-{x.id}</b>,sort:x=>x.id},
      {key:'car',label:'Автомобіль',render:x=><>{[x.brand,x.model].filter(Boolean).join(' ')||'Авто не вказано'}<small>{x.plate||'Без номера'}</small></>,sort:x=>x.brand||''},
      {key:'client',label:'Клієнт',render:x=><>{x.first_name}<small>{x.phone_number||x.username||'—'}</small></>,sort:x=>x.first_name},
-     {key:'date',label:'Дата',render:x=>x.scheduled_for?dt(x.scheduled_for):'Без часу',sort:x=>x.scheduled_for||''},
+     {key:'date',label:'Початок',render:x=>x.scheduled_for?dt(x.scheduled_for):'Без часу',sort:x=>x.scheduled_for||''},
+     {key:'deadline',label:'Дедлайн',render:x=><span className={'orders-table-deadline '+deadlineState(x)}>{x.deadline_at?dt(x.deadline_at):'—'}<small>{x.estimated_duration_min?durationText(x.estimated_duration_min):''}</small></span>,sort:x=>x.deadline_at||''},
      {key:'status',label:'Статус',render:x=><StatusBadge status={x.status}/>},
      {key:'amount',label:'Сума',render:x=>money(x.final_job_price??x.calculated_price,x.currency),sort:x=>x.final_job_price??x.calculated_price},
      {key:'payment',label:'Оплата',render:x=><StatusBadge status={x.payment_status}/>}
@@ -101,6 +106,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
          <div className="orders-card-car"><span className="orders-car-icon"><CarFront/></span><div><b>{[o.brand,o.model].filter(Boolean).join(' ')||'Автомобіль'}</b><small>{o.plate||'Номер не вказано'}</small></div></div>
          <div className="orders-card-client"><UserRound/><span><b>{o.first_name||o.username||'Клієнт'}</b><small>{o.phone_number||'Контакт не вказано'}</small></span></div>
          <div className="orders-card-service">{o.service_title||o.service_slug||'Послуги в замовленні'}</div>
+         <div className={'orders-card-deadline '+deadlineState(o)}><AlarmClock/><span><small>Дедлайн · {durationText(o.estimated_duration_min)}</small><b>{o.deadline_at?dt(o.deadline_at):'Не визначено'}</b></span></div>
          <div className="card-badges">{o.accelerated>0&&<span className="express"><Zap/>Прискорене</span>}{o.payment_status!=='PAID'&&<span>Не оплачено</span>}{o.client_tier&&o.client_tier!=='STANDARD'&&<span className="vip">VIP</span>}</div>
          <div className="orders-card-footer"><strong>{money(o.final_job_price??o.calculated_price,o.currency)}</strong><span>{o.responsible_name||'Без відповідального'}</span></div>
         </button>
