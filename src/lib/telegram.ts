@@ -14,3 +14,14 @@ export const telegramLanguage=()=>tg()?.initDataUnsafe?.user?.language_code||'';
 export const openBot=(start?:string)=>{const username='ChameleonDetailing_bot';const url=`https://t.me/${username}${start?`?start=${encodeURIComponent(start)}`:''}`;const w=tg();if(w?.openTelegramLink)w.openTelegramLink(url);else window.open(url,'_blank','noopener,noreferrer')};
 export const shareTelegramLink=(url:string,text='')=>{const share=`https://t.me/share/url?url=${encodeURIComponent(url)}${text?`&text=${encodeURIComponent(text)}`:''}`;const w=tg();if(w?.openTelegramLink)w.openTelegramLink(share);else window.open(share,'_blank','noopener,noreferrer')};
 export const openExternal=(url:string)=>{const value=String(url||'').trim();if(!/^https?:\/\//i.test(value))return;const w=tg();if(w?.openLink)w.openLink(value);else window.open(value,'_blank','noopener,noreferrer')};
+
+export const waitForTelegramInitData=async(timeoutMs=1800)=>{
+ const started=Date.now();
+ while(Date.now()-started<timeoutMs){
+  const w=tg();
+  if(w?.initData)return w.initData;
+  if(!w)return '';
+  await new Promise(r=>setTimeout(r,90));
+ }
+ return tg()?.initData||'';
+};
