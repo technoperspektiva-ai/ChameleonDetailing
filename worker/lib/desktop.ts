@@ -355,13 +355,13 @@ const cleanWorkspace=(input:any)=>{
  const sidebar=Array.isArray(x.sidebar)?x.sidebar.slice(0,60).map((i:any,position:number)=>({
   id:String(i.id||'').slice(0,40),type:String(i.type||'page').slice(0,30),parentId:i.parentId==null?null:String(i.parentId).slice(0,40),position:Number.isFinite(Number(i.position))?Number(i.position):position,
   label:String(i.label||i.title||i.id||'').slice(0,80),title:String(i.title||i.label||i.id||'').slice(0,80),description:String(i.description||'').slice(0,300),icon:String(i.icon||'circle').slice(0,30),group:String(i.group||'Other').slice(0,40),
-  hidden:!!i.hidden,visible:i.visible!==false,desktopVisible:i.desktopVisible!==false,telegramVisible:!!i.telegramVisible,roles:roles(i.roles),systemCritical:i.systemCritical!==false
+  hidden:!!i.hidden,visible:i.visible!==false,desktopVisible:i.desktopVisible!==false,telegramVisible:false,roles:roles(i.roles),systemCritical:i.systemCritical!==false
  })).filter((i:any)=>i.id):defaultWorkspace.sidebar;
  const widgets=Array.isArray(x.widgets)?x.widgets.slice(0,100).map((w:any,position:number)=>({
   id:String(w.id||'').slice(0,50),type:String(w.type||'kpi').slice(0,30),parentId:w.parentId==null?null:String(w.parentId).slice(0,50),position:Number.isFinite(Number(w.position))?Number(w.position):position,
   title:String(w.title||w.id||'').slice(0,100),description:String(w.description||'').slice(0,300),icon:String(w.icon||'').slice(0,30),
   x:Math.max(0,Math.min(11,Number(w.x)||0)),y:Math.max(0,Number(w.y)||0),width:Math.max(1,Math.min(12,Number(w.width)||3)),height:Math.max(1,Math.min(12,Number(w.height)||1)),
-  minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),hidden:!!w.hidden,visible:w.visible!==false,desktopVisible:w.desktopVisible!==false,telegramVisible:!!w.telegramVisible,roles:roles(w.roles),systemCritical:w.systemCritical!==false
+  minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),hidden:!!w.hidden,visible:w.visible!==false,desktopVisible:w.desktopVisible!==false,telegramVisible:false,roles:roles(w.roles),systemCritical:w.systemCritical!==false
  })).filter((w:any)=>w.id):defaultWorkspace.widgets;
  return {schemaVersion:2,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:Array.isArray(x.presets)?x.presets.slice(0,30):defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings,kanbanLabels:x.kanbanLabels&&typeof x.kanbanLabels==='object'?x.kanbanLabels:{},telegramMenu:{}};
 };
@@ -743,7 +743,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
    env.DB!.prepare('SELECT * FROM vehicle_types ORDER BY sort_order,id').all<any>(),
    env.DB!.prepare('SELECT * FROM condition_levels ORDER BY sort_order,id').all<any>(),
    env.DB!.prepare('SELECT * FROM business_weekly_schedule ORDER BY day_of_week').all<any>(),
-   env.DB!.prepare("SELECT key,locale,value,updated_at FROM content_blocks WHERE key IN ('home.hero.title','home.hero.subtitle','bot.welcome','bot.returning','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description','bot.client_menu_text','bot.client_settings_text','bot.help_text') ORDER BY key,locale").all<any>(),
+   env.DB!.prepare("SELECT key,locale,value,updated_at FROM content_blocks WHERE key IN ('home.hero.title','home.hero.subtitle','calculator.result.note','vip.description','referral.title','referral.subtitle','referral.share_text','referral.description','contact.description') ORDER BY key,locale").all<any>(),
    env.DB!.prepare('SELECT * FROM social_links ORDER BY sort_order,id').all<any>(),
    env.DB!.prepare('SELECT * FROM specialists ORDER BY sort_order,id').all<any>(),
    env.DB!.prepare('SELECT * FROM feature_flags ORDER BY key').all<any>(),
