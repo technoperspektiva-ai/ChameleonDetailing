@@ -397,15 +397,17 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   await setSetting(env,'desktop.kanban_labels',JSON.stringify(next));await log(env,staff.user_id,'desktop.kanban.labels','settings','desktop.kanban_labels',null,next);return reply({ok:true,labels:next});
  }
  if(url.pathname==='/api/desktop/dashboard'&&request.method==='GET'){
-  const [newOrders,confirmed,inWork,readyCars,unpaid,revenue]=await Promise.all([
+  const target=normalizeCurrency(url.searchParams.get('currency')||await getSetting(env,'reporting_currency','PLN'));
+  const [newOrders,confirmed,inWork,readyCars,unpaid,revenueRows]=await Promise.all([
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE date(created_at)=date('now') AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE status='CONFIRMED' AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE status IN ('IN_PROGRESS','CAR_ACCEPTED','INSPECTION') AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE status IN ('READY','COMPLETED') AND payment_status<>'PAID' AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE payment_status<>'PAID' AND status NOT IN ('REJECTED','CANCELLED') AND staff_deleted_at IS NULL").first<any>(),
-   env.DB!.prepare("SELECT COALESCE(SUM(COALESCE(final_job_price,calculated_price)),0) n FROM service_requests WHERE payment_status='PAID' AND date(COALESCE(completed_at,created_at))=date('now') AND staff_deleted_at IS NULL").first<any>()
+   env.DB!.prepare("SELECT COALESCE(final_job_price,calculated_price,0) amount,currency FROM service_requests WHERE payment_status='PAID' AND date(COALESCE(completed_at,created_at))=date('now') AND staff_deleted_at IS NULL").all<any>()
   ]);
-  return reply({kpi:{newOrders:Number(newOrders?.n||0),confirmed:Number(confirmed?.n||0),inWork:Number(inWork?.n||0),ready:Number(readyCars?.n||0),unpaid:Number(unpaid?.n||0),revenue:Number(revenue?.n||0)},currency:await getSetting(env,'reporting_currency','PLN'),serviceStatus:await getSetting(env,'business_status_override','AUTO')});
+  const revenue=(revenueRows.results||[]).reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.amount||0),normalizeCurrency(x.currency||'PLN'),target),0);
+  return reply({kpi:{newOrders:Number(newOrders?.n||0),confirmed:Number(confirmed?.n||0),inWork:Number(inWork?.n||0),ready:Number(readyCars?.n||0),unpaid:Number(unpaid?.n||0),revenue:Math.round(revenue*100)/100},currency:target,serviceStatus:await getSetting(env,'business_status_override','AUTO')});
  }
  if(url.pathname==='/api/desktop/payments'&&request.method==='GET'){
   if(!perms.financial_access)return reply({error:'Financial access is disabled.'},403);
