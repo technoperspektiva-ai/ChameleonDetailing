@@ -100,7 +100,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
      <div className="premium-timeline">
       {scheduled.map((x,index)=><button key={x.id} className="premium-timeline-row" onClick={()=>goto('orders/'+x.id)}>
        <div className="premium-time"><span>{businessTime(x.scheduled_for!)}</span><i className={working.has(x.status)?'is-live':''}/>{index<scheduled.length-1&&<b/>}</div>
-       <div className="premium-car-thumb"><CarFront/></div>
+       <div className="premium-car-thumb"><img src={vehicleImage(x.body_type)} alt="" aria-hidden="true"/></div>
        <div className="premium-job-main"><strong>{[x.brand,x.model].filter(Boolean).join(' ')||'CHD-'+x.id}</strong><span>{x.service_title||x.service_slug||'Детейлінг'}{x.plate?' · '+x.plate:''}</span></div>
        <StatusBadge status={x.status}/>
        <div className="premium-assignee">{x.responsible_name?<><span>{initials(x.responsible_name)}</span><small>{x.responsible_name}</small></>:<small>Без майстра</small>}</div>
