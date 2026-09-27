@@ -891,3 +891,20 @@ nav button.active::after{bottom:1px}
 /* Internal desktop adjustment reasons are intentionally not rendered in the
    client Mini App. The class remains only for backwards-safe styling. */
 .order-adjustment-note{display:none!important}
+
+
+/* v1.2.14 — mutually exclusive detailing service states */
+.choice.disabled,
+.choice:disabled{
+ opacity:.48;
+ cursor:not-allowed;
+ border-color:color-mix(in srgb,var(--neon-color) 8%,var(--line))!important;
+ box-shadow:none!important;
+ filter:saturate(.55);
+}
+.choice.disabled .choice-icon,
+.choice:disabled .choice-icon{opacity:.72}
+.choice.disabled i,
+.choice:disabled i{color:#7f8a7c!important}
+.choice.disabled small,
+.choice:disabled small{color:#8c9689!important}
