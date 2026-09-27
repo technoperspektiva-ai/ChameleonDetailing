@@ -5,7 +5,7 @@ import {sendMessage,sendPhoto,tgApi,uploadPhoto} from './telegram';
 import {buildReport,buildStaffMemberReport,type ReportType,type ReportLocale} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
-import {grantReferralRewardsIfEligible} from './referrals';
+import {grantReferralRewardsIfEligible,grantReferralRewardsForCurrentState} from './referrals';
 
 export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'broadcast_forced_access'|'reports_access'|'financial_access'|'clients_access'|'order_deadline_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
@@ -472,6 +472,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   if(changes.length)await notifyClientOrderChanges(env,id,changes);
   if(String(old.status)!==String(now?.status)&&String(now?.status)==='COMPLETED')await grantReferralRewardsIfEligible(env,id,'COMPLETED');
   if(String(old.payment_status)!=='PAID'&&String(now?.payment_status)==='PAID')await grantReferralRewardsIfEligible(env,id,'PAID');
+  await grantReferralRewardsForCurrentState(env,id);
   return reply({ok:true,order:now});
  }
  const orderSelectionMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)\/catalog-selection$/);
