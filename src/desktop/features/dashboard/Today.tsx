@@ -17,7 +17,7 @@ function initials(value:string){
  return value.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'CH';
 }
 
-function vehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('suv')?'suv':raw.includes('van')||raw.includes('bus')?'van':raw.includes('hatch')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp'}
+function vehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp'}
 
 function monthGrid(date:Date,orders:Order[]){
  const first=new Date(date.getFullYear(),date.getMonth(),1);
