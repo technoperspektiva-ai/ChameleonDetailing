@@ -6,6 +6,7 @@ import {
  Monitor,Tablet,X,Check,AlertTriangle,Sun,Moon
 } from 'lucide-react';
 import './desktop.css';
+import {desktopLocales,desktopLocaleLabels,desktopLocaleNames,desktopT,normalizeDesktopLocale,type DesktopLocale} from './desktopLocales';
 
 type Role='OWNER'|'ADMIN'|'MANAGER';
 type Bootstrap={user:{id:number;telegramId:number;firstName:string;username?:string;role:Role};permissions:Record<string,boolean>;mode:string;workspace:{version:number;config:any};personal:any};
@@ -35,6 +36,8 @@ export function DesktopApp(){
  const phoneBlocked=useMemo(()=>isPhoneClient(),[]);
  const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard');
  const [theme,setTheme]=useState<'dark'|'light'>(()=>localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark');
+ const [locale,setLocale]=useState<DesktopLocale>(()=>normalizeDesktopLocale(localStorage.getItem('chameleon.desktop.locale')||navigator.language));
+ const t=(key:string)=>desktopT(locale,key);
  const load=async()=>{
   setLoading(true);setError('');
   try{
@@ -47,6 +50,7 @@ export function DesktopApp(){
    }
    const b=await api('/api/desktop/bootstrap') as Bootstrap;setBoot(b);
    const storedTheme=b.personal?.theme==='light'?'light':b.personal?.theme==='dark'?'dark':localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark';setTheme(storedTheme);
+   const storedLocale=normalizeDesktopLocale(b.personal?.locale||localStorage.getItem('chameleon.desktop.locale')||navigator.language);setLocale(storedLocale);
    const hash=location.hash.replace(/^#/,'') as Page;if(hash&&labels[hash])setPage(hash);else setPage((b.workspace?.config?.defaultPage||'dashboard') as Page);
   }catch(e:any){setError(String(e?.message||e));setBoot(null)}
   finally{setLoading(false)}
@@ -54,9 +58,10 @@ export function DesktopApp(){
  useEffect(()=>{if(!phoneBlocked)load();else setLoading(false)},[phoneBlocked]);
  useEffect(()=>{location.hash=page==='dashboard'?'':page},[page]);
  useEffect(()=>{document.documentElement.dataset.desktopTheme=theme;localStorage.setItem('chameleon.desktop.theme',theme)},[theme]);
- if(phoneBlocked)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>Вхід з телефону заблокований.</p><p className="desk-muted">Відкрийте панель на PC, Mac, ноутбуці або iPad / планшеті.</p></div>;
- if(loading)return <div className="desk-state"><div className="desk-spinner"/><h1>Chameleon Control Center</h1><p>Завантаження робочого простору…</p></div>;
- if(!boot)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>{error||'Сесія недоступна.'}</p><p className="desk-muted">Відкрийте Telegram Bot та надішліть команду <b>/desktop</b>, щоб отримати нове одноразове посилання.</p></div>;
+ useEffect(()=>{document.documentElement.lang=locale;localStorage.setItem('chameleon.desktop.locale',locale)},[locale]);
+ if(phoneBlocked)return <div className="desk-state"><AlertTriangle/><h1>{t('blocked.title')}</h1><p>{t('blocked.phone')}</p><p className="desk-muted">{t('blocked.device')}</p></div>;
+ if(loading)return <div className="desk-state"><div className="desk-spinner"/><h1>Chameleon Control Center</h1><p>{t('loading')}</p></div>;
+ if(!boot)return <div className="desk-state"><AlertTriangle/><h1>{t('blocked.title')}</h1><p>{error||t('session.error')}</p><p className="desk-muted">{t('session.hint')}</p></div>;
  const logout=async()=>{try{await post('/api/desktop/logout',{})}catch{}localStorage.removeItem('chameleon.desktop.session');setBoot(null)};
  const allowed=(id:string)=>{
   if(id==='workspace')return !!boot.permissions.workspace_editor;
@@ -69,49 +74,53 @@ export function DesktopApp(){
   return true;
  };
  const sidebar=(boot.workspace?.config?.sidebar||[]).filter((x:any)=>x&&labels[x.id as Page]&&allowed(x.id)&&(!x.roles||x.roles.includes(boot.user.role)));
- const toggleTheme=async()=>{const next=theme==='dark'?'light':'dark';setTheme(next);const personal={...(boot.personal||{}),theme:next};setBoot({...boot,personal});try{await post('/api/desktop/personal-workspace',personal,'PUT')}catch{}};
+ const savePersonal=async(next:any)=>{const personal={...(boot.personal||{}),...next};setBoot({...boot,personal});try{await post('/api/desktop/personal-workspace',personal,'PUT')}catch{}};
+ const toggleTheme=async()=>{const next=theme==='dark'?'light':'dark';setTheme(next);await savePersonal({theme:next,locale})};
+ const changeLocale=async(next:DesktopLocale)=>{setLocale(next);await savePersonal({locale:next,theme})};
  return <div className={'desktop-shell theme-'+theme} data-theme={theme}>
   <main className="desktop-main">
-   <header className="desk-topbar"><div className="desk-top-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><small>CHAMELEON DETAILING</small><h1>{labels[page]}</h1></div></div><div className="desk-top-actions"><button className="desk-theme-toggle" onClick={toggleTheme} title={theme==='dark'?'Світла тема':'Темна тема'}>{theme==='dark'?<Sun/>:<Moon/>}<span>{theme==='dark'?'Light':'Dark'}</span></button><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div><div className="desk-user-top"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}</span></div><button onClick={logout} title="Вийти"><LogOut/></button></div></div></header>
-   {boot.mode==='READ_ONLY'&&<div className="desk-banner warning">Read Only: перегляд доступний, зміни заблоковані backend.</div>}
+   <header className="desk-topbar"><div className="desk-top-brand"><img src="/brand/chameleon-logo.webp" alt=""/><div><small>CHAMELEON DETAILING</small><h1>{t('page.'+page)}</h1></div></div><div className="desk-top-actions"><label className="desk-language-select" title={t('common.language')}><span>{desktopLocaleLabels[locale]}</span><select value={locale} onChange={e=>changeLocale(e.target.value as DesktopLocale)}>{desktopLocales.map(l=><option value={l} key={l}>{desktopLocaleLabels[l]} · {desktopLocaleNames[l]}</option>)}</select></label><button className="desk-theme-toggle" onClick={toggleTheme} title={theme==='dark'?t('theme.light'):t('theme.dark')}>{theme==='dark'?<Sun/>:<Moon/>}<span>{theme==='dark'?t('theme.light'):t('theme.dark')}</span></button><div className="desk-mode"><i className={'mode-'+boot.mode.toLowerCase().replace('_','-')}/><span>{boot.mode.replace('_',' ')}</span></div><div className="desk-user-top"><div className="desk-avatar">{(boot.user.firstName||'C')[0]}</div><div><b>{boot.user.firstName}</b><span>{boot.user.role}</span></div><button onClick={logout} title={t('logout')}><LogOut/></button></div></div></header>
+   {boot.mode==='READ_ONLY'&&<div className="desk-banner warning">{t('readonly')}</div>}
    <div className="desktop-content">
-    {page==='dashboard'&&<Dashboard boot={boot} goto={setPage}/>}
-    {page==='orders'&&<Orders/>}
+    {page==='dashboard'&&<Dashboard boot={boot} goto={setPage} locale={locale}/>}
+    {page==='orders'&&<Orders locale={locale}/>}
     {page==='sales'&&<Sales/>}
-    {page==='cars'&&<SimpleTable endpoint="/api/desktop/cars" keyName="cars" title="Cars CRM" type="cars"/>}
-    {page==='clients'&&<SimpleTable endpoint="/api/desktop/clients" keyName="clients" title="Clients CRM" type="clients"/>}
+    {page==='cars'&&<SimpleTable endpoint="/api/desktop/cars" keyName="cars" title={t('page.cars')+' CRM'} type="cars"/>}
+    {page==='clients'&&<SimpleTable endpoint="/api/desktop/clients" keyName="clients" title={t('page.clients')+' CRM'} type="clients"/>}
     {page==='calendar'&&<CalendarView/>}
-    {page==='services'&&<ServicesCatalog/>}
+    {page==='services'&&<ServicesCatalog locale={locale}/>}
     {page==='payments'&&<Payments/>}
     {page==='broadcasts'&&<Broadcasts/>}
     {page==='analytics'&&<Analytics/>}
     {page==='reports'&&<Reports/>}
-    {page==='staff'&&<SimpleTable endpoint="/api/desktop/staff" keyName="staff" title="Staff" type="staff"/>}
-    {page==='audit'&&<SimpleTable endpoint="/api/desktop/audit" keyName="events" title="Audit Log" type="audit"/>}
+    {page==='staff'&&<SimpleTable endpoint="/api/desktop/staff" keyName="staff" title={t('page.staff')} type="staff"/>}
+    {page==='audit'&&<SimpleTable endpoint="/api/desktop/audit" keyName="events" title={t('page.audit')} type="audit"/>}
     {page==='workspace'&&<WorkspaceEditor boot={boot} onPublished={load}/>}
     {page==='settings'&&<DesktopSettings boot={boot} reload={load}/>}
    </div>
-   <nav className="desktop-bottom-nav" aria-label="Desktop navigation"><div className="desktop-bottom-scroll">{sidebar.map((x:any)=>{const id=x.id as Page,I=icons[id]||ChevronRight;return <button key={id} className={page===id?'active':''} onClick={()=>setPage(id)} title={(x.group||'')+' · '+(x.label||labels[id])}><I/><span>{x.label||labels[id]}</span><small>{x.group||''}</small></button>})}</div></nav>
+   <nav className="desktop-bottom-nav" aria-label="Desktop navigation"><div className="desktop-bottom-scroll">{sidebar.map((x:any)=>{const id=x.id as Page,I=icons[id]||ChevronRight;return <button key={id} className={page===id?'active':''} onClick={()=>setPage(id)} title={(x.group||'')+' · '+(x.label||labels[id])}><I/><span>{t('page.'+id)}</span><small>{x.group||''}</small></button>})}</div></nav>
   </main>
  </div>
 }
 
 function Panel({title,children,action}:{title:string;children:any;action?:any}){return <section className="desk-panel"><div className="desk-panel-head"><h2>{title}</h2>{action}</div>{children}</section>}
-function Dashboard({boot,goto}:{boot:Bootstrap;goto:(p:Page)=>void}){
+function Dashboard({boot,goto,locale}:{boot:Bootstrap;goto:(p:Page)=>void;locale:DesktopLocale}){
+ const t=(key:string)=>desktopT(locale,key);
  const [data,setData]=useState<any>(null);useEffect(()=>{api('/api/desktop/dashboard').then(setData).catch(()=>{})},[]);
- const k=data?.kpi||{};const cards=[['Нові заявки',k.newOrders||0],['Підтверджені',k.confirmed||0],['Авто в роботі',k.inWork||0],['Готові',k.ready||0],['Очікують оплату',k.unpaid||0],['Виручка сьогодні',money(k.revenue||0,data?.currency||'PLN')]];
+ const k=data?.kpi||{};const cards=[[t('dashboard.new'),k.newOrders||0],[t('dashboard.confirmed'),k.confirmed||0],[t('dashboard.work'),k.inWork||0],[t('dashboard.ready'),k.ready||0],[t('dashboard.unpaid'),k.unpaid||0],[t('dashboard.revenue'),money(k.revenue||0,data?.currency||'PLN')]];
  return <><div className="desk-kpis">{cards.map(([a,b])=><div className="desk-kpi" key={String(a)}><small>{a}</small><strong>{b}</strong></div>)}</div>
- <div className="desk-grid-2"><Panel title="Швидкі дії"><div className="desk-quick">{[['orders','Нова / активна заявка'],['sales','Знайти замовлення'],['cars','Автомобілі'],['calendar','Розклад'],['broadcasts','Розсилки'],['reports','Звіти']].filter(([id])=>id!=='sales'||boot.permissions.sales_access).filter(([id])=>id!=='broadcasts'||boot.permissions.broadcast_access).filter(([id])=>id!=='reports'||boot.permissions.reports_access).map(([id,label])=><button key={id} onClick={()=>goto(id as Page)}>{label}<ChevronRight/></button>)}</div></Panel>
- <Panel title="Система"><div className="desk-system"><p><span>Desktop</span><b>{boot.mode}</b></p><p><span>Роль</span><b>{boot.user.role}</b></p><p><span>Workspace</span><b>v{boot.workspace.version}</b></p></div></Panel></div></>
+ <div className="desk-grid-2"><Panel title={t('dashboard.quick')}><div className="desk-quick">{[['orders',t('quick.order')],['sales',t('quick.search')],['cars',t('quick.cars')],['calendar',t('quick.schedule')],['broadcasts',t('quick.broadcasts')],['reports',t('quick.reports')]].filter(([id])=>id!=='sales'||boot.permissions.sales_access).filter(([id])=>id!=='broadcasts'||boot.permissions.broadcast_access).filter(([id])=>id!=='reports'||boot.permissions.reports_access).map(([id,label])=><button key={id} onClick={()=>goto(id as Page)}>{label}<ChevronRight/></button>)}</div></Panel>
+ <Panel title={t('dashboard.system')}><div className="desk-system"><p><span>Desktop</span><b>{boot.mode}</b></p><p><span>{t('system.role')}</span><b>{boot.user.role}</b></p><p><span>Workspace</span><b>v{boot.workspace.version}</b></p></div></Panel></div></>
 }
 
-function Orders(){
+function Orders({locale}:{locale:DesktopLocale}){
+ const t=(key:string)=>desktopT(locale,key);
  const [orders,setOrders]=useState<any[]>([]),[q,setQ]=useState(''),[status,setStatus]=useState(''),[view,setView]=useState<'table'|'kanban'>('table'),[selected,setSelected]=useState<any>(null),[busy,setBusy]=useState(false);
  const load=async()=>{setBusy(true);try{const d=await api('/api/desktop/orders?q='+encodeURIComponent(q)+'&status='+encodeURIComponent(status));setOrders(d.orders||[])}finally{setBusy(false)}};
  useEffect(()=>{load()},[]);
  const statuses=['','REQUESTED','CONFIRMED','IN_PROGRESS','READY','COMPLETED','CANCELLED'];
- return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder="Телефон, CHD-номер, @username, номер авто…"/></div><select value={status} onChange={e=>setStatus(e.target.value)}>{statuses.map(s=><option value={s} key={s}>{s||'Всі статуси'}</option>)}</select><button onClick={load}><RefreshCw className={busy?'spin':''}/>Оновити</button><div className="desk-segment"><button className={view==='table'?'active':''} onClick={()=>setView('table')}>Table</button><button className={view==='kanban'?'active':''} onClick={()=>setView('kanban')}>Kanban</button></div></div>
- {view==='table'?<Panel title={'Замовлення · '+orders.length}><div className="desk-table-wrap"><table><thead><tr><th>№</th><th>Клієнт</th><th>Телефон</th><th>Авто</th><th>Дата</th><th>Статус</th><th>Ціна</th><th>Оплата</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} onClick={()=>setSelected(o)}><td><b>CHD-{o.id}</b></td><td>{o.first_name||o.username||'—'}</td><td>{o.phone_number||'—'}</td><td>{[o.brand,o.model,o.plate].filter(Boolean).join(' · ')||'—'}</td><td>{dt(o.scheduled_for||o.created_at)}</td><td><span className="desk-status">{o.status}</span></td><td>{money(o.final_job_price??o.calculated_price,o.currency)}</td><td>{o.payment_status}</td></tr>)}</tbody></table></div></Panel>:<Kanban orders={orders} select={setSelected} changed={load}/>}
+ return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&load()} placeholder={t('orders.search')}/></div><select value={status} onChange={e=>setStatus(e.target.value)}>{statuses.map(s=><option value={s} key={s}>{s||t('common.all')}</option>)}</select><button onClick={load}><RefreshCw className={busy?'spin':''}/>{t('common.refresh')}</button><div className="desk-segment"><button className={view==='table'?'active':''} onClick={()=>setView('table')}>Table</button><button className={view==='kanban'?'active':''} onClick={()=>setView('kanban')}>Kanban</button></div></div>
+ {view==='table'?<Panel title={t('orders.title')+' · '+orders.length}><div className="desk-table-wrap"><table><thead><tr><th>№</th><th>{t('orders.client')}</th><th>{t('orders.phone')}</th><th>{t('orders.car')}</th><th>{t('orders.date')}</th><th>{t('orders.status')}</th><th>{t('orders.price')}</th><th>{t('orders.payment')}</th></tr></thead><tbody>{orders.map(o=><tr key={o.id} onClick={()=>setSelected(o)}><td><b>CHD-{o.id}</b></td><td>{o.first_name||o.username||'—'}</td><td>{o.phone_number||'—'}</td><td>{[o.brand,o.model,o.plate].filter(Boolean).join(' · ')||'—'}</td><td>{dt(o.scheduled_for||o.created_at)}</td><td><span className="desk-status">{o.status}</span></td><td>{money(o.final_job_price??o.calculated_price,o.currency)}</td><td>{o.payment_status}</td></tr>)}</tbody></table></div></Panel>:<Kanban orders={orders} select={setSelected} changed={load}/>}
  {selected&&<OrderDrawer id={selected.id} close={()=>setSelected(null)} changed={load}/>}</>
 }
 function Kanban({orders,select,changed}:{orders:any[];select:(o:any)=>void;changed:()=>void}){
@@ -139,15 +148,16 @@ function Sales(){
  const search=async()=>{setBusy(true);try{const d=await api('/api/desktop/search?q='+encodeURIComponent(q));setR(d.results||[])}finally{setBusy(false)}};
  return <><Panel title="Sales Search"><div className="desk-sales-search"><Search/><input autoFocus value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="+380…, CHD-10482, @username, номер авто"/><button onClick={search}>{busy?'Пошук…':'Знайти'}</button></div></Panel><div className="desk-search-results">{r.map(x=><button key={x.id} onClick={()=>setOpen(x.id)}><div><b>CHD-{x.id}</b><span>{x.first_name||x.username||'Client'} · {x.phone_number||'—'}</span><small>{[x.brand,x.model,x.plate].filter(Boolean).join(' · ')}</small></div><div><strong>{money(x.final_job_price??x.calculated_price,x.currency)}</strong><span className="desk-status">{x.status}</span></div></button>)}</div>{open&&<OrderDrawer id={open} close={()=>setOpen(null)} changed={search}/>}</>
 }
-function ServicesCatalog(){
+function ServicesCatalog({locale}:{locale:DesktopLocale}){
+ const t=(key:string)=>desktopT(locale,key);
  const [data,setData]=useState<{services:any[];options:any[];total:number}>({services:[],options:[],total:0}),[q,setQ]=useState('');
  const load=()=>api('/api/desktop/services').then(d=>setData({services:d.services||[],options:d.options||[],total:Number(d.total||0)})).catch(()=>{});
  useEffect(()=>{load()},[]);
  const term=q.trim().toLowerCase(),main=data.services.filter(x=>!term||String(x.title+' '+x.slug+' '+x.category).toLowerCase().includes(term)),extras=data.options.filter(x=>!term||String(x.title+' '+x.slug+' '+x.service_slugs).toLowerCase().includes(term));
- return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Пошук по всіх послугах та додаткових опціях…"/></div><button onClick={load}><RefreshCw/>Оновити</button><span className="desk-catalog-count">Всього: <b>{data.total}</b></span></div>
- <div className="service-catalog-summary"><div><Wrench/><span>Основні послуги</span><b>{data.services.length}</b></div><div><Check/><span>Додаткові опції</span><b>{data.options.length}</b></div><p>Desktop показує той самий каталог, що й Bot Panel: основні послуги + усі додаткові опції калькулятора.</p></div>
- <Panel title={'Основні послуги · '+main.length}><div className="desk-table-wrap"><table><thead><tr><th>Послуга</th><th>Категорія</th><th>Ціна</th><th>Валюта</th><th>Тривалість</th><th>Стан</th></tr></thead><tbody>{main.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{x.category||'—'}</td><td>{Number(x.base_price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.duration_min||0} min</td><td><span className="desk-status">{x.archived?'ARCHIVED':x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
- <Panel title={'Додаткові опції · '+extras.length}><div className="desk-table-wrap"><table><thead><tr><th>Опція</th><th>Для послуг</th><th>Ціна</th><th>Валюта</th><th>Тип ціни</th><th>Стан</th></tr></thead><tbody>{extras.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{String(x.service_slugs||'').split(',').filter(Boolean).join(', ')||'Усі / без привʼязки'}</td><td>{Number(x.price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.pricing_type||'FIXED'}</td><td><span className="desk-status">{x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel></>
+ return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder={t('services.search')}/></div><button onClick={load}><RefreshCw/>{t('common.refresh')}</button><span className="desk-catalog-count">{t('services.total')}: <b>{data.total}</b></span></div>
+ <div className="service-catalog-summary"><div><Wrench/><span>{t('services.main')}</span><b>{data.services.length}</b></div><div><Check/><span>{t('services.options')}</span><b>{data.options.length}</b></div><p>{t('services.sync')}</p></div>
+ <Panel title={t('services.main')+' · '+main.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('page.services')}</th><th>{t('services.category')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.duration')}</th><th>{t('services.state')}</th></tr></thead><tbody>{main.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{x.category||'—'}</td><td>{Number(x.base_price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.duration_min||0} min</td><td><span className="desk-status">{x.archived?'ARCHIVED':x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
+ <Panel title={t('services.options')+' · '+extras.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('services.options')}</th><th>{t('services.for')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.pricing')}</th><th>{t('services.state')}</th></tr></thead><tbody>{extras.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{String(x.service_slugs||'').split(',').filter(Boolean).join(', ')||t('services.unbound')}</td><td>{Number(x.price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.pricing_type||'FIXED'}</td><td><span className="desk-status">{x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel></>
 }
 
 function SimpleTable({endpoint,keyName,title,type}:{endpoint:string;keyName:string;title:string;type:string}){
