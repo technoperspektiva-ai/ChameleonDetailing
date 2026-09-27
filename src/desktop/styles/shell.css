@@ -63,3 +63,119 @@
  .desktop-content{padding:16px}
  .desk-topbar{padding:12px 14px}
 }
+
+
+/* DESKTOP ROUTE ISOLATION */
+html.desktop-route{
+ background:#070807!important;
+ color-scheme:dark;
+ --neon-color:#ddb86f;
+}
+html.desktop-route body{
+ margin:0;
+ min-width:0;
+ min-height:100dvh;
+ background:
+  radial-gradient(circle at 74% -12%,rgba(221,184,111,.07),transparent 30%),
+  linear-gradient(180deg,#080908 0%,#070807 100%)!important;
+ color:var(--text)!important;
+ font-size:14px!important;
+ overflow-x:auto;
+}
+html.desktop-route body::before,
+html.desktop-route .seasonal-decor,
+html.desktop-route .app::before{
+ display:none!important;
+ content:none!important;
+ opacity:0!important;
+}
+html.desktop-route #root{
+ min-height:100dvh;
+ background:transparent!important;
+}
+html.desktop-route .desktop-shell{
+ position:relative;
+ z-index:1;
+ background:transparent!important;
+}
+
+/* styles.css contains Mini App nav rules; Desktop navigation must never inherit them */
+html.desktop-route .desktop-sidebar nav{
+ position:static!important;
+ inset:auto!important;
+ left:auto!important;
+ right:auto!important;
+ top:auto!important;
+ bottom:auto!important;
+ transform:none!important;
+ width:auto!important;
+ max-width:none!important;
+ display:flex!important;
+ grid-template-columns:none!important;
+ flex-direction:column!important;
+ gap:20px!important;
+ padding:0!important;
+ margin:0!important;
+ background:transparent!important;
+ backdrop-filter:none!important;
+ -webkit-backdrop-filter:none!important;
+ border:0!important;
+ z-index:auto!important;
+}
+html.desktop-route .desktop-sidebar nav .desk-nav-group{
+ width:100%;
+}
+html.desktop-route .desktop-sidebar nav button{
+ position:relative!important;
+ min-height:42px!important;
+ display:flex!important;
+ grid-template-columns:none!important;
+ place-items:initial!important;
+ align-content:initial!important;
+ justify-content:flex-start!important;
+ gap:12px!important;
+ padding:10px 12px!important;
+ font-size:13px!important;
+ line-height:1.2!important;
+ text-align:left!important;
+}
+html.desktop-route .desktop-sidebar nav button::after{
+ content:none!important;
+ display:none!important;
+}
+html.desktop-route .desktop-sidebar nav button.active{
+ color:#f5e6c6!important;
+}
+
+/* remove the Mini App's green visual language from Desktop */
+html.desktop-route .desk-brand img{
+ filter:grayscale(1) sepia(1) saturate(2.7) hue-rotate(352deg) brightness(1.08) contrast(1.04)!important;
+}
+html.desktop-route .desktop-main,
+html.desktop-route .desktop-content{
+ color:var(--text);
+}
+html.desktop-route .desktop-content{
+ background:transparent!important;
+}
+html.desktop-route .desk-topbar{
+ background:rgba(7,8,7,.88)!important;
+ border-bottom-color:var(--border)!important;
+}
+html.desktop-route .desktop-sidebar{
+ background:linear-gradient(180deg,rgba(10,11,10,.99),rgba(5,6,5,.995))!important;
+ border-right-color:var(--border)!important;
+}
+html.desktop-route .desktop-shell h1,
+html.desktop-route .desktop-shell h2,
+html.desktop-route .desktop-shell h3,
+html.desktop-route .desktop-shell b,
+html.desktop-route .desktop-shell strong{
+ color:var(--text);
+}
+html.desktop-route .desktop-shell p,
+html.desktop-route .desktop-shell label,
+html.desktop-route .desktop-shell span,
+html.desktop-route .desktop-shell small{
+ text-shadow:none;
+}
