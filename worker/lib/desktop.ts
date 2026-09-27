@@ -186,18 +186,38 @@ const auth=async(env:Env,request:Request)=>{
 };
 const writable=async(env:Env)=>{const m=await mode(env);if(m==='READ_ONLY')throw new Error('Desktop is in Read Only mode.');if(m==='MAINTENANCE')throw new Error('Desktop is under maintenance.');if(m==='DISABLED')throw new Error('Desktop is disabled.');};
 
+const deriveOrderDuration=async(env:Env,id:number)=>{
+ const row=await env.DB!.prepare(`SELECT COALESCE(NULLIF((SELECT SUM(s.duration_min) FROM services s WHERE s.slug IN (
+  SELECT value FROM json_each(CASE WHEN json_valid(sr.services_json) THEN sr.services_json ELSE json_array(sr.service_slug) END)
+  UNION SELECT service_slug FROM service_request_extras WHERE request_id=sr.id
+ )),0),60) duration FROM service_requests sr WHERE sr.id=?`).bind(id).first<any>();
+ return Math.max(5,Math.min(10080,Number(row?.duration||60)));
+};
+const syncOrderTiming=async(env:Env,id:number,forceAuto=false)=>{
+ const row=await env.DB!.prepare('SELECT scheduled_for,estimated_duration_min,duration_overridden FROM service_requests WHERE id=?').bind(id).first<any>();
+ if(!row)return null;
+ const overridden=!forceAuto&&Number(row.duration_overridden||0)===1;
+ const duration=overridden?Math.max(5,Math.min(10080,Number(row.estimated_duration_min||60))):await deriveOrderDuration(env,id);
+ const start=row.scheduled_for?Date.parse(String(row.scheduled_for)):NaN;
+ const deadline=Number.isFinite(start)?new Date(start+duration*60000).toISOString():null;
+ await env.DB!.prepare('UPDATE service_requests SET estimated_duration_min=?,duration_overridden=?,deadline_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(duration,overridden?1:0,deadline,id).run();
+ return {duration,deadline,overridden};
+};
+
 const orderRows=async(env:Env,search='',status='')=>{
  const args:any[]=[];let where="sr.staff_deleted_at IS NULL";
  if(search){where+=" AND (CAST(sr.id AS TEXT) LIKE ? OR lower(COALESCE(u.username,'')) LIKE lower(?) OR COALESCE(cp.phone_number,'') LIKE ? OR lower(COALESCE(c.plate,'')) LIKE lower(?) OR lower(COALESCE(c.brand,'')||' '||COALESCE(c.model,'')) LIKE lower(?) OR lower(COALESCE(u.first_name,'')||' '||COALESCE(u.last_name,'')) LIKE lower(?))";const q='%'+search.replace(/^CHD-/i,'').replace(/^@/,'')+'%';args.push(q,q,q,q,q,q)}
  if(status){where+=' AND sr.status=?';args.push(status)}
- const q="SELECT sr.id,sr.user_id,sr.responsible_staff_id,cp.client_tier,(SELECT title FROM service_translations WHERE service_id=(SELECT id FROM services WHERE slug=sr.service_slug) AND locale='uk' LIMIT 1) service_title,COALESCE(NULLIF(TRIM(sr.status),''),'REQUESTED') status,sr.payment_status,sr.request_type,sr.scheduled_for,sr.created_at,sr.completed_at,sr.final_job_price,sr.calculated_price,sr.currency,sr.service_slug,sr.services_json,sr.options_json,sr.car_id,sr.staff_note,sr.accelerated,sr.accelerated_surcharge,u.first_name,u.username,u.telegram_user_id,cp.phone_number,c.name car_name,c.brand,c.model,c.modification,c.body_type,c.plate,c.has_ceramic,rs.first_name responsible_name FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_profiles cp ON cp.user_id=u.id LEFT JOIN client_cars c ON c.id=sr.car_id LEFT JOIN users rs ON rs.id=sr.responsible_staff_id WHERE "+where+" ORDER BY sr.id DESC LIMIT 250";
+ const q="SELECT sr.id,sr.user_id,sr.responsible_staff_id,cp.client_tier,(SELECT title FROM service_translations WHERE service_id=(SELECT id FROM services WHERE slug=sr.service_slug) AND locale='uk' LIMIT 1) service_title,COALESCE(NULLIF(TRIM(sr.status),''),'REQUESTED') status,sr.payment_status,sr.request_type,sr.scheduled_for,sr.created_at,sr.completed_at,sr.final_job_price,sr.calculated_price,sr.currency,sr.service_slug,sr.services_json,sr.options_json,sr.car_id,sr.staff_note,sr.accelerated,sr.accelerated_surcharge,COALESCE(NULLIF(sr.estimated_duration_min,0),NULLIF((SELECT SUM(s.duration_min) FROM services s WHERE s.slug IN (SELECT value FROM json_each(CASE WHEN json_valid(sr.services_json) THEN sr.services_json ELSE json_array(sr.service_slug) END) UNION SELECT service_slug FROM service_request_extras WHERE request_id=sr.id)),0),60) estimated_duration_min,COALESCE(sr.deadline_at,CASE WHEN sr.scheduled_for IS NOT NULL THEN datetime(sr.scheduled_for,'+' || (COALESCE(NULLIF(sr.estimated_duration_min,0),NULLIF((SELECT SUM(s.duration_min) FROM services s WHERE s.slug IN (SELECT value FROM json_each(CASE WHEN json_valid(sr.services_json) THEN sr.services_json ELSE json_array(sr.service_slug) END) UNION SELECT service_slug FROM service_request_extras WHERE request_id=sr.id)),0),60)) || ' minutes') END) deadline_at,sr.duration_overridden,u.first_name,u.username,u.telegram_user_id,cp.phone_number,c.name car_name,c.brand,c.model,c.modification,c.body_type,c.plate,c.has_ceramic,rs.first_name responsible_name FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_profiles cp ON cp.user_id=u.id LEFT JOIN client_cars c ON c.id=sr.car_id LEFT JOIN users rs ON rs.id=sr.responsible_staff_id WHERE "+where+" ORDER BY sr.id DESC LIMIT 250";
  const r=await env.DB!.prepare(q).bind(...args).all<any>();return r.results||[];
 };
 const orderDetail=async(env:Env,id:number)=>{
  const row=await env.DB!.prepare("SELECT sr.*,u.first_name,u.last_name,u.username,u.telegram_user_id,cp.phone_number,cp.notes client_notes,c.name car_name,c.brand,c.model,c.modification,c.body_type,c.plate,c.has_ceramic,c.owner_phone,rs.first_name responsible_name FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_profiles cp ON cp.user_id=u.id LEFT JOIN client_cars c ON c.id=sr.car_id LEFT JOIN users rs ON rs.id=sr.responsible_staff_id WHERE sr.id=? AND sr.staff_deleted_at IS NULL").bind(id).first<any>();
  if(!row)return null;
  const ex=await env.DB!.prepare('SELECT * FROM service_request_extras WHERE request_id=? ORDER BY id').bind(id).all<any>();
- return {...row,extras:ex.results||[]};
+ const autoDuration=await deriveOrderDuration(env,id),duration=Math.max(5,Math.min(10080,Number(row.estimated_duration_min||autoDuration)));
+ const start=row.scheduled_for?Date.parse(String(row.scheduled_for)):NaN,timingDeadline=Number.isFinite(start)?new Date(start+duration*60000).toISOString():null;
+ return {...row,estimated_duration_min:duration,deadline_at:row.deadline_at||timingDeadline,duration_overridden:Number(row.duration_overridden||0),extras:ex.results||[]};
 };
 const campaignRecipients=async(env:Env,a:any)=>{
  const type=String(a?.type||'all');let sql="SELECT DISTINCT u.id,u.telegram_user_id,u.notifications_enabled,u.language FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' AND u.status='ACTIVE' AND u.telegram_user_id IS NOT NULL";const binds:any[]=[];
