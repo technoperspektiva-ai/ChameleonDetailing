@@ -1876,3 +1876,59 @@
 .analytics-reset-row button:disabled{opacity:.4}.analytics-reset-row button svg{width:11px}.analytics-reset-row span{font-size:8px;color:var(--desk-muted)}
 .theme-light .broadcast-photo-field,.theme-light .broadcast-photo-field input,.theme-light .analytics-reset-row input{background:#fffaf0;border-color:#d8cfbd;color:#2c3129}
 @media(max-width:760px){.analytics-reset-row{grid-template-columns:1fr}.staff-row-controls{grid-template-columns:1fr 70px}}
+
+/* v1.7.2 — permanent deny-list */
+.hard-ban-box{
+ border:1px solid color-mix(in srgb,var(--desk-red) 35%,var(--desk-line));
+ border-radius:10px;
+ background:color-mix(in srgb,var(--desk-red) 4%,var(--desk-panel2));
+ padding:0;
+ overflow:hidden;
+}
+.hard-ban-box summary{
+ cursor:pointer;
+ padding:10px 11px;
+ font-size:9px;
+ font-weight:850;
+ color:var(--desk-red);
+}
+.hard-ban-box p{
+ margin:0;
+ padding:0 11px 9px;
+ color:var(--desk-muted);
+ font-size:8px;
+ line-height:1.5;
+}
+.hard-ban-box>div{
+ display:grid;
+ grid-template-columns:minmax(150px,1fr) auto;
+ gap:7px;
+ padding:0 11px 11px;
+}
+.hard-ban-box input{
+ height:36px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel);
+ color:var(--desk-text);
+ padding:0 9px;
+ font-size:9px;
+}
+.hard-ban-box button{
+ min-height:36px;
+ padding:0 11px;
+ border:1px solid color-mix(in srgb,var(--desk-red) 35%,var(--desk-line));
+ border-radius:9px;
+ background:color-mix(in srgb,var(--desk-red) 8%,var(--desk-panel));
+ color:var(--desk-red);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ font-size:8px;
+ font-weight:850;
+}
+.hard-ban-box button:disabled{opacity:.4}
+.hard-ban-box button svg{width:12px}
+.theme-light .hard-ban-box,.theme-light .hard-ban-box input{background:#fff8f2;border-color:#e1c8bf;color:#2c3129}
+@media(max-width:760px){.hard-ban-box>div{grid-template-columns:1fr}}
