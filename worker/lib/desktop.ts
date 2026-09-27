@@ -427,9 +427,9 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
    const nc=b.newClient||{},firstName=String(nc.firstName||'').trim().slice(0,100),username=String(nc.username||'').trim().replace(/^@/,'').slice(0,100)||null,phone=String(nc.phone||'').trim().slice(0,40)||null,telegramUserId=Number(nc.telegramUserId||0);
    if(!firstName)return reply({error:'Вкажіть ім’я нового клієнта.'},400);
    let existing:any=null;
-   if(telegramUserId>0)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE telegram_user_id=? AND role='CLIENT' LIMIT 1").bind(telegramUserId).first<any>();
-   if(!existing&&username)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE lower(username)=lower(?) AND role='CLIENT' LIMIT 1").bind(username).first<any>();
-   if(!existing&&phone)existing=await env.DB!.prepare("SELECT u.id,u.status FROM users u JOIN client_profiles cp ON cp.user_id=u.id WHERE cp.phone_number=? AND u.role='CLIENT' LIMIT 1").bind(phone).first<any>();
+   if(telegramUserId>0)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE telegram_user_id=? AND role IN ('CLIENT','OWNER','ADMIN','MANAGER') LIMIT 1").bind(telegramUserId).first<any>();
+   if(!existing&&username)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE lower(username)=lower(?) AND role IN ('CLIENT','OWNER','ADMIN','MANAGER') LIMIT 1").bind(username).first<any>();
+   if(!existing&&phone)existing=await env.DB!.prepare("SELECT u.id,u.status FROM users u JOIN client_profiles cp ON cp.user_id=u.id WHERE cp.phone_number=? AND u.role IN ('CLIENT','OWNER','ADMIN','MANAGER') LIMIT 1").bind(phone).first<any>();
    if(existing){if(existing.status!=='ACTIVE')return reply({error:'Цей клієнт неактивний.'},400);userId=Number(existing.id)}
    else{
     let tg=telegramUserId;
@@ -440,8 +440,9 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
     await log(env,staff.user_id,'desktop.client.create_inline','user',String(userId),null,{firstName,username,phone,telegramUserId:tg>0?tg:null});
    }
   }
-  const client=await env.DB!.prepare("SELECT id,status FROM users WHERE id=? AND role='CLIENT'").bind(userId).first<any>();
-  if(!client||client.status!=='ACTIVE')return reply({error:'Оберіть активного клієнта.'},400);
+  const client=await env.DB!.prepare("SELECT id,status,role,username FROM users WHERE id=? AND role IN ('CLIENT','OWNER','ADMIN','MANAGER')").bind(userId).first<any>();
+  const botUsername=String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'').toLowerCase();
+  if(!client||client.status!=='ACTIVE'||String(client.username||'').replace(/^@/,'').toLowerCase()===botUsername)return reply({error:'Оберіть активного клієнта.'},400);
 
   let carId=Number(b.carId||0),car:any=null;
   if(carId)car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=? AND user_id=?').bind(carId,userId).first<any>();
@@ -550,14 +551,20 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const r=await env.DB!.prepare('INSERT INTO service_request_extras(request_id,service_id,service_slug,title_snapshot,price_snapshot,currency,added_by) VALUES(?,?,?,?,?,?,?)').bind(id,serviceId,slug,title.slice(0,120),price,currency,staff.user_id).run();await env.DB!.prepare('UPDATE service_requests SET final_job_price=COALESCE(final_job_price,calculated_price,0)+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(convertCurrency(price,currency,(await env.DB!.prepare('SELECT currency FROM service_requests WHERE id=?').bind(id).first<any>())?.currency||currency),id).run();const timingBeforeAdd=await env.DB!.prepare('SELECT duration_overridden FROM service_requests WHERE id=?').bind(id).first<any>();if(Number(timingBeforeAdd?.duration_overridden||0)!==1)await syncOrderTiming(env,id,true);await log(env,staff.user_id,'order.service.add','service_request',String(id),null,{extraId:r.meta.last_row_id,slug,title,price,currency});await notifyClientOrderChanges(env,id,[{key:'extra_added',detail:title}]);return reply({ok:true,id:r.meta.last_row_id});}
  const extraDelete=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)\/services\/(\d+)$/);
  if(extraDelete&&request.method==='DELETE'){if(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders')))return reply({error:'Orders management is disabled for Manager.'},403);await writable(env);const id=Number(extraDelete[1]),eid=Number(extraDelete[2]),old=await env.DB!.prepare('SELECT * FROM service_request_extras WHERE id=? AND request_id=?').bind(eid,id).first<any>();if(!old)return reply({error:'Extra service not found.'},404);await env.DB!.prepare('DELETE FROM service_request_extras WHERE id=?').bind(eid).run();await env.DB!.prepare('UPDATE service_requests SET final_job_price=MAX(0,COALESCE(final_job_price,calculated_price,0)-?),updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(Number(old.price_snapshot||0),id).run();const timingBeforeDelete=await env.DB!.prepare('SELECT duration_overridden FROM service_requests WHERE id=?').bind(id).first<any>();if(Number(timingBeforeDelete?.duration_overridden||0)!==1)await syncOrderTiming(env,id,true);await log(env,staff.user_id,'desktop.order.service.remove','service_request',String(id),old,null);await notifyClientOrderChanges(env,id,[{key:'extra_removed',detail:String(old.title_snapshot||old.service_slug||'Service')}]);return reply({ok:true});}
- if(url.pathname==='/api/desktop/clients'&&request.method==='GET'){if(!perms.clients_access)return reply({error:'Client access is disabled.'},403);const r=await env.DB!.prepare("SELECT u.id,u.telegram_user_id,u.username,u.first_name,u.last_seen_at,cp.phone_number,cp.client_tier,cp.paid_jobs_count,cp.lifetime_value,cp.notes,(SELECT COUNT(*) FROM client_cars c WHERE c.user_id=u.id) cars,(SELECT MAX(COALESCE(sr.completed_at,sr.created_at)) FROM service_requests sr WHERE sr.user_id=u.id AND sr.staff_deleted_at IS NULL) last_visit FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role='CLIENT' ORDER BY u.last_seen_at DESC LIMIT 300").all<any>();return reply({clients:r.results||[]});}
+ if(url.pathname==='/api/desktop/clients'&&request.method==='GET'){
+  if(!perms.clients_access)return reply({error:'Client access is disabled.'},403);
+  const r=await env.DB!.prepare("SELECT u.id,u.telegram_user_id,u.username,u.first_name,u.role,u.status,u.last_seen_at,cp.phone_number,COALESCE(cp.client_tier,'STANDARD') client_tier,COALESCE(cp.paid_jobs_count,0) paid_jobs_count,COALESCE(cp.lifetime_value,0) lifetime_value,cp.notes,(SELECT COUNT(*) FROM client_cars c WHERE c.user_id=u.id) cars,(SELECT MAX(COALESCE(sr.completed_at,sr.created_at)) FROM service_requests sr WHERE sr.user_id=u.id AND sr.staff_deleted_at IS NULL) last_visit FROM users u LEFT JOIN client_profiles cp ON cp.user_id=u.id WHERE u.role IN ('CLIENT','OWNER','ADMIN','MANAGER') AND u.status='ACTIVE' ORDER BY u.last_seen_at DESC,u.id DESC LIMIT 500").all<any>();
+  const botUsername=String(env.BOT_USERNAME||'ChameleonDetailing_bot').replace(/^@/,'').toLowerCase();
+  const clients=(r.results||[]).filter((x:any)=>String(x.username||'').replace(/^@/,'').toLowerCase()!==botUsername);
+  return reply({clients});
+ }
  const clientBonusMatch=url.pathname.match(/^\/api\/desktop\/clients\/(\d+)\/bonus$/);
  if(clientBonusMatch&&request.method==='POST'){
   if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
   await writable(env);
   const userId=Number(clientBonusMatch[1]),b=await body(request),pct=Math.max(0,Math.min(90,Number(b.percentDiscount||0))),days=Math.max(1,Math.min(365,Number(b.validDays||30)));
   if(!pct)return reply({error:'Bonus percent must be between 1 and 90.'},400);
-  const client=await env.DB!.prepare("SELECT id,telegram_user_id,first_name,username,language FROM users WHERE id=? AND role='CLIENT' AND status='ACTIVE'").bind(userId).first<any>();
+  const client=await env.DB!.prepare("SELECT id,telegram_user_id,first_name,username,language,role FROM users WHERE id=? AND role IN ('CLIENT','OWNER','ADMIN','MANAGER') AND status='ACTIVE'").bind(userId).first<any>();
   if(!client)return reply({error:'Client not found.'},404);
   const expires=new Date(Date.now()+days*86400000).toISOString(),message=String(b.message||'').trim().slice(0,900);
   const r=await env.DB!.prepare("INSERT INTO personal_discounts(user_id,percent_discount,greeting,status,expires_at,created_by,activated_at) VALUES(?,?,?,'ACTIVATED',?,?,CURRENT_TIMESTAMP)").bind(userId,pct,message||null,expires,staff.user_id).run();
