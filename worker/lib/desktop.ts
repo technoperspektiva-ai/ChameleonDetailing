@@ -57,9 +57,8 @@ const notifyClientOrderNeutral=async(env:Env,orderId:number,status:string)=>{
 const notifyClientOrderChanges=async(env:Env,orderId:number,changes:Array<{key:string;before?:any;after?:any;detail?:string}>)=>{
  if(!env.DB||!env.BOT_TOKEN||!changes.length)return;
  try{
-  if((await getSetting(env,'client_status_notifications_enabled','1'))!=='1')return;
-  const r=await env.DB.prepare("SELECT sr.id,sr.currency,u.telegram_user_id,u.language,u.notifications_enabled FROM service_requests sr JOIN users u ON u.id=sr.user_id WHERE sr.id=?").bind(orderId).first<any>();
-  if(!r?.telegram_user_id||Number(r.notifications_enabled??1)!==1)return;
+  const r=await env.DB.prepare("SELECT sr.id,sr.currency,u.telegram_user_id,u.language FROM service_requests sr JOIN users u ON u.id=sr.user_id WHERE sr.id=?").bind(orderId).first<any>();
+  if(!r?.telegram_user_id)return;
   const raw=String(r.language||'en').toLowerCase(),lang=['uk','pl','en','de','fr'].includes(raw)?raw:'en';
   const names:any={
    status:{uk:'Статус',pl:'Status',en:'Status',de:'Status',fr:'Statut'},
