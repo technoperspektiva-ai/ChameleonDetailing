@@ -6,6 +6,7 @@ import {scheduleState} from './lib/schedule';
 import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookSecret,repairTelegramBot,notifyNewOrder} from './lib/bot';
 import {runReactivationCampaigns} from './lib/campaigns';
 import {handleDesktopApi,runDesktopScheduledJobs} from './lib/desktop';
+import {reconcileReferralRewards} from './lib/referrals';
 
 const VERSION='1.3.0';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -341,5 +342,6 @@ export default {
   await selfHealWebhook(env,undefined,true);
   await runReactivationCampaigns(env,false).catch(error=>console.error('reactivation campaign failed',error));
   await runDesktopScheduledJobs(env).catch(error=>console.error('desktop scheduled jobs failed',error));
+  await reconcileReferralRewards(env).catch(error=>console.error('referral reconciliation failed',error));
  }
 };
