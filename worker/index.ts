@@ -43,7 +43,17 @@ async function auth(env:Env,initData:string){
  if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN is not configured');
  const v=await validateInitData(initData,env.BOT_TOKEN);
  if(!v)throw new Error('Invalid or expired Telegram session');
- return {...await upsertUser(env,v.user,String(v.user.id)===String(env.OWNER_TELEGRAM_ID)),photo_url:v.user.photo_url||null,demo:false};
+ if(env.DB){
+  await ensureDb(env);
+  const permanent=await env.DB.prepare('SELECT telegram_user_id FROM permanent_bans WHERE telegram_user_id=?').bind(Number(v.user.id)).first<any>().catch(()=>null);
+  if(permanent)throw new Error('SERVICE_TEMPORARILY_UNAVAILABLE_404');
+ }
+ const user=await upsertUser(env,v.user,String(v.user.id)===String(env.OWNER_TELEGRAM_ID));
+ if(env.DB&&user.role==='CLIENT'){
+  const blocked=await getActiveBlock(env,user.id);
+  if(blocked)throw new Error('SERVICE_TEMPORARILY_UNAVAILABLE_404');
+ }
+ return {...user,photo_url:v.user.photo_url||null,demo:false};
 }
 
 async function resolveSeasonalTheme(env:Env){
@@ -324,7 +334,7 @@ export default {
    }
    if(url.pathname.startsWith('/api/'))return json({error:'Not found'},404);
    return env.ASSETS.fetch(request);
-  }catch(e:any){console.error(e);return json({error:e?.message||'Unexpected error'},500)}
+  }catch(e:any){console.error(e);const message=e?.message||'Unexpected error';if(message==='SERVICE_TEMPORARILY_UNAVAILABLE_404')return json({error:message},404);return json({error:message},500)}
  },
  async scheduled(_controller:ScheduledController,env:Env,_ctx:ExecutionContext):Promise<void>{
   await selfHealWebhook(env,undefined,true);
