@@ -5115,3 +5115,117 @@
  .order-car-art{width:106px!important;height:62px!important}
  .order-car-card{grid-template-columns:106px minmax(0,1fr)!important}
 }
+
+
+/* KANBAN READABILITY + DASHBOARD VEHICLE VISIBILITY 2026-09-27 D */
+
+/* Kanban cards must keep their natural height. The previous fixed-height grid body
+   compressed every card into a short strip when a column contained many orders. */
+.orders-column-body{
+ display:flex!important;
+ flex-direction:column!important;
+ align-items:stretch!important;
+ align-content:initial!important;
+ gap:8px!important;
+ min-height:0!important;
+ height:auto!important;
+ max-height:none!important;
+ overflow-y:auto!important;
+ overflow-x:hidden!important;
+ padding:9px 6px 9px 9px!important;
+ scrollbar-gutter:stable;
+}
+.orders-kanban-card{
+ flex:0 0 auto!important;
+ height:auto!important;
+ min-height:0!important;
+ overflow:hidden!important;
+}
+.orders-card-main{
+ height:auto!important;
+ min-height:0!important;
+}
+.orders-card-car-text{
+ display:block!important;
+ min-height:42px!important;
+ margin-bottom:9px!important;
+ padding:6px 0 8px!important;
+ border-bottom:1px solid var(--border);
+}
+.orders-card-car-text>div{
+ display:grid!important;
+ gap:3px!important;
+ min-width:0!important;
+}
+.orders-card-car-text b{
+ font-size:11px!important;
+ white-space:nowrap;
+ overflow:hidden;
+ text-overflow:ellipsis;
+}
+.orders-card-car-text small{
+ font-size:8px!important;
+ color:var(--text-muted)!important;
+}
+.orders-car-thumb{display:none!important}
+
+/* Keep each stage independently scrollable, but never squeeze its children. */
+.orders-kanban{
+ height:clamp(470px,calc(100dvh - 285px),760px)!important;
+}
+.orders-kanban-col{
+ min-height:0!important;
+ height:100%!important;
+ grid-template-rows:auto minmax(0,1fr)!important;
+}
+
+/* Dashboard artwork: use the same proven assets as the Mini App and make the
+   car unmistakably visible instead of leaving only the green glow. */
+.premium-focus-visual{
+ position:relative!important;
+ min-height:190px!important;
+ display:grid!important;
+ place-items:center!important;
+ overflow:hidden!important;
+}
+.premium-focus-car-image{
+ position:relative!important;
+ z-index:4!important;
+ display:block!important;
+ width:92%!important;
+ height:92%!important;
+ max-width:520px!important;
+ max-height:210px!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ transform:none!important;
+ opacity:1!important;
+ visibility:visible!important;
+ filter:drop-shadow(0 18px 22px rgba(0,0,0,.42)) drop-shadow(0 0 10px rgba(115,255,0,.08))!important;
+}
+.premium-focus-glow{z-index:1!important}
+.premium-focus-visual:before{z-index:2!important;pointer-events:none!important}
+.premium-focus-visual>span{z-index:5!important}
+
+.premium-car-thumb{
+ display:grid!important;
+ place-items:center!important;
+ overflow:hidden!important;
+}
+.premium-car-thumb img{
+ display:block!important;
+ width:92%!important;
+ height:92%!important;
+ max-width:100%!important;
+ max-height:100%!important;
+ object-fit:contain!important;
+ object-position:center!important;
+ transform:none!important;
+ opacity:1!important;
+ visibility:visible!important;
+ filter:drop-shadow(0 6px 8px rgba(0,0,0,.32))!important;
+}
+
+@media(max-width:1100px){
+ .orders-kanban{height:clamp(460px,calc(100dvh - 260px),700px)!important}
+}
