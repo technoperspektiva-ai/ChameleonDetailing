@@ -790,3 +790,45 @@
  }
  .broadcast-schedule>input{min-width:0!important}
 }
+
+
+/* CAMPAIGN DELETE ACTION */
+.broadcast-timeline .desk-inline-actions{
+ display:flex;
+ align-items:center;
+ gap:6px;
+}
+.broadcast-timeline .desk-inline-actions button{
+ width:36px;
+ height:36px;
+ padding:0!important;
+ display:grid;
+ place-items:center;
+ border:1px solid var(--border)!important;
+ border-radius:10px!important;
+ background:rgba(255,255,255,.025)!important;
+ color:var(--text-muted)!important;
+}
+.broadcast-timeline .desk-inline-actions button:hover{
+ color:var(--text)!important;
+ border-color:rgba(221,184,111,.2)!important;
+ background:rgba(255,255,255,.045)!important;
+}
+.broadcast-timeline .desk-inline-actions button svg{
+ width:15px;
+ height:15px;
+}
+.broadcast-timeline .desk-inline-actions .broadcast-delete{
+ color:#b97c78!important;
+ border-color:rgba(228,119,114,.16)!important;
+ margin-left:2px;
+}
+.broadcast-timeline .desk-inline-actions .broadcast-delete:hover{
+ color:#ef8f89!important;
+ border-color:rgba(228,119,114,.34)!important;
+ background:rgba(228,119,114,.08)!important;
+}
+.broadcast-timeline .desk-inline-actions .broadcast-delete:disabled{
+ opacity:.45;
+ cursor:wait;
+}
