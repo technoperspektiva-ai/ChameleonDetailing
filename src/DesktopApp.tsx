@@ -34,8 +34,8 @@ const post=(path:string,data:any,method='POST')=>api(path,{method,body:JSON.stri
 
 export function DesktopApp(){
  const phoneBlocked=useMemo(()=>isPhoneClient(),[]);
- const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard');
- const [theme,setTheme]=useState<'dark'|'light'>(()=>localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark');
+ const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('orders');
+ const [theme,setTheme]=useState<'dark'|'light'>(()=>localStorage.getItem('chameleon.desktop.theme')==='dark'?'dark':'light');
  const [locale,setLocale]=useState<DesktopLocale>(()=>normalizeDesktopLocale(localStorage.getItem('chameleon.desktop.locale')||navigator.language));
  const [langOpen,setLangOpen]=useState(false);
  const langRef=useRef<HTMLDivElement|null>(null);
@@ -51,9 +51,9 @@ export function DesktopApp(){
     history.replaceState({},'',location.pathname);
    }
    const b=await api('/api/desktop/bootstrap') as Bootstrap;setBoot(b);
-   const storedTheme=b.personal?.theme==='light'?'light':b.personal?.theme==='dark'?'dark':localStorage.getItem('chameleon.desktop.theme')==='light'?'light':'dark';setTheme(storedTheme);
+   const storedTheme=b.personal?.theme==='dark'?'dark':b.personal?.theme==='light'?'light':localStorage.getItem('chameleon.desktop.theme')==='dark'?'dark':'light';setTheme(storedTheme);
    const storedLocale=normalizeDesktopLocale(b.personal?.locale||localStorage.getItem('chameleon.desktop.locale')||navigator.language);setLocale(storedLocale);
-   const hash=location.hash.replace(/^#/,'') as Page;if(hash&&labels[hash])setPage(hash);else setPage((b.workspace?.config?.defaultPage||'dashboard') as Page);
+   const hash=location.hash.replace(/^#/,'') as Page;if(hash&&labels[hash])setPage(hash);else setPage('orders');
   }catch(e:any){setError(String(e?.message||e));setBoot(null)}
   finally{setLoading(false)}
  };
@@ -92,7 +92,7 @@ export function DesktopApp(){
     {page==='cars'&&<SimpleTable endpoint="/api/desktop/cars" keyName="cars" title={t('page.cars')+' CRM'} type="cars"/>}
     {page==='clients'&&<SimpleTable endpoint="/api/desktop/clients" keyName="clients" title={t('page.clients')+' CRM'} type="clients"/>}
     {page==='calendar'&&<CalendarView/>}
-    {page==='services'&&<ServicesCatalog locale={locale}/>}
+    {page==='services'&&<ServicesCatalog locale={locale} role={boot.user.role}/>}
     {page==='payments'&&<Payments/>}
     {page==='broadcasts'&&<Broadcasts/>}
     {page==='analytics'&&<Analytics/>}
@@ -119,7 +119,7 @@ function Dashboard({boot,goto,locale}:{boot:Bootstrap;goto:(p:Page)=>void;locale
 
 function Orders({locale}:{locale:DesktopLocale}){
  const t=(key:string)=>desktopT(locale,key);
- const [orders,setOrders]=useState<any[]>([]),[q,setQ]=useState(''),[status,setStatus]=useState(''),[view,setView]=useState<'table'|'kanban'>('table'),[selected,setSelected]=useState<any>(null),[busy,setBusy]=useState(false);
+ const [orders,setOrders]=useState<any[]>([]),[q,setQ]=useState(''),[status,setStatus]=useState(''),[view,setView]=useState<'table'|'kanban'>('kanban'),[selected,setSelected]=useState<any>(null),[busy,setBusy]=useState(false);
  const load=async()=>{setBusy(true);try{const d=await api('/api/desktop/orders?q='+encodeURIComponent(q)+'&status='+encodeURIComponent(status));setOrders(d.orders||[])}finally{setBusy(false)}};
  useEffect(()=>{load()},[]);
  const statuses=['','REQUESTED','CONFIRMED','IN_PROGRESS','READY','COMPLETED','CANCELLED'];
@@ -152,16 +152,22 @@ function Sales(){
  const search=async()=>{setBusy(true);try{const d=await api('/api/desktop/search?q='+encodeURIComponent(q));setR(d.results||[])}finally{setBusy(false)}};
  return <><Panel title="Sales Search"><div className="desk-sales-search"><Search/><input autoFocus value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==='Enter'&&search()} placeholder="+380…, CHD-10482, @username, номер авто"/><button onClick={search}>{busy?'Пошук…':'Знайти'}</button></div></Panel><div className="desk-search-results">{r.map(x=><button key={x.id} onClick={()=>setOpen(x.id)}><div><b>CHD-{x.id}</b><span>{x.first_name||x.username||'Client'} · {x.phone_number||'—'}</span><small>{[x.brand,x.model,x.plate].filter(Boolean).join(' · ')}</small></div><div><strong>{money(x.final_job_price??x.calculated_price,x.currency)}</strong><span className="desk-status">{x.status}</span></div></button>)}</div>{open&&<OrderDrawer id={open} close={()=>setOpen(null)} changed={search}/>}</>
 }
-function ServicesCatalog({locale}:{locale:DesktopLocale}){
+function ServicesCatalog({locale,role}:{locale:DesktopLocale;role:Role}){
  const t=(key:string)=>desktopT(locale,key);
- const [data,setData]=useState<{services:any[];options:any[];total:number}>({services:[],options:[],total:0}),[q,setQ]=useState('');
+ const canEdit=role==='OWNER'||role==='ADMIN';
+ const [data,setData]=useState<{services:any[];options:any[];total:number}>({services:[],options:[],total:0}),[q,setQ]=useState(''),[edit,setEdit]=useState<any>(null),[saving,setSaving]=useState(false),[msg,setMsg]=useState('');
  const load=()=>api('/api/desktop/services').then(d=>setData({services:d.services||[],options:d.options||[],total:Number(d.total||0)})).catch(()=>{});
  useEffect(()=>{load()},[]);
  const term=q.trim().toLowerCase(),main=data.services.filter(x=>!term||String(x.title+' '+x.slug+' '+x.category).toLowerCase().includes(term)),extras=data.options.filter(x=>!term||String(x.title+' '+x.slug+' '+x.service_slugs).toLowerCase().includes(term));
+ const openService=(x:any)=>canEdit&&setEdit({kind:'service',id:x.id,title:x.title,slug:x.slug,price:Number(x.base_price||0),currency:x.base_currency||'PLN',enabled:!!x.enabled,durationMin:Number(x.duration_min||0)});
+ const openOption=(x:any)=>canEdit&&setEdit({kind:'option',id:x.id,title:x.title,slug:x.slug,price:Number(x.price||0),currency:x.base_currency||'PLN',enabled:!!x.enabled});
+ const save=async()=>{if(!edit)return;setSaving(true);setMsg('');try{const path=edit.kind==='service'?'/api/desktop/services/'+edit.id:'/api/desktop/service-options/'+edit.id;await post(path,{price:Number(edit.price||0),currency:edit.currency,enabled:!!edit.enabled,...(edit.kind==='service'?{durationMin:Number(edit.durationMin||0)}:{})},'PATCH');setMsg('Збережено');setEdit(null);await load()}catch(e:any){setMsg(String(e?.message||e))}finally{setSaving(false)}};
  return <><div className="desk-toolbar"><div className="desk-search"><Search/><input value={q} onChange={e=>setQ(e.target.value)} placeholder={t('services.search')}/></div><button onClick={load}><RefreshCw/>{t('common.refresh')}</button><span className="desk-catalog-count">{t('services.total')}: <b>{data.total}</b></span></div>
- <div className="service-catalog-summary"><div><Wrench/><span>{t('services.main')}</span><b>{data.services.length}</b></div><div><Check/><span>{t('services.options')}</span><b>{data.options.length}</b></div><p>{t('services.sync')}</p></div>
- <Panel title={t('services.main')+' · '+main.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('page.services')}</th><th>{t('services.category')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.duration')}</th><th>{t('services.state')}</th></tr></thead><tbody>{main.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{x.category||'—'}</td><td>{Number(x.base_price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.duration_min||0} min</td><td><span className="desk-status">{x.archived?'ARCHIVED':x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
- <Panel title={t('services.options')+' · '+extras.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('services.options')}</th><th>{t('services.for')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.pricing')}</th><th>{t('services.state')}</th></tr></thead><tbody>{extras.map(x=><tr key={x.id}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{String(x.service_slugs||'').split(',').filter(Boolean).join(', ')||t('services.unbound')}</td><td>{Number(x.price||0).toFixed(2)}</td><td>{x.base_currency||'PLN'}</td><td>{x.pricing_type||'FIXED'}</td><td><span className="desk-status">{x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel></>
+ <div className="service-catalog-summary"><div><Wrench/><span>{t('services.main')}</span><b>{data.services.length}</b></div><div><Check/><span>{t('services.options')}</span><b>{data.options.length}</b></div><p>{canEdit?'Owner/Admin: натисніть на рядок, щоб змінити ціну, валюту, статус і тривалість.':t('services.sync')}</p></div>
+ {msg&&<div className="desk-banner">{msg}</div>}
+ <Panel title={t('services.main')+' · '+main.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('page.services')}</th><th>{t('services.category')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.duration')}</th><th>{t('services.state')}</th></tr></thead><tbody>{main.map(x=><tr key={x.id} className={canEdit?'editable-row':''} onClick={()=>openService(x)}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{x.category||'—'}</td><td><b>{Number(x.base_price||0).toFixed(2)}</b></td><td>{x.base_currency||'PLN'}</td><td>{x.duration_min||0} min</td><td><span className="desk-status">{x.archived?'ARCHIVED':x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
+ <Panel title={t('services.options')+' · '+extras.length}><div className="desk-table-wrap"><table><thead><tr><th>{t('services.options')}</th><th>{t('services.for')}</th><th>{t('orders.price')}</th><th>{t('services.currency')}</th><th>{t('services.pricing')}</th><th>{t('services.state')}</th></tr></thead><tbody>{extras.map(x=><tr key={x.id} className={canEdit?'editable-row':''} onClick={()=>openOption(x)}><td><b>{x.title}</b><small>{x.slug}</small></td><td>{String(x.service_slugs||'').split(',').filter(Boolean).join(', ')||t('services.unbound')}</td><td><b>{Number(x.price||0).toFixed(2)}</b></td><td>{x.base_currency||'PLN'}</td><td>{x.pricing_type||'FIXED'}</td><td><span className="desk-status">{x.enabled?'ENABLED':'DISABLED'}</span></td></tr>)}</tbody></table></div></Panel>
+ {edit&&<div className="desk-drawer-backdrop" onMouseDown={e=>e.target===e.currentTarget&&setEdit(null)}><aside className="desk-drawer service-edit-drawer"><button className="desk-drawer-close" onClick={()=>setEdit(null)}><X/></button><span className="desk-eyebrow">{edit.kind==='service'?'SERVICE':'ADD-ON'} · {edit.slug}</span><h2>{edit.title}</h2><div className="desk-form-grid"><label>Ціна<input type="number" min="0" step="0.01" value={edit.price} onChange={e=>setEdit({...edit,price:e.target.value})}/></label><label>Валюта<select value={edit.currency} onChange={e=>setEdit({...edit,currency:e.target.value})}><option>PLN</option><option>UAH</option><option>USD</option></select></label>{edit.kind==='service'&&<label>Тривалість, хв<input type="number" min="0" value={edit.durationMin} onChange={e=>setEdit({...edit,durationMin:e.target.value})}/></label>}<label className="service-enabled-toggle"><span>Активна</span><input type="checkbox" checked={!!edit.enabled} onChange={e=>setEdit({...edit,enabled:e.target.checked})}/></label></div><button className="desk-primary wide" disabled={saving} onClick={save}><Save/>{saving?'Збереження…':'Зберегти зміни'}</button></aside></div>}</>
 }
 
 function SimpleTable({endpoint,keyName,title,type}:{endpoint:string;keyName:string;title:string;type:string}){
