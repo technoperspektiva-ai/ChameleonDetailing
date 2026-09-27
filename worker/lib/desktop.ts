@@ -6,7 +6,7 @@ import {buildReport,type ReportType} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
 
-export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'broadcast_forced_access'|'reports_access'|'financial_access'|'clients_access'|'workspace_editor';
+export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'broadcast_forced_access'|'reports_access'|'financial_access'|'clients_access'|'order_deadline_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
 
 let ready=false;
@@ -110,6 +110,9 @@ export async function ensureDesktopDb(env:Env){
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN accelerated INTEGER NOT NULL DEFAULT 0');
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN accelerated_surcharge REAL NOT NULL DEFAULT 0');
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN responsible_staff_id INTEGER');
+ await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN estimated_duration_min INTEGER');
+ await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN duration_overridden INTEGER NOT NULL DEFAULT 0');
+ await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN deadline_at TEXT');
  await safeAlter(env,'ALTER TABLE desktop_campaign_deliveries ADD COLUMN read_at TEXT');
  await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN photo_file_id TEXT');
  await safeAlter(env,'ALTER TABLE desktop_campaigns ADD COLUMN skipped_dnd_count INTEGER NOT NULL DEFAULT 0');
@@ -119,20 +122,20 @@ export async function ensureDesktopDb(env:Env){
  await safeAlter(env,'ALTER TABLE desktop_campaign_runs ADD COLUMN telegram_error_count INTEGER NOT NULL DEFAULT 0');
  await safeAlter(env,'ALTER TABLE desktop_campaign_runs ADD COLUMN other_error_count INTEGER NOT NULL DEFAULT 0');
  const defs:{role:string,key:DesktopPermission,value:number}[]=[];
- (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'ADMIN',key,value:1}));
+ (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access','order_deadline_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'ADMIN',key,value:1}));
  defs.push({role:'ADMIN',key:'broadcast_forced_access',value:0});
  defs.push({role:'ADMIN',key:'workspace_editor',value:0});
  (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','broadcast_forced_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'MANAGER',key,value:0}));
- defs.push({role:'MANAGER',key:'clients_access',value:1},{role:'MANAGER',key:'workspace_editor',value:0});
+ defs.push({role:'MANAGER',key:'clients_access',value:1},{role:'MANAGER',key:'order_deadline_access',value:0},{role:'MANAGER',key:'workspace_editor',value:0});
  for(const d of defs)await env.DB.prepare('INSERT OR IGNORE INTO staff_role_permissions(role,permission_key,enabled) VALUES(?,?,?)').bind(d.role,d.key,d.value).run();
- for(const d of [['desktop',0],['sales',0],['campaigns',0],['financial',0],['clients',1]])await env.DB.prepare('INSERT OR IGNORE INTO manager_permissions(permission_key,enabled) VALUES(?,?)').bind(d[0],d[1]).run();
+ for(const d of [['desktop',0],['sales',0],['campaigns',0],['financial',0],['clients',1],['deadlines',0]])await env.DB.prepare('INSERT OR IGNORE INTO manager_permissions(permission_key,enabled) VALUES(?,?)').bind(d[0],d[1]).run();
  if(!(await env.DB.prepare('SELECT 1 ok FROM desktop_workspace_draft WHERE id=1').first<any>()))await env.DB.prepare('INSERT INTO desktop_workspace_draft(id,config_json,locked) VALUES(1,?,1)').bind(JSON.stringify(defaultWorkspace)).run();
  if(!(await env.DB.prepare('SELECT 1 ok FROM desktop_workspace_versions WHERE is_active=1 LIMIT 1').first<any>()))await env.DB.prepare('INSERT INTO desktop_workspace_versions(version_number,config_json,comment,is_active) VALUES(1,?,?,1)').bind(JSON.stringify(defaultWorkspace),'Initial workspace').run();
  if((await getSetting(env,'desktop.mode',''))==='')await setSetting(env,'desktop.mode','ONLINE');
  ready=true;
 }
 
-const legacyKey=(key:DesktopPermission)=>({desktop_access:'desktop',sales_access:'sales',broadcast_access:'campaigns',broadcast_forced_access:'campaigns_forced',reports_access:'reports',financial_access:'financial',clients_access:'clients',workspace_editor:'workspace'} as Record<DesktopPermission,string>)[key];
+const legacyKey=(key:DesktopPermission)=>({desktop_access:'desktop',sales_access:'sales',broadcast_access:'campaigns',broadcast_forced_access:'campaigns_forced',reports_access:'reports',financial_access:'financial',clients_access:'clients',order_deadline_access:'deadlines',workspace_editor:'workspace'} as Record<DesktopPermission,string>)[key];
 export async function desktopPermission(env:Env,role:string,key:DesktopPermission){
  if(role==='OWNER')return true;
  if(role!=='ADMIN'&&role!=='MANAGER')return false;
@@ -166,7 +169,7 @@ export async function desktopSalesSearch(env:Env,q:string,limit=10){
 
 const mode=async(env:Env)=>String(await getSetting(env,'desktop.mode','ONLINE')).toUpperCase();
 const permissionSnapshot=async(env:Env,role:string)=>{
- const keys:DesktopPermission[]=['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','workspace_editor'];
+ const keys:DesktopPermission[]=['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','order_deadline_access','workspace_editor'];
  const out:any={};for(const k of keys)out[k]=await desktopPermission(env,role,k);return out;
 };
 const auth=async(env:Env,request:Request)=>{
@@ -716,7 +719,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/workspace/import'&&request.method==='POST'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),cfg=cleanWorkspace(b.config||b);await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=1,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(cfg),staff.user_id).run();await log(env,staff.user_id,'desktop.workspace.import','workspace','1');return reply({ok:true,preview:cfg});}
  if(url.pathname==='/api/desktop/system/mode'&&request.method==='PATCH'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const b=await body(request),next=String(b.mode||'').toUpperCase();if(!['ONLINE','READ_ONLY','MAINTENANCE','DISABLED'].includes(next))return reply({error:'Invalid desktop mode.'},400);const old=await mode(env);await setSetting(env,'desktop.mode',next);await log(env,staff.user_id,'desktop.mode.update','settings','desktop.mode',{mode:old},{mode:next});return reply({ok:true,mode:next});}
  if(url.pathname==='/api/desktop/permissions'&&request.method==='GET'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);const r=await env.DB!.prepare('SELECT * FROM staff_role_permissions ORDER BY role,permission_key').all<any>();return reply({permissions:r.results||[]});}
- if(url.pathname==='/api/desktop/permissions'&&request.method==='PUT'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),role=String(b.role||'').toUpperCase(),key=String(b.key||'') as DesktopPermission;if(!['ADMIN','MANAGER'].includes(role)||!['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','workspace_editor'].includes(key))return reply({error:'Invalid permission.'},400);if(role==='MANAGER'&&key==='workspace_editor')return reply({error:'Manager cannot access Workspace Editor.'},400);await env.DB!.prepare('INSERT INTO staff_role_permissions(role,permission_key,enabled,updated_by) VALUES(?,?,?,?) ON CONFLICT(role,permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(role,key,b.enabled?1:0,staff.user_id).run();if(role==='MANAGER'){const lk=legacyKey(key);if(lk)await env.DB!.prepare('INSERT INTO manager_permissions(permission_key,enabled,updated_by) VALUES(?,?,?) ON CONFLICT(permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(lk,b.enabled?1:0,staff.user_id).run()}if(!b.enabled&&key==='desktop_access')await env.DB!.prepare("UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id IN (SELECT id FROM users WHERE role=?) AND revoked_at IS NULL").bind(role).run();await log(env,staff.user_id,'desktop.permission.update','permission',role+':'+key,null,{enabled:!!b.enabled});return reply({ok:true});}
+ if(url.pathname==='/api/desktop/permissions'&&request.method==='PUT'){if(staff.role!=='OWNER')return reply({error:'Owner access required.'},403);await writable(env);const b=await body(request),role=String(b.role||'').toUpperCase(),key=String(b.key||'') as DesktopPermission;if(!['ADMIN','MANAGER'].includes(role)||!['desktop_access','sales_access','broadcast_access','broadcast_forced_access','reports_access','financial_access','clients_access','order_deadline_access','workspace_editor'].includes(key))return reply({error:'Invalid permission.'},400);if(role==='MANAGER'&&key==='workspace_editor')return reply({error:'Manager cannot access Workspace Editor.'},400);await env.DB!.prepare('INSERT INTO staff_role_permissions(role,permission_key,enabled,updated_by) VALUES(?,?,?,?) ON CONFLICT(role,permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(role,key,b.enabled?1:0,staff.user_id).run();if(role==='MANAGER'){const lk=legacyKey(key);if(lk)await env.DB!.prepare('INSERT INTO manager_permissions(permission_key,enabled,updated_by) VALUES(?,?,?) ON CONFLICT(permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP').bind(lk,b.enabled?1:0,staff.user_id).run()}if(!b.enabled&&key==='desktop_access')await env.DB!.prepare("UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE user_id IN (SELECT id FROM users WHERE role=?) AND revoked_at IS NULL").bind(role).run();await log(env,staff.user_id,'desktop.permission.update','permission',role+':'+key,null,{enabled:!!b.enabled});return reply({ok:true});}
  if(url.pathname==='/api/desktop/sessions'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT ds.id,ds.user_id,ds.device_label,ds.user_agent,ds.created_at,ds.last_seen_at,ds.expires_at,u.first_name,u.username,u.role FROM desktop_sessions ds JOIN users u ON u.id=ds.user_id WHERE ds.revoked_at IS NULL AND ds.expires_at>CURRENT_TIMESTAMP ORDER BY ds.last_seen_at DESC").all<any>();return reply({sessions:r.results||[]});}
  const sm=url.pathname.match(/^\/api\/desktop\/sessions\/(\d+)$/);if(sm&&request.method==='DELETE'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);await env.DB!.prepare('UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?').bind(Number(sm[1])).run();await log(env,staff.user_id,'desktop.session.revoke','desktop_session',sm[1]);return reply({ok:true});}
  if(url.pathname==='/api/desktop/logout'&&request.method==='POST'){await env.DB!.prepare('UPDATE desktop_sessions SET revoked_at=CURRENT_TIMESTAMP WHERE id=?').bind(staff.session_id).run();return reply({ok:true});}
