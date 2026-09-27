@@ -14,7 +14,7 @@ import {Drawer,Tabs,StatusBadge} from '../../components/primitives';
 import {showError} from '../../components/Toast';
 import {businessDate,businessTime,fromBusinessLocal} from '../../format';
 import {Panel} from '../../components/Panel';
-function orderVehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp'}
+function orderVehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'-v2.webp'}
 
 export function OrderDrawer({boot,id,initialTab='overview',close,changed}:{boot:Bootstrap;id:number;initialTab?:string;close:()=>void;changed:()=>void}){
  const validTabs=['overview','services','checklist','photos','payment'];
