@@ -404,7 +404,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE status IN ('IN_PROGRESS','CAR_ACCEPTED','INSPECTION') AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE status IN ('READY','COMPLETED') AND payment_status<>'PAID' AND staff_deleted_at IS NULL").first<any>(),
    env.DB!.prepare("SELECT COUNT(*) n FROM service_requests WHERE payment_status<>'PAID' AND status NOT IN ('REJECTED','CANCELLED') AND staff_deleted_at IS NULL").first<any>(),
-   env.DB!.prepare("SELECT COALESCE(final_job_price,calculated_price,0) amount,currency FROM service_requests WHERE payment_status='PAID' AND date(COALESCE(completed_at,created_at))=date('now') AND staff_deleted_at IS NULL").all<any>()
+   env.DB!.prepare("SELECT COALESCE(final_job_price,calculated_price,0) amount,currency FROM service_requests WHERE payment_status='PAID' AND strftime('%Y-%m',COALESCE(completed_at,created_at))=strftime('%Y-%m','now') AND staff_deleted_at IS NULL").all<any>()
   ]);
   const revenue=(revenueRows.results||[]).reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.amount||0),normalizeCurrency(x.currency||'PLN'),target),0);
   return reply({kpi:{newOrders:Number(newOrders?.n||0),confirmed:Number(confirmed?.n||0),inWork:Number(inWork?.n||0),ready:Number(readyCars?.n||0),unpaid:Number(unpaid?.n||0),revenue:Math.round(revenue*100)/100},currency:target,serviceStatus:await getSetting(env,'business_status_override','AUTO')});
