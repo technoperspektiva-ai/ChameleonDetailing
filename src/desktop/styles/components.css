@@ -3404,3 +3404,11 @@
 :root[data-desktop-theme="light"] .client-lookup input,
 :root[data-desktop-theme="light"] .client-lookup select,
 :root[data-desktop-theme="light"] .desk-upload-button{background:#fffdf9!important;color:#29261f!important;border-color:rgba(73,55,31,.18)!important}
+
+
+/* REFERRAL CONFIG */
+.referral-service-setting{display:grid;grid-template-columns:minmax(120px,.7fr) minmax(180px,1.1fr);gap:6px 10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);font-size:8.5px;color:var(--text-muted)}
+.referral-service-setting select{min-height:36px}
+.referral-service-setting small{grid-column:1/-1;font-size:7.5px!important;line-height:1.45;color:var(--text-muted)!important}
+.referral-reconcile{width:100%;margin-top:9px;justify-content:center}
+@media(max-width:760px){.referral-service-setting{grid-template-columns:1fr}}
