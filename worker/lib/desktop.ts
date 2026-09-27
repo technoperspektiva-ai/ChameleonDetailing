@@ -1,7 +1,7 @@
 import type {Env} from './types';
 import {ensureDb,getSetting,setSetting} from './db';
 import {managerBlockEnabled} from './permissions';
-import {sendMessage,sendPhoto} from './telegram';
+import {sendMessage,sendPhoto,tgApi} from './telegram';
 import {buildReport,type ReportType} from './reports';
 import {convertCurrency,normalizeCurrency,fx} from './currency';
 import {runReactivationCampaigns} from './campaigns';
@@ -521,6 +521,39 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   else if(action==='unwhitelist')await env.DB!.prepare('DELETE FROM whitelist WHERE user_id=?').bind(userId).run();
   else if(action==='blacklist')await env.DB!.prepare('INSERT INTO blacklist(user_id,public_reason,internal_note,blocked_by,is_active) VALUES(?,?,?,?,1)').bind(userId,String(b.reason||'Access restricted').slice(0,300),String(b.note||'').slice(0,500),staff.user_id).run();
   else if(action==='unblacklist')await env.DB!.prepare('UPDATE blacklist SET is_active=0,unblocked_by=?,unblocked_at=CURRENT_TIMESTAMP WHERE user_id=? AND is_active=1').bind(staff.user_id,userId).run();
+  else if(action==='erase_and_ban'){
+   if(staff.role!=='OWNER')return reply({error:'Owner required for permanent erase.'},403);
+   if(String(b.confirm||'')!=='ERASE USER')return reply({error:'Type ERASE USER to confirm.'},400);
+   const target=await env.DB!.prepare('SELECT id,telegram_user_id,username,first_name,role FROM users WHERE id=?').bind(userId).first<any>();if(!target)return reply({error:'User not found.'},404);if(target.role!=='CLIENT')return reply({error:'Staff accounts cannot be erased here.'},403);
+   const tg=Number(target.telegram_user_id),reason=String(b.reason||'Permanent access ban').slice(0,300);
+   await env.DB!.prepare("INSERT INTO permanent_bans(telegram_user_id,reason,blocked_by) VALUES(?,?,?) ON CONFLICT(telegram_user_id) DO UPDATE SET reason=excluded.reason,blocked_by=excluded.blocked_by,blocked_at=CURRENT_TIMESTAMP").bind(tg,reason,staff.user_id).run();
+   const panel=await env.DB!.prepare('SELECT panel_message_id FROM bot_ui_state WHERE chat_id=?').bind(tg).first<any>().catch(()=>null);if(panel?.panel_message_id)await tgApi(env,'deleteMessage',{chat_id:tg,message_id:Number(panel.panel_message_id)}).catch(()=>{});
+   const requestIds=(await env.DB!.prepare('SELECT id FROM service_requests WHERE user_id=?').bind(userId).all<any>().catch(()=>({results:[]} as any))).results||[];
+   const calcIds=(await env.DB!.prepare('SELECT id FROM calculator_sessions WHERE user_id=?').bind(userId).all<any>().catch(()=>({results:[]} as any))).results||[];
+   const carIds=(await env.DB!.prepare('SELECT id FROM client_cars WHERE user_id=?').bind(userId).all<any>().catch(()=>({results:[]} as any))).results||[];
+   const offerIds=(await env.DB!.prepare('SELECT id FROM personal_offers WHERE user_id=?').bind(userId).all<any>().catch(()=>({results:[]} as any))).results||[];
+   const referralIds=(await env.DB!.prepare('SELECT id FROM referrals WHERE referrer_user_id=? OR referred_user_id=?').bind(userId,userId).all<any>().catch(()=>({results:[]} as any))).results||[];
+   for(const x of requestIds){await env.DB!.prepare('DELETE FROM service_request_extras WHERE request_id=?').bind(x.id).run().catch(()=>{});await env.DB!.prepare('DELETE FROM delivery_requests WHERE service_request_id=? OR user_id=?').bind(x.id,userId).run().catch(()=>{});await env.DB!.prepare('DELETE FROM payments WHERE service_request_id=? OR user_id=?').bind(x.id,userId).run().catch(()=>{})}
+   for(const x of calcIds)await env.DB!.prepare('DELETE FROM calculator_session_options WHERE calculator_session_id=? OR session_id=?').bind(x.id,x.id).run().catch(()=>{});
+   for(const x of carIds)await env.DB!.prepare('DELETE FROM car_packages WHERE car_id=?').bind(x.id).run().catch(()=>{});
+   for(const x of offerIds)await env.DB!.prepare('DELETE FROM personal_offer_services WHERE offer_id=?').bind(x.id).run().catch(()=>{});
+   for(const x of referralIds)await env.DB!.prepare('DELETE FROM referral_rewards WHERE referral_id=?').bind(x.id).run().catch(()=>{});
+   const cleanup=[
+    ['DELETE FROM desktop_campaign_deliveries WHERE user_id=?',[userId]],['DELETE FROM campaign_deliveries WHERE user_id=?',[userId]],
+    ['DELETE FROM analytics_events WHERE user_id=?',[userId]],['DELETE FROM client_feedback WHERE user_id=?',[userId]],
+    ['DELETE FROM personal_discounts WHERE user_id=?',[userId]],['DELETE FROM personal_offers WHERE user_id=?',[userId]],
+    ['DELETE FROM referral_rewards WHERE user_id=?',[userId]],['DELETE FROM referrals WHERE referrer_user_id=? OR referred_user_id=?',[userId,userId]],
+    ['DELETE FROM payments WHERE user_id=?',[userId]],['DELETE FROM delivery_requests WHERE user_id=?',[userId]],
+    ['DELETE FROM service_requests WHERE user_id=?',[userId]],['DELETE FROM calculator_sessions WHERE user_id=?',[userId]],
+    ['DELETE FROM car_packages WHERE car_id IN (SELECT id FROM client_cars WHERE user_id=?)',[userId]],['DELETE FROM client_cars WHERE user_id=?',[userId]],
+    ['DELETE FROM vip_history WHERE user_id=?',[userId]],['DELETE FROM whitelist WHERE user_id=?',[userId]],['DELETE FROM blacklist WHERE user_id=?',[userId]],
+    ['DELETE FROM client_profiles WHERE user_id=?',[userId]],['DELETE FROM bot_state WHERE user_id=?',[userId]],['DELETE FROM bot_ui_state WHERE chat_id=?',[tg]],
+    ['DELETE FROM users WHERE id=?',[userId]]
+   ] as any[];
+   for(const [sql,args] of cleanup)await env.DB!.prepare(sql).bind(...args).run().catch(()=>{});
+   await log(env,staff.user_id,'desktop.user.erase_and_ban','telegram_user',String(tg),{userId,username:target.username||null},{permanentBan:true,personalDataErased:true});
+   return reply({ok:true,erased:true,permanentBan:true,telegramUserId:tg});
+  }
   else return reply({error:'Unsupported user-access action.'},400);await log(env,staff.user_id,'desktop.user_access.'+action,'user',String(userId),null,b);return reply({ok:true});
  }
  if(url.pathname==='/api/desktop/admin-hub/manager-permissions'&&request.method==='PUT'){if(staff.role!=='OWNER')return reply({error:'Owner required.'},403);await writable(env);const b=await body(request),key=String(b.key||'').slice(0,80);if(!key)return reply({error:'Permission key required.'},400);await env.DB!.prepare("INSERT INTO manager_permissions(permission_key,enabled,updated_by) VALUES(?,?,?) ON CONFLICT(permission_key) DO UPDATE SET enabled=excluded.enabled,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP").bind(key,b.enabled?1:0,staff.user_id).run();await log(env,staff.user_id,'desktop.manager_permission.update','manager_permission',key,null,{enabled:!!b.enabled});return reply({ok:true});}
