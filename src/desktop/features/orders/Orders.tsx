@@ -15,7 +15,7 @@ const filterOptions:[string,string][]=[
 ];
 const deadlineState=(o:Order)=>{const active=!['COMPLETED','CANCELLED','REJECTED'].includes(String(o.status||'').toUpperCase()),at=o.deadline_at?Date.parse(o.deadline_at):NaN;if(!active||!Number.isFinite(at))return 'none';const left=at-Date.now();return left<0?'overdue':left<=30*60_000?'soon':'ok'};
 const durationText=(value?:number)=>{const m=Math.max(0,Number(value||0));return m>=60?`${Math.floor(m/60)}г${m%60?' '+m%60+'хв':''}`:`${m}хв`};
-const vehicleImage=(body?:string|null)=>{const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'-v2.webp'};
+const vehicleImage=(body?:string|null)=>{const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp?v=20260927-3'};
 
 
 export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:string)=>void;initialFilter?:string}){
@@ -104,7 +104,7 @@ export function Orders({boot,goto,initialFilter=''}:{boot:Bootstrap;goto:(p:stri
        {cards.map(o=><article className="desk-kanban-card orders-kanban-card" key={o.id} draggable={boot.mode==='ONLINE'&&!busy.includes(o.id)} onDragStart={e=>e.dataTransfer.setData('text/plain',String(o.id))}>
         <button className="card-main orders-card-main" onClick={()=>goto('orders/'+o.id)}>
          <div className="orders-card-top"><span>CHD-{o.id}</span><time>{o.scheduled_for?dt(o.scheduled_for):'Без часу'}</time></div>
-         <div className="orders-card-car"><span className="orders-car-thumb"><img src={vehicleImage(o.body_type)} alt="" aria-hidden="true"/></span><div><b>{[o.brand,o.model].filter(Boolean).join(' ')||'Автомобіль'}</b><small>{o.plate||'Номер не вказано'}</small></div></div>
+         <div className="orders-card-car orders-card-car-text"><div><b>{[o.brand,o.model].filter(Boolean).join(' ')||'Автомобіль'}</b><small>{o.plate||'Номер не вказано'}</small></div></div>
          <div className="orders-card-client"><UserRound/><span><b>{o.first_name||o.username||'Клієнт'}</b><small>{o.phone_number||'Контакт не вказано'}</small></span></div>
          <div className="orders-card-service">{o.service_title||o.service_slug||'Послуги в замовленні'}</div>
          <div className={'orders-card-deadline '+deadlineState(o)}><AlarmClock/><span><small>Дедлайн · {durationText(o.estimated_duration_min)}</small><b>{o.deadline_at?dt(o.deadline_at):'Не визначено'}</b></span></div>
