@@ -573,3 +573,71 @@
     overflow:hidden!important;
   }
 }
+
+
+/* MOBILE VEHICLE ART FULL-FRAME FIX 2026-09-28 */
+@media (max-width:680px){
+  /* The PNGs are transparent full-car renders. Do not zoom/crop them inside the
+     order drawer: preserve the complete silhouette and its intrinsic proportions. */
+  html.desktop-route .desk-order-car.order-car-card,
+  html.desktop-route .order-car-card{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    min-height:0!important;
+    padding:10px!important;
+  }
+
+  html.desktop-route .order-car-art{
+    width:100%!important;
+    max-width:none!important;
+    height:clamp(150px,46vw,210px)!important;
+    min-height:150px!important;
+    aspect-ratio:auto!important;
+    margin:0 0 10px!important;
+    padding:6px!important;
+    display:grid!important;
+    place-items:center!important;
+    overflow:visible!important;
+    background:
+      radial-gradient(ellipse at 50% 72%,rgba(114,255,0,.075),transparent 64%),
+      rgba(255,255,255,.01)!important;
+  }
+
+  html.desktop-route .order-car-art img{
+    display:block!important;
+    width:100%!important;
+    height:100%!important;
+    max-width:100%!important;
+    max-height:100%!important;
+    object-fit:contain!important;
+    object-position:center center!important;
+    transform:none!important;
+    scale:1!important;
+    translate:none!important;
+    margin:0!important;
+    padding:0!important;
+    clip-path:none!important;
+    filter:drop-shadow(0 10px 14px rgba(0,0,0,.34))!important;
+  }
+
+  html.desktop-route .desk-order-car.order-car-card>div:last-child{
+    width:100%!important;
+    min-width:0!important;
+    padding:0 2px 2px!important;
+  }
+
+  /* Dashboard artwork gets the same no-crop rule on phones. */
+  html.desktop-route .premium-focus-car-image{
+    width:94%!important;
+    height:94%!important;
+    max-width:94%!important;
+    max-height:94%!important;
+    object-fit:contain!important;
+    object-position:center!important;
+    transform:none!important;
+    scale:1!important;
+    translate:none!important;
+    clip-path:none!important;
+  }
+}
