@@ -421,16 +421,73 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/orders'&&request.method==='GET')return reply({orders:await orderRows(env,url.searchParams.get('q')||'',url.searchParams.get('status')||'')});
  if(url.pathname==='/api/desktop/orders'&&request.method==='POST'){
   if(!perms.clients_access||(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders'))))return reply({error:'Orders management is disabled.'},403);
-  await writable(env);const b=await body(request),userId=Number(b.userId),carId=Number(b.carId),serviceId=Number(b.serviceId);
+  await writable(env);const b=await body(request);
+  let userId=Number(b.userId||0);
+  if(!userId){
+   const nc=b.newClient||{},firstName=String(nc.firstName||'').trim().slice(0,100),username=String(nc.username||'').trim().replace(/^@/,'').slice(0,100)||null,phone=String(nc.phone||'').trim().slice(0,40)||null,telegramUserId=Number(nc.telegramUserId||0);
+   if(!firstName)return reply({error:'Вкажіть ім’я нового клієнта.'},400);
+   let existing:any=null;
+   if(telegramUserId>0)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE telegram_user_id=? AND role='CLIENT' LIMIT 1").bind(telegramUserId).first<any>();
+   if(!existing&&username)existing=await env.DB!.prepare("SELECT id,status FROM users WHERE lower(username)=lower(?) AND role='CLIENT' LIMIT 1").bind(username).first<any>();
+   if(!existing&&phone)existing=await env.DB!.prepare("SELECT u.id,u.status FROM users u JOIN client_profiles cp ON cp.user_id=u.id WHERE cp.phone_number=? AND u.role='CLIENT' LIMIT 1").bind(phone).first<any>();
+   if(existing){if(existing.status!=='ACTIVE')return reply({error:'Цей клієнт неактивний.'},400);userId=Number(existing.id)}
+   else{
+    let tg=telegramUserId;
+    if(!(tg>0)){const m=await env.DB!.prepare("SELECT MIN(telegram_user_id) n FROM users WHERE telegram_user_id<0").first<any>();tg=Math.min(-1,Number(m?.n||0)-1)}
+    const created=await env.DB!.prepare("INSERT INTO users(telegram_user_id,username,first_name,language,preferred_currency,role,status,bot_status) VALUES(?,?,?,'en',?,'CLIENT','ACTIVE','UNAVAILABLE')").bind(tg,username,firstName,normalizeCurrency(b.currency||'PLN')).run();
+    userId=Number(created.meta.last_row_id);
+    await env.DB!.prepare("INSERT OR IGNORE INTO client_profiles(user_id,phone_number,phone_verified_via_telegram) VALUES(?,?,0)").bind(userId,phone).run();
+    await log(env,staff.user_id,'desktop.client.create_inline','user',String(userId),null,{firstName,username,phone,telegramUserId:tg>0?tg:null});
+   }
+  }
   const client=await env.DB!.prepare("SELECT id,status FROM users WHERE id=? AND role='CLIENT'").bind(userId).first<any>();
   if(!client||client.status!=='ACTIVE')return reply({error:'Оберіть активного клієнта.'},400);
-  const car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=? AND user_id=?').bind(carId,userId).first<any>();
-  const service=await env.DB!.prepare('SELECT s.slug,s.duration_min,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(serviceId).first<any>();
-  if(!car||!service)return reply({error:'Перевірте автомобіль та послугу.'},400);
+
+  let carId=Number(b.carId||0),car:any=null;
+  if(carId)car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=? AND user_id=?').bind(carId,userId).first<any>();
+  if(!car){
+   const nc=b.newCar||{},brand=String(nc.brand||'').trim().slice(0,60),model=String(nc.model||'').trim().slice(0,60),plate=String(nc.plate||'').trim().slice(0,32),name=String(nc.name||[brand,model].filter(Boolean).join(' ')||plate||'Автомобіль').trim().slice(0,80),bodyType=String(nc.bodyType||b.vehicleSlug||'').trim().slice(0,60)||null;
+   if(!brand&&!model&&!plate)return reply({error:'Оберіть автомобіль або введіть дані нового авто.'},400);
+   const cr=await env.DB!.prepare("INSERT INTO client_cars(user_id,name,brand,model,modification,body_type,plate,has_ceramic,owner_phone) VALUES(?,?,?,?,?,?,?,?,?)").bind(userId,name,brand||null,model||null,String(nc.modification||'').trim().slice(0,80)||null,bodyType,plate||null,nc.hasCeramic?1:0,String(nc.ownerPhone||'').trim().slice(0,40)||null).run();
+   carId=Number(cr.meta.last_row_id);car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=?').bind(carId).first<any>();
+   await log(env,staff.user_id,'desktop.car.create_inline','client_car',String(carId),null,{userId,brand,model,plate,bodyType});
+  }
+
+  const serviceIds=[...new Set((Array.isArray(b.serviceIds)?b.serviceIds:[b.serviceId,...(Array.isArray(b.additionalServiceIds)?b.additionalServiceIds:[])]).map((x:any)=>Number(x)).filter((x:number)=>x>0))];
+  if(!serviceIds.length)return reply({error:'Оберіть хоча б одну послугу.'},400);
+  const services:any[]=[];
+  for(const sid of serviceIds){const row=await env.DB!.prepare('SELECT s.id,s.slug,s.duration_min,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(sid).first<any>();if(!row)return reply({error:'Одна з послуг більше недоступна.'},400);services.push(row)}
+  const target=normalizeCurrency(b.currency||services[0].base_currency||'PLN');
+  const optionIds=[...new Set((Array.isArray(b.optionIds)?b.optionIds:[]).map((x:any)=>Number(x)).filter((x:number)=>x>0))];
+  const options:any[]=[];
+  for(const oid of optionIds){const row=await env.DB!.prepare("SELECT o.id,o.slug,o.price,o.base_currency,COALESCE(t.title,o.slug) title FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale='uk' WHERE o.id=? AND o.enabled=1").bind(oid).first<any>();if(row)options.push(row)}
+  const customExtras=(Array.isArray(b.customExtras)?b.customExtras:[]).map((x:any)=>({title:String(x?.title||'').trim().slice(0,120),price:Math.max(0,Number(x?.price||0)),currency:normalizeCurrency(x?.currency||target)})).filter((x:any)=>x.title&&x.price>=0).slice(0,20);
+
   if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
-  const scheduled=b.scheduledFor?new Date(b.scheduledFor).toISOString():null,duration=Math.max(5,Math.min(10080,Number(service.duration_min||60))),deadline=scheduled?new Date(Date.parse(scheduled)+duration*60000).toISOString():null;
-  const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,request_type,calculated_price,currency,scheduled_for,staff_note,responsible_staff_id,assigned_manager_id,created_by_staff_id,estimated_duration_min,duration_overridden,deadline_at) VALUES(?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?,?,?,0,?)").bind(userId,carId,car.name,car.plate||null,service.slug,JSON.stringify([service.slug]),'[]',Number(service.base_price),service.base_currency||'PLN',scheduled,String(b.staffNote||'').slice(0,3000),staff.user_id,staff.user_id,staff.user_id,duration,deadline).run();
-  const id=Number(r.meta.last_row_id);await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceId});return reply({ok:true,id});
+  const scheduled=b.scheduledFor?new Date(b.scheduledFor).toISOString():null;
+  const status=['REQUESTED','PENDING_CONFIRMATION','CONFIRMED'].includes(String(b.status||''))?String(b.status):'PENDING_CONFIRMATION';
+  const duration=Math.max(5,Math.min(10080,Number(b.estimatedDurationMin||services.reduce((sum:number,x:any)=>sum+Number(x.duration_min||60),0)||60)));
+  const durationOverridden=Object.prototype.hasOwnProperty.call(b,'estimatedDurationMin')?1:0;
+  const responsibleId=Number(b.responsibleStaffId||staff.user_id);
+  const responsible=await env.DB!.prepare("SELECT id FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER') AND status='ACTIVE'").bind(responsibleId).first<any>();
+  if(!responsible)return reply({error:'Відповідального не знайдено.'},400);
+
+  const servicesTotal=services.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.base_price||0),normalizeCurrency(x.base_currency||target),target),0);
+  const optionsTotal=options.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.price||0),normalizeCurrency(x.base_currency||target),target),0);
+  const customTotal=customExtras.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.price||0),x.currency,target),0);
+  const beforeDiscount=Math.max(0,servicesTotal+optionsTotal+customTotal);
+  const discountPercent=Math.max(0,Math.min(90,Number(b.discountPercent||0)));
+  const discountAmount=Math.min(beforeDiscount,Math.max(0,Object.prototype.hasOwnProperty.call(b,'discountAmount')?Number(b.discountAmount||0):beforeDiscount*discountPercent/100));
+  const finalPrice=Object.prototype.hasOwnProperty.call(b,'finalPrice')?Math.max(0,Number(b.finalPrice||0)):Math.max(0,beforeDiscount-discountAmount);
+  const confirmedAt=status==='CONFIRMED'?new Date().toISOString():null;
+  const deadline=confirmedAt?new Date(Date.parse(confirmedAt)+duration*60000).toISOString():null;
+  const slugs=services.map(x=>String(x.slug)),optionSlugs=options.map(x=>String(x.slug));
+  const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,final_job_price,price_adjustment_reason,currency,scheduled_for,confirmed_at,staff_note,responsible_staff_id,assigned_manager_id,created_by_staff_id,estimated_duration_min,duration_overridden,deadline_at) VALUES(?,?,?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(userId,carId,car?.name||[car?.brand,car?.model].filter(Boolean).join(' ')||null,car?.plate||null,slugs[0],JSON.stringify(slugs),JSON.stringify(optionSlugs),String(b.vehicleSlug||car?.body_type||'')||null,String(b.conditionSlug||'')||null,status,servicesTotal,optionsTotal,discountAmount,beforeDiscount,finalPrice,discountAmount>0?'Desktop create discount '+discountPercent.toFixed(2)+'%':'Desktop manual order',target,scheduled,confirmedAt,String(b.staffNote||'').slice(0,3000),responsibleId,responsibleId,staff.user_id,duration,durationOverridden,deadline).run();
+  const id=Number(r.meta.last_row_id);
+  for(const x of customExtras){const targetPrice=convertCurrency(x.price,x.currency,target);await env.DB!.prepare("INSERT INTO service_request_extras(request_id,service_id,service_slug,title_snapshot,price_snapshot,currency,added_by) VALUES(?,NULL,'custom',?,?,?,?)").bind(id,x.title,targetPrice,target,staff.user_id).run()}
+  await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceIds,optionIds,customExtras:customExtras.map((x:any)=>x.title),currency:target,discountPercent,discountAmount,finalPrice,status,responsibleId});
+  if(status==='CONFIRMED')await syncOrderTiming(env,id,false);
+  return reply({ok:true,id,userId,carId,total:finalPrice,currency:target});
  }
  const orderMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)$/);
  if(orderMatch&&request.method==='GET')return reply({order:await orderDetail(env,Number(orderMatch[1]))});
