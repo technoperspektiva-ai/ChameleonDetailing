@@ -14,6 +14,13 @@ const labels:Record<Page,string>={dashboard:'Dashboard',orders:'Замовлен
 const icons:Record<Page,any>={dashboard:Home,orders:ClipboardList,sales:Search,cars:Car,clients:Users,calendar:CalendarDays,services:Wrench,payments:CreditCard,broadcasts:Megaphone,analytics:BarChart3,reports:FileText,staff:BadgeCheck,audit:History,workspace:LayoutDashboard,settings:Settings};
 const money=(v:any,c='PLN')=>new Intl.NumberFormat('uk-UA',{style:'currency',currency:c||'PLN',maximumFractionDigits:2}).format(Number(v||0));
 const dt=(v:any)=>v?new Date(String(v).endsWith('Z')?v:String(v)+'Z').toLocaleString('uk-UA'):'—';
+const isPhoneClient=()=>{
+ const ua=String(navigator.userAgent||'');
+ const uaData=(navigator as any).userAgentData;
+ const phoneUa=/iPhone|iPod|Windows Phone|IEMobile|Opera Mini|BlackBerry|BB10|Android[^)]*Mobile/i.test(ua);
+ const tablet=/iPad|Tablet|Android(?![^)]*Mobile)/i.test(ua);
+ return !tablet&&(phoneUa||uaData?.mobile===true);
+};
 
 const api=async(path:string,init:RequestInit={})=>{
  const session=localStorage.getItem('chameleon.desktop.session')||'';
@@ -25,6 +32,7 @@ const api=async(path:string,init:RequestInit={})=>{
 const post=(path:string,data:any,method='POST')=>api(path,{method,body:JSON.stringify(data)});
 
 export function DesktopApp(){
+ const phoneBlocked=useMemo(()=>isPhoneClient(),[]);
  const [boot,setBoot]=useState<Bootstrap|null>(null),[error,setError]=useState(''),[loading,setLoading]=useState(true),[page,setPage]=useState<Page>('dashboard'),[mobile,setMobile]=useState(false);
  const load=async()=>{
   setLoading(true);setError('');
@@ -41,8 +49,9 @@ export function DesktopApp(){
   }catch(e:any){setError(String(e?.message||e));setBoot(null)}
   finally{setLoading(false)}
  };
- useEffect(()=>{load()},[]);
+ useEffect(()=>{if(!phoneBlocked)load();else setLoading(false)},[phoneBlocked]);
  useEffect(()=>{location.hash=page==='dashboard'?'':page},[page]);
+ if(phoneBlocked)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>Вхід з телефону заблокований.</p><p className="desk-muted">Відкрийте панель на PC, Mac, ноутбуці або iPad / планшеті.</p></div>;
  if(loading)return <div className="desk-state"><div className="desk-spinner"/><h1>Chameleon Control Center</h1><p>Завантаження робочого простору…</p></div>;
  if(!boot)return <div className="desk-state"><AlertTriangle/><h1>Desktop Control Center</h1><p>{error||'Сесія недоступна.'}</p><p className="desk-muted">Відкрийте Telegram Bot та надішліть команду <b>/desktop</b>, щоб отримати нове одноразове посилання.</p></div>;
  const logout=async()=>{try{await post('/api/desktop/logout',{})}catch{}localStorage.removeItem('chameleon.desktop.session');setBoot(null)};
