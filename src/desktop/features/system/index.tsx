@@ -56,7 +56,7 @@ export function AdminHub({role,section='access'}:{role:Role;section?:string}){
  const updateMultiplier=async(kind:string,x:any,next:any)=>{await post('/api/desktop/admin-hub/'+kind+'/'+x.id,{multiplier:Number(next.multiplier??x.multiplier),enabled:next.enabled??!!x.enabled,sortOrder:Number(next.sortOrder??x.sort_order)},'PATCH');await load()};
  const updateSchedule=async(x:any,next:any)=>{await post('/api/desktop/admin-hub/schedule/'+x.day_of_week,{enabled:next.enabled??!!x.enabled,openTime:next.openTime||x.open_time,closeTime:next.closeTime||x.close_time},'PATCH');await load()};
  const saveContent=async(key:string,locale:string,value:string)=>{await post('/api/desktop/admin-hub/content',{key,locale,value},'PUT');await load()};
- const tabs=[['access','Клієнти & доступ'],['calculator','Калькулятор'],['content','Контент & мови'],['commercial','Комерція'],['brand','Бренд & сезон'],['permissions','Права & сповіщення'],...(role==='OWNER'?[['botmenu','Меню Telegram Bot']]:[])];
+ const tabs=[['access','Клієнти & доступ'],['calculator','Калькулятор'],['content','Контент Mini App'],['commercial','Комерція'],['brand','Бренд & сезон'],['permissions','Права & сповіщення']];
  return <>{msg&&<div className="desk-banner">{msg}</div>}
  {tab==='access'&&<AccessControl clients={clients} data={data} action={userAction} role={role} reload={load}/>}
  {tab==='calculator'&&<CalculatorControl data={data} settingMap={settingMap} updateSetting={updateSetting} updateMultiplier={updateMultiplier} updateSchedule={updateSchedule}/>}
@@ -64,7 +64,7 @@ export function AdminHub({role,section='access'}:{role:Role;section?:string}){
  {tab==='commercial'&&<CommercialControl data={data} services={services} clients={clients} settingMap={settingMap} updateSetting={updateSetting} reload={load}/>}
  {tab==='brand'&&<BrandControl data={data} settingMap={settingMap} updateSetting={updateSetting} reload={load}/>}
  {tab==='permissions'&&<PermissionsControl data={data} role={role} reload={load}/>}
- {tab==='botmenu'&&role==='OWNER'&&<BotMenuControl/>}</>
+</>
 }
 
 export function AccessControl({clients,data,action,role,reload}:{clients:any[];data:any;action:(id:number,a:string,e?:any)=>Promise<void>;role:Role;reload:()=>Promise<void>|void}){
@@ -112,7 +112,7 @@ export function ContentControl({data,saveContent,settingMap,updateSetting}:{data
   'referral.description':{name:'Опис реферальної програми',where:'Mini App → Реферальна програма → Опис',hint:'Розгорнуте пояснення програми.',preview:'mini'},
   'contact.description':{name:'Опис у розділі контактів',where:'Mini App → Контакти → Опис',hint:'Текст перед контактними діями.',preview:'mini'}
  };
- const keys=Object.keys(meta),[edit,setEdit]=useState<any>({}),[activeLocale,setActiveLocale]=useState<DesktopLocale>('uk'),[saving,setSaving]=useState('');
+ const keys=Object.keys(meta).filter(key=>!key.startsWith('bot.')),[edit,setEdit]=useState<any>({}),[activeLocale,setActiveLocale]=useState<DesktopLocale>('uk'),[saving,setSaving]=useState('');
  const clean=(v:string)=>String(v||'').replace(/\\n/g,'\n');
  const value=(key:string,loc:string)=>edit[key+':'+loc]??clean((data.content||[]).find((x:any)=>x.key===key&&x.locale===loc)?.value??'');
  const save=async(key:string)=>{setSaving(key);try{await saveContent(key,activeLocale,value(key,activeLocale));setEdit((x:any)=>{const n={...x};delete n[key+':'+activeLocale];return n})}finally{setSaving('')}};
