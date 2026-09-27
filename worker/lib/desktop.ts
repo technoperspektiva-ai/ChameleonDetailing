@@ -731,7 +731,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/personal-workspace'&&request.method==='PUT'){
   await writable(env);const b=await body(request);
   const locale=['uk','pl','en','de','fr'].includes(String(b.locale))?String(b.locale):'en';
-  const config={compact:!!b.compact,sidebarCollapsed:!!b.sidebarCollapsed,density:['compact','comfortable'].includes(String(b.density))?String(b.density):'comfortable',theme:String(b.theme)==='light'?'light':'dark',locale,favoritePages:Array.isArray(b.favoritePages)?b.favoritePages.map(String).slice(0,12):[]};
+  const config={compact:!!b.compact,sidebarCollapsed:!!b.sidebarCollapsed,density:['compact','comfortable'].includes(String(b.density))?String(b.density):'comfortable',theme:String(b.theme)==='light'?'light':'dark',locale,currency:['PLN','USD','UAH'].includes(String(b.currency))?String(b.currency):'PLN',favoritePages:Array.isArray(b.favoritePages)?b.favoritePages.map(String).slice(0,12):[]};
   await env.DB!.prepare("INSERT INTO desktop_personal_workspace(user_id,config_json) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET config_json=excluded.config_json,updated_at=CURRENT_TIMESTAMP").bind(staff.user_id,JSON.stringify(config)).run();
   return reply({ok:true,config});
  }
