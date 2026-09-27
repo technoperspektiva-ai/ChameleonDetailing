@@ -123,20 +123,123 @@ export function ContentControl({data,saveContent,settingMap,updateSetting}:{data
 
 
 export function CommercialControl({data,services,clients,settingMap,updateSetting,reload}:{data:any;services:any[];clients:any[];settingMap:any;updateSetting:(k:string,v:any)=>Promise<void>;reload:()=>void}){
- const [promo,setPromo]=useState<any>({serviceId:'',percentDiscount:10,startsAt:'',endsAt:'',label:''}),[gift,setGift]=useState<any>({userId:'',percentDiscount:10,greeting:'',expiresAt:''}),[offer,setOffer]=useState<any>({userId:'',primaryServiceId:'',extraServiceIds:[],vehicleSlug:'sedan',conditionSlug:'normal',finalPrice:0,currency:'PLN',note:''}),[msg,setMsg]=useState('');
- const createPromo=async()=>{await post('/api/desktop/admin-hub/promotions',promo);setPromo({...promo,label:''});reload()};
- const createGift=async()=>{await post('/api/desktop/admin-hub/gift-discount',gift);setGift({...gift,greeting:''});setMsg('✅ Подарункову знижку створено');reload()};
- const createOffer=async()=>{const d=await post('/api/desktop/admin-hub/offers',offer);setMsg('✅ Персональну пропозицію #'+d.id+' створено');setOffer({...offer,note:'',finalPrice:0,extraServiceIds:[]});reload()};
- const offerAction=async(id:number,action:string)=>{try{await post('/api/desktop/admin-hub/offers/'+id+'/'+action,{});setMsg('✅ Offer '+action);reload()}catch(e:any){setMsg('⚠️ '+e.message)}};
+ const [promo,setPromo]=useState<any>({serviceId:'',percentDiscount:10,startsAt:'',endsAt:'',label:''}),[gift,setGift]=useState<any>({userId:'',percentDiscount:10,greeting:'',expiresAt:''}),[offer,setOffer]=useState<any>({userId:'',primaryServiceId:'',extraServiceIds:[],vehicleSlug:'sedan',conditionSlug:'normal',finalPrice:0,currency:'PLN',note:''}),[msg,setMsg]=useState(''),[deletingGift,setDeletingGift]=useState<number|null>(null);
+ const createPromo=async()=>{try{await post('/api/desktop/admin-hub/promotions',promo);setPromo({...promo,label:''});setMsg('✅ Акцію створено');await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}};
+ const createGift=async()=>{try{await post('/api/desktop/admin-hub/gift-discount',gift);setGift({...gift,greeting:''});setMsg('✅ Подарункову знижку створено');await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}};
+ const removeGift=async(id:number)=>{if(!confirm('Видалити цю подарункову знижку? Дію не можна скасувати.'))return;setDeletingGift(id);try{await api('/api/desktop/admin-hub/gift-discount/'+id,{method:'DELETE'});setMsg('✅ Подарункову знижку видалено');await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}finally{setDeletingGift(null)}};
+ const createOffer=async()=>{try{const d=await post('/api/desktop/admin-hub/offers',offer);setMsg('✅ Персональну пропозицію #'+d.id+' створено');setOffer({...offer,note:'',finalPrice:0,extraServiceIds:[]});await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}};
+ const offerAction=async(id:number,action:string)=>{try{await post('/api/desktop/admin-hub/offers/'+id+'/'+action,{});setMsg('✅ Пропозицію оновлено');await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}};
  const toggleExtra=(id:number)=>setOffer({...offer,extraServiceIds:offer.extraServiceIds.includes(id)?offer.extraServiceIds.filter((x:number)=>x!==id):[...offer.extraServiceIds,id]});
- return <>{msg&&<div className="desk-banner">{msg}</div>}
- <div className="control-grid"><Panel title="Реферальна програма"><div className="settings-stack"><SettingLine label="Enabled" value={settingMap.referral_enabled||'1'} choices={['0','1']} save={v=>updateSetting('referral_enabled',v)}/><SettingLine label="Успіх при статусі" value={settingMap.referral_success_status||'COMPLETED'} choices={['COMPLETED','PAID']} save={v=>updateSetting('referral_success_status',v)}/><SettingLine label="Тип бонусу" value={settingMap.referral_referrer_bonus_type||'PERCENT'} choices={['PERCENT','FIXED']} save={v=>updateSetting('referral_referrer_bonus_type',v)}/><SettingLine label="Значення бонусу" value={settingMap.referral_referrer_bonus_value||'10'} save={v=>updateSetting('referral_referrer_bonus_value',v)}/><SettingLine label="Валюта бонусу" value={settingMap.referral_referrer_bonus_currency||'PLN'} choices={['PLN','USD','UAH']} save={v=>updateSetting('referral_referrer_bonus_currency',v)}/><SettingLine label="Friend service ID" value={settingMap.referral_friend_service_id||''} save={v=>updateSetting('referral_friend_service_id',v)}/></div></Panel>
- <Panel title="Авто-нагадування"><div className="settings-stack"><SettingLine label="Enabled" value={settingMap['reactivation.enabled']||'1'} choices={['0','1']} save={v=>updateSetting('reactivation.enabled',v)}/><SettingLine label="Після днів" value={settingMap['reactivation.days']||'14'} save={v=>updateSetting('reactivation.days',v)}/><SettingLine label="Час" value={settingMap['reactivation.time']||'11:00'} save={v=>updateSetting('reactivation.time',v)}/><SettingLine label="Текст" value={settingMap['reactivation.message']||''} save={v=>updateSetting('reactivation.message',v)}/><SettingLine label="Telegram photo file_id" value={settingMap['reactivation.photo_file_id']||''} save={v=>updateSetting('reactivation.photo_file_id',v)}/></div><button className="control-run-button" onClick={async()=>{const d=await post('/api/desktop/admin-hub/reactivation/run',{});setMsg('Reactivation: '+d.sent+' sent / '+d.failed+' failed')}}><Send/>Надіслати простроченим зараз</button></Panel></div>
- <div className="control-grid"><Panel title="Нова акція на послугу"><div className="control-form"><label>Послуга<select value={promo.serviceId} onChange={e=>setPromo({...promo,serviceId:e.target.value})}><option value="">Оберіть…</option>{services.map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><label>Знижка %<input type="number" value={promo.percentDiscount} onChange={e=>setPromo({...promo,percentDiscount:Number(e.target.value)})}/></label><label>Початок<input type="datetime-local" value={promo.startsAt} onChange={e=>setPromo({...promo,startsAt:e.target.value})}/></label><label>Кінець<input type="datetime-local" value={promo.endsAt} onChange={e=>setPromo({...promo,endsAt:e.target.value})}/></label><label>Назва<input value={promo.label} onChange={e=>setPromo({...promo,label:e.target.value})}/></label><button className="desk-primary" disabled={!promo.serviceId||!promo.endsAt} onClick={createPromo}><Plus/>Створити акцію</button></div></Panel>
- <Panel title="Подарункова знижка клієнту"><div className="control-form"><label>Клієнт<select value={gift.userId} onChange={e=>setGift({...gift,userId:e.target.value})}><option value="">Оберіть…</option>{clients.map(x=><option value={x.id} key={x.id}>{x.first_name||x.username||x.id}</option>)}</select></label><label>Знижка %<input type="number" min="1" max="100" value={gift.percentDiscount} onChange={e=>setGift({...gift,percentDiscount:Number(e.target.value)})}/></label><label>До дати<input type="datetime-local" value={gift.expiresAt} onChange={e=>setGift({...gift,expiresAt:e.target.value})}/></label><label>Привітання<input value={gift.greeting} onChange={e=>setGift({...gift,greeting:e.target.value})}/></label><button className="desk-primary" disabled={!gift.userId} onClick={createGift}><Plus/>Створити</button></div></Panel></div>
- <Panel title="Персональна пропозиція"><div className="offer-builder"><div className="control-form"><label>Клієнт<select value={offer.userId} onChange={e=>setOffer({...offer,userId:e.target.value})}><option value="">Оберіть…</option>{clients.map(x=><option value={x.id} key={x.id}>{x.first_name||x.username||x.id}</option>)}</select></label><label>Основна послуга<select value={offer.primaryServiceId} onChange={e=>setOffer({...offer,primaryServiceId:Number(e.target.value)})}><option value="">Оберіть…</option>{services.map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label><label>Тип авто<select value={offer.vehicleSlug} onChange={e=>setOffer({...offer,vehicleSlug:e.target.value})}>{['sedan','hatchback','suv','large-suv','van'].map(x=><option key={x}>{x}</option>)}</select></label><label>Стан<select value={offer.conditionSlug} onChange={e=>setOffer({...offer,conditionSlug:e.target.value})}>{['light','normal','dirty','very-dirty'].map(x=><option key={x}>{x}</option>)}</select></label><label>Фінальна ціна<input type="number" min="0" value={offer.finalPrice} onChange={e=>setOffer({...offer,finalPrice:Number(e.target.value)})}/></label><label>Валюта<select value={offer.currency} onChange={e=>setOffer({...offer,currency:e.target.value})}><option>PLN</option><option>USD</option><option>UAH</option></select></label><label className="wide-field">Примітка<textarea value={offer.note} onChange={e=>setOffer({...offer,note:e.target.value})}/></label></div><div className="offer-extra-picker"><b>Додаткові послуги</b>{services.filter(x=>Number(x.id)!==Number(offer.primaryServiceId)).map(x=><label className={offer.extraServiceIds.includes(x.id)?'selected':''} key={x.id}><input type="checkbox" checked={offer.extraServiceIds.includes(x.id)} onChange={()=>toggleExtra(x.id)}/><span>{x.title}</span></label>)}</div><button className="desk-primary offer-create" disabled={!offer.userId||!offer.primaryServiceId} onClick={createOffer}><Plus/>Створити персональні умови</button></div></Panel>
- <div className="control-grid"><Panel title={'Акції · '+(data.promotions||[]).length}><div className="compact-list">{(data.promotions||[]).map((x:any)=><div key={x.id}><span><b>{x.service_title} · -{x.percent_discount}%</b><small>{x.label||''} · до {dt(x.ends_at)}</small></span>{x.enabled?<button onClick={async()=>{await api('/api/desktop/admin-hub/promotions/'+x.id,{method:'DELETE'});reload()}}>Вимкнути</button>:<strong>OFF</strong>}</div>)}</div></Panel><Panel title={'Реферали · '+(data.referrals||[]).length}><div className="compact-list">{(data.referrals||[]).slice(0,30).map((x:any)=><div key={x.id}><span><b>{x.referrer_name||x.referrer_username||'—'} → {x.referred_name||x.referred_username||'—'}</b><small>{x.code}</small></span><strong>{x.first_paid_job_at?'PAID':'OPEN'}</strong></div>)}</div></Panel></div>
- <div className="control-grid"><Panel title={'Персональні пропозиції · '+(data.offers||[]).length}><div className="offer-list">{(data.offers||[]).slice(0,60).map((x:any)=><div key={x.id}><span><b>#{x.id} · {x.first_name||x.username||'—'}</b><small>{x.status} · {x.note||''}</small></span><strong>{money(x.final_price,x.currency)}</strong><div>{['DRAFT','APPROVED'].includes(x.status)&&<button title="Надіслати клієнту" onClick={()=>offerAction(x.id,'send')}><Send/></button>}{x.status==='DRAFT'&&<button title="Погодити" onClick={()=>offerAction(x.id,'approve')}><Check/></button>}<button className="danger-mini" onClick={()=>offerAction(x.id,'reject')}><X/></button></div></div>)}</div></Panel><Panel title={'Подарункові знижки · '+(data.personalDiscounts||[]).length}><div className="compact-list">{(data.personalDiscounts||[]).slice(0,40).map((x:any)=><div key={x.id}><span><b>{x.first_name||x.username||'—'} · -{x.percent_discount}%</b><small>{x.status} · {x.greeting||''}</small></span><strong>{x.expires_at?dt(x.expires_at):'—'}</strong></div>)}</div></Panel><Panel title={'Розрахунки · '+(data.calculations||[]).length}><div className="compact-list">{(data.calculations||[]).slice(0,40).map((x:any)=><div key={x.id}><span><b>#{x.id} · {x.service_slug||'service'}</b><small>{x.first_name||x.username||'—'} · {dt(x.created_at)}</small></span><strong>{money(x.calculated_price,x.currency)}</strong></div>)}</div></Panel></div></>
+ const promotions=data.promotions||[],personalDiscounts=data.personalDiscounts||[],offers=data.offers||[],referrals=data.referrals||[],calculations=data.calculations||[];
+ const activePromos=promotions.filter((x:any)=>!!x.enabled).length,activeGifts=personalDiscounts.filter((x:any)=>!['USED','CANCELLED','EXPIRED'].includes(String(x.status||'').toUpperCase())).length,openOffers=offers.filter((x:any)=>!['ACCEPTED','REJECTED','EXPIRED'].includes(String(x.status||'').toUpperCase())).length;
+ const discountStatus=(s:string)=>({OFFERED:'Запропоновано',ACTIVE:'Активна',USED:'Використано',EXPIRED:'Прострочено',CANCELLED:'Скасовано'} as Record<string,string>)[String(s||'').toUpperCase()]||s||'Активна';
+ return <div className="commercial-dashboard">
+  {msg&&<div className="desk-banner commercial-feedback">{msg}</div>}
+  <section className="commercial-hero">
+   <div><span className="desk-eyebrow">MARKETING & RETENTION</span><h2>Комерція та утримання клієнтів</h2><p>Акції, персональні умови, подарункові знижки та повернення клієнтів — в одному робочому просторі без зайвих переходів.</p></div>
+   <div className="commercial-summary">
+    <div><small>Активні акції</small><strong>{activePromos}</strong><span>з {promotions.length}</span></div>
+    <div><small>Подарункові знижки</small><strong>{activeGifts}</strong><span>активні</span></div>
+    <div><small>Персональні пропозиції</small><strong>{openOffers}</strong><span>у роботі</span></div>
+    <div><small>Реферали</small><strong>{referrals.length}</strong><span>всього</span></div>
+   </div>
+  </section>
+
+  <div className="commercial-config-grid">
+   <section className="commercial-card">
+    <header><div className="commercial-card-icon"><Users/></div><div><span className="desk-eyebrow">REFERRALS</span><h3>Реферальна програма</h3><p>Умови бонусу для клієнта, який запросив друга.</p></div></header>
+    <div className="settings-stack commercial-settings">
+     <SettingLine label="Програма активна" value={settingMap.referral_enabled||'1'} choices={['0','1']} save={v=>updateSetting('referral_enabled',v)}/>
+     <SettingLine label="Успіх при статусі" value={settingMap.referral_success_status||'COMPLETED'} choices={['COMPLETED','PAID']} save={v=>updateSetting('referral_success_status',v)}/>
+     <SettingLine label="Тип бонусу" value={settingMap.referral_referrer_bonus_type||'PERCENT'} choices={['PERCENT','FIXED']} save={v=>updateSetting('referral_referrer_bonus_type',v)}/>
+     <SettingLine label="Значення бонусу" value={settingMap.referral_referrer_bonus_value||'10'} save={v=>updateSetting('referral_referrer_bonus_value',v)}/>
+     <SettingLine label="Валюта бонусу" value={settingMap.referral_referrer_bonus_currency||'PLN'} choices={['PLN','USD','UAH']} save={v=>updateSetting('referral_referrer_bonus_currency',v)}/>
+     <SettingLine label="Послуга для друга · ID" value={settingMap.referral_friend_service_id||''} save={v=>updateSetting('referral_friend_service_id',v)}/>
+    </div>
+   </section>
+
+   <section className="commercial-card">
+    <header><div className="commercial-card-icon"><RefreshCw/></div><div><span className="desk-eyebrow">REACTIVATION</span><h3>Авто-нагадування</h3><p>М’яко повертає клієнтів, які давно не були на обслуговуванні.</p></div></header>
+    <div className="settings-stack commercial-settings">
+     <SettingLine label="Нагадування активні" value={settingMap['reactivation.enabled']||'1'} choices={['0','1']} save={v=>updateSetting('reactivation.enabled',v)}/>
+     <SettingLine label="Нагадати через, днів" value={settingMap['reactivation.days']||'14'} save={v=>updateSetting('reactivation.days',v)}/>
+     <SettingLine label="Час відправлення" value={settingMap['reactivation.time']||'11:00'} save={v=>updateSetting('reactivation.time',v)}/>
+     <SettingLine label="Текст повідомлення" value={settingMap['reactivation.message']||''} save={v=>updateSetting('reactivation.message',v)}/>
+     <SettingLine label="Telegram photo file_id" value={settingMap['reactivation.photo_file_id']||''} save={v=>updateSetting('reactivation.photo_file_id',v)}/>
+    </div>
+    <button className="control-run-button" onClick={async()=>{try{const d=await post('/api/desktop/admin-hub/reactivation/run',{});setMsg('✅ Нагадування: '+d.sent+' надіслано · '+d.failed+' помилок')}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}}}><Send/>Надіслати простроченим зараз</button>
+   </section>
+  </div>
+
+  <div className="commercial-create-grid">
+   <section className="commercial-card commercial-create-card">
+    <header><div className="commercial-card-icon"><Megaphone/></div><div><span className="desk-eyebrow">PROMOTION</span><h3>Нова акція на послугу</h3><p>Тимчасова знижка для конкретної послуги.</p></div></header>
+    <div className="control-form">
+     <label className="wide-field">Послуга<select value={promo.serviceId} onChange={e=>setPromo({...promo,serviceId:e.target.value})}><option value="">Оберіть послугу…</option>{services.map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label>
+     <label>Знижка, %<input type="number" min="1" max="100" value={promo.percentDiscount} onChange={e=>setPromo({...promo,percentDiscount:Number(e.target.value)})}/></label>
+     <label>Назва<input value={promo.label} onChange={e=>setPromo({...promo,label:e.target.value})} placeholder="Напр. Осінній догляд"/></label>
+     <label>Початок<input type="datetime-local" value={promo.startsAt} onChange={e=>setPromo({...promo,startsAt:e.target.value})}/></label>
+     <label>Кінець<input type="datetime-local" value={promo.endsAt} onChange={e=>setPromo({...promo,endsAt:e.target.value})}/></label>
+    </div>
+    <button className="desk-primary commercial-create-button" disabled={!promo.serviceId||!promo.endsAt} onClick={createPromo}><Plus/>Створити акцію</button>
+   </section>
+
+   <section className="commercial-card commercial-create-card gift-card">
+    <header><div className="commercial-card-icon"><BadgeCheck/></div><div><span className="desk-eyebrow">PERSONAL GIFT</span><h3>Подарункова знижка</h3><p>Персональний бонус для конкретного клієнта з терміном дії.</p></div></header>
+    <div className="control-form">
+     <label className="wide-field">Клієнт<select value={gift.userId} onChange={e=>setGift({...gift,userId:e.target.value})}><option value="">Оберіть клієнта…</option>{clients.map(x=><option value={x.id} key={x.id}>{x.first_name||x.username||x.id}</option>)}</select></label>
+     <label>Знижка, %<input type="number" min="1" max="100" value={gift.percentDiscount} onChange={e=>setGift({...gift,percentDiscount:Number(e.target.value)})}/></label>
+     <label>Діє до<input type="datetime-local" value={gift.expiresAt} onChange={e=>setGift({...gift,expiresAt:e.target.value})}/></label>
+     <label className="wide-field">Привітання<input value={gift.greeting} onChange={e=>setGift({...gift,greeting:e.target.value})} placeholder="Коротке персональне повідомлення"/></label>
+    </div>
+    <button className="desk-primary commercial-create-button" disabled={!gift.userId} onClick={createGift}><Plus/>Подарувати знижку</button>
+   </section>
+  </div>
+
+  <section className="commercial-card commercial-offer-card">
+   <header><div className="commercial-card-icon"><FileText/></div><div><span className="desk-eyebrow">PERSONAL OFFER</span><h3>Персональна пропозиція</h3><p>Сформуйте готовий пакет послуг і кінцеву ціну для конкретного клієнта.</p></div></header>
+   <div className="offer-builder">
+    <div className="control-form">
+     <label>Клієнт<select value={offer.userId} onChange={e=>setOffer({...offer,userId:e.target.value})}><option value="">Оберіть…</option>{clients.map(x=><option value={x.id} key={x.id}>{x.first_name||x.username||x.id}</option>)}</select></label>
+     <label>Основна послуга<select value={offer.primaryServiceId} onChange={e=>setOffer({...offer,primaryServiceId:Number(e.target.value)})}><option value="">Оберіть…</option>{services.map(x=><option value={x.id} key={x.id}>{x.title}</option>)}</select></label>
+     <label>Тип авто<select value={offer.vehicleSlug} onChange={e=>setOffer({...offer,vehicleSlug:e.target.value})}>{['sedan','hatchback','suv','large-suv','van'].map(x=><option key={x}>{x}</option>)}</select></label>
+     <label>Стан<select value={offer.conditionSlug} onChange={e=>setOffer({...offer,conditionSlug:e.target.value})}>{['light','normal','dirty','very-dirty'].map(x=><option key={x}>{x}</option>)}</select></label>
+     <label>Фінальна ціна<input type="number" min="0" value={offer.finalPrice} onChange={e=>setOffer({...offer,finalPrice:Number(e.target.value)})}/></label>
+     <label>Валюта<select value={offer.currency} onChange={e=>setOffer({...offer,currency:e.target.value})}><option>PLN</option><option>USD</option><option>UAH</option></select></label>
+     <label className="wide-field">Примітка<textarea value={offer.note} onChange={e=>setOffer({...offer,note:e.target.value})} placeholder="Що важливо пояснити клієнту…"/></label>
+    </div>
+    <div className="offer-extra-picker"><b>Додаткові послуги</b><small>Оберіть усе, що входить у персональний пакет.</small><div>{services.filter(x=>Number(x.id)!==Number(offer.primaryServiceId)).map(x=><label className={offer.extraServiceIds.includes(x.id)?'selected':''} key={x.id}><input type="checkbox" checked={offer.extraServiceIds.includes(x.id)} onChange={()=>toggleExtra(x.id)}/><span>{x.title}</span></label>)}</div></div>
+   </div>
+   <button className="desk-primary commercial-create-button offer-create" disabled={!offer.userId||!offer.primaryServiceId} onClick={createOffer}><Plus/>Створити персональні умови</button>
+  </section>
+
+  <div className="commercial-lists-grid">
+   <section className="commercial-card commercial-list-card">
+    <header><div><span className="desk-eyebrow">LIVE</span><h3>Акції</h3></div><span className="commercial-count">{promotions.length}</span></header>
+    <div className="compact-list">{promotions.length?promotions.map((x:any)=><div key={x.id}><span><b>{x.service_title} · -{x.percent_discount}%</b><small>{x.label||'Без назви'} · до {dt(x.ends_at)}</small></span>{x.enabled?<button onClick={async()=>{await api('/api/desktop/admin-hub/promotions/'+x.id,{method:'DELETE'});await reload()}}>Вимкнути</button>:<strong className="commercial-status muted">OFF</strong>}</div>):<p className="commercial-empty">Акцій ще немає.</p>}</div>
+   </section>
+
+   <section className="commercial-card commercial-list-card">
+    <header><div><span className="desk-eyebrow">GIFTS</span><h3>Подарункові знижки</h3></div><span className="commercial-count">{personalDiscounts.length}</span></header>
+    <div className="compact-list gift-discount-list">{personalDiscounts.length?personalDiscounts.slice(0,60).map((x:any)=><div key={x.id}><span><b>{x.first_name||x.username||'—'} · -{x.percent_discount}%</b><small>{x.greeting||'Без привітання'}</small></span><div className="commercial-list-meta"><strong className={'commercial-status '+String(x.status||'').toLowerCase()}>{discountStatus(x.status)}</strong><small>{x.expires_at?'до '+dt(x.expires_at):'без терміну'}</small></div><button className="commercial-delete" title="Видалити подарункову знижку" aria-label="Видалити подарункову знижку" disabled={deletingGift===x.id} onClick={()=>removeGift(x.id)}><Trash2/></button></div>):<p className="commercial-empty">Подарункових знижок ще немає.</p>}</div>
+   </section>
+
+   <section className="commercial-card commercial-list-card commercial-offers-list">
+    <header><div><span className="desk-eyebrow">OFFERS</span><h3>Персональні пропозиції</h3></div><span className="commercial-count">{offers.length}</span></header>
+    <div className="offer-list">{offers.length?offers.slice(0,60).map((x:any)=><div key={x.id}><span><b>#{x.id} · {x.first_name||x.username||'—'}</b><small>{x.status} · {x.note||'Без примітки'}</small></span><strong>{money(x.final_price,x.currency)}</strong><div>{['DRAFT','APPROVED'].includes(x.status)&&<button title="Надіслати клієнту" onClick={()=>offerAction(x.id,'send')}><Send/></button>}{x.status==='DRAFT'&&<button title="Погодити" onClick={()=>offerAction(x.id,'approve')}><Check/></button>}<button className="danger-mini" title="Відхилити" onClick={()=>offerAction(x.id,'reject')}><X/></button></div></div>):<p className="commercial-empty">Персональних пропозицій ще немає.</p>}</div>
+   </section>
+
+   <section className="commercial-card commercial-list-card">
+    <header><div><span className="desk-eyebrow">REFERRALS</span><h3>Останні реферали</h3></div><span className="commercial-count">{referrals.length}</span></header>
+    <div className="compact-list">{referrals.length?referrals.slice(0,30).map((x:any)=><div key={x.id}><span><b>{x.referrer_name||x.referrer_username||'—'} → {x.referred_name||x.referred_username||'—'}</b><small>{x.code}</small></span><strong className={'commercial-status '+(x.first_paid_job_at?'active':'muted')}>{x.first_paid_job_at?'PAID':'OPEN'}</strong></div>):<p className="commercial-empty">Рефералів поки немає.</p>}</div>
+   </section>
+
+   <section className="commercial-card commercial-list-card">
+    <header><div><span className="desk-eyebrow">CALCULATIONS</span><h3>Останні розрахунки</h3></div><span className="commercial-count">{calculations.length}</span></header>
+    <div className="compact-list">{calculations.length?calculations.slice(0,40).map((x:any)=><div key={x.id}><span><b>#{x.id} · {x.service_slug||'service'}</b><small>{x.first_name||x.username||'—'} · {dt(x.created_at)}</small></span><strong>{money(x.calculated_price,x.currency)}</strong></div>):<p className="commercial-empty">Розрахунків поки немає.</p>}</div>
+   </section>
+  </div>
+ </div>
 }
 
 export function BrandControl({data,settingMap,updateSetting,reload}:{data:any;settingMap:any;updateSetting:(k:string,v:any)=>Promise<void>;reload:()=>void}){
