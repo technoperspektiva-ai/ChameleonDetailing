@@ -163,7 +163,8 @@ export function CommercialControl({data,services,clients,settingMap,updateSettin
      <SettingLine label="Тип бонусу" value={settingMap.referral_referrer_bonus_type||'PERCENT'} choices={['PERCENT','FIXED']} save={v=>updateSetting('referral_referrer_bonus_type',v)}/>
      <SettingLine label="Значення бонусу" value={settingMap.referral_referrer_bonus_value||'10'} save={v=>updateSetting('referral_referrer_bonus_value',v)}/>
      <SettingLine label="Валюта бонусу" value={settingMap.referral_referrer_bonus_currency||'PLN'} choices={['PLN','USD','UAH']} save={v=>updateSetting('referral_referrer_bonus_currency',v)}/>
-     <SettingLine label="Послуга для друга · ID" value={settingMap.referral_friend_service_id||''} save={v=>updateSetting('referral_friend_service_id',v)}/>
+     <label className="referral-service-setting">Бонусна послуга для друга<select value={settingMap.referral_friend_service_id||''} onChange={e=>{void updateSetting('referral_friend_service_id',e.target.value)}}><option value="">Без бонусної послуги</option>{services.filter(x=>x.enabled!==0).map(x=><option key={x.id} value={x.id}>{x.title} · #{x.id}</option>)}</select><small>Після виконання умови друг отримає цю послугу безкоштовно. ID вводити вручну більше не потрібно.</small></label>
+     <button className="control-run-button referral-reconcile" onClick={async()=>{try{const d=await post('/api/desktop/admin-hub/referrals/reconcile',{});setMsg('✅ Реферали перевірено: '+d.eligible+' успішних · '+d.granted+' бонусів відновлено');await reload()}catch(e:any){setMsg('⚠️ '+String(e?.message||e))}}}><RefreshCw/>Перевірити й відновити бонуси</button>
     </div>
    </section>
 
@@ -240,7 +241,7 @@ export function CommercialControl({data,services,clients,settingMap,updateSettin
 
    <section className="commercial-card commercial-list-card">
     <header><div><span className="desk-eyebrow">REFERRALS</span><h3>Останні реферали</h3></div><span className="commercial-count">{referrals.length}</span></header>
-    <div className="compact-list">{referrals.length?referrals.slice(0,30).map((x:any)=><div key={x.id}><span><b>{x.referrer_name||x.referrer_username||'—'} → {x.referred_name||x.referred_username||'—'}</b><small>{x.code}</small></span><strong className={'commercial-status '+(x.first_paid_job_at?'active':'muted')}>{x.first_paid_job_at?'PAID':'OPEN'}</strong></div>):<p className="commercial-empty">Рефералів поки немає.</p>}</div>
+    <div className="compact-list">{referrals.length?referrals.slice(0,30).map((x:any)=><div key={x.id}><span><b>{x.referrer_name||x.referrer_username||'—'} → {x.referred_name||x.referred_username||'—'}</b><small>{x.code} · бонусів: {Number(x.reward_count||0)}{Number(x.available_rewards||0)>0?' · доступно '+Number(x.available_rewards||0):Number(x.used_rewards||0)>0?' · використано '+Number(x.used_rewards||0):''}</small></span><strong className={'commercial-status '+(Number(x.reward_count||0)>0?'active':'muted')}>{Number(x.available_rewards||0)>0?'BONUS READY':Number(x.used_rewards||0)>0?'USED':x.first_paid_job_at?'SUCCESS':'OPEN'}</strong></div>):<p className="commercial-empty">Рефералів поки немає.</p>}</div>
    </section>
 
    <section className="commercial-card commercial-list-card">
