@@ -2,5 +2,11 @@ import {useEffect,useState} from 'react';
 import {api} from './api/desktopApi';
 import {showError} from './components/Toast';
 export function useData<T>(url:string,key:string){const [rows,setRows]=useState<T[]>([]),[loading,setLoading]=useState(true),[version,setVersion]=useState(0),[updated,setUpdated]=useState<Date>();useEffect(()=>{const controller=new AbortController();setLoading(true);api(url,{signal:controller.signal}).then(d=>{setRows(d[key]||[]);setUpdated(new Date())}).catch(e=>{if(e.name!=='AbortError')showError(e)}).finally(()=>{if(!controller.signal.aborted)setLoading(false)});return()=>controller.abort()},[url,key,version]);return {rows,setRows,loading,updated,reload:()=>setVersion(v=>v+1)}}
-export function usePreference<T>(name:string,initial:T){const key='chameleon.desktop.'+(sessionStorage.getItem('desktop.user')||'guest')+'.'+name;const [value,setValue]=useState<T>(()=>{try{return JSON.parse(localStorage.getItem(key)||'null')??initial}catch{return initial}});useEffect(()=>{localStorage.setItem(key,JSON.stringify(value))},[key,value]);return [value,setValue] as const}
+export function usePreference<T>(name:string,initial:T){
+ const key='chameleon.desktop.'+(sessionStorage.getItem('desktop.user')||'guest')+'.'+name;
+ const [value,setValue]=useState<T>(()=>{try{return JSON.parse(localStorage.getItem(key)||'null')??initial}catch{return initial}});
+ useEffect(()=>{localStorage.setItem(key,JSON.stringify(value));window.dispatchEvent(new CustomEvent('chameleon:preference',{detail:{key,value}}))},[key,value]);
+ useEffect(()=>{const storage=(e:StorageEvent)=>{if(e.key!==key)return;try{setValue(e.newValue==null?initial:JSON.parse(e.newValue))}catch{setValue(initial)}};const local=(e:Event)=>{const d=(e as CustomEvent).detail;if(d?.key===key)setValue(d.value as T)};window.addEventListener('storage',storage);window.addEventListener('chameleon:preference',local);return()=>{window.removeEventListener('storage',storage);window.removeEventListener('chameleon:preference',local)}},[key,initial]);
+ return [value,setValue] as const
+}
 export function useRoute(){const read=()=>decodeURIComponent(location.hash.slice(1)||'dashboard');const [route,setRoute]=useState(read);useEffect(()=>{const change=()=>setRoute(read());window.addEventListener('hashchange',change);return()=>window.removeEventListener('hashchange',change)},[]);return [route,(next:string)=>{location.hash=next}] as const}
