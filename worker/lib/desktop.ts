@@ -54,6 +54,36 @@ const notifyClientOrderNeutral=async(env:Env,orderId:number,status:string)=>{
 };
 
 
+const notifyClientOrderChanges=async(env:Env,orderId:number,changes:Array<{key:string;before?:any;after?:any;detail?:string}>)=>{
+ if(!env.DB||!env.BOT_TOKEN||!changes.length)return;
+ try{
+  if((await getSetting(env,'client_status_notifications_enabled','1'))!=='1')return;
+  const r=await env.DB.prepare("SELECT sr.id,sr.currency,u.telegram_user_id,u.language,u.notifications_enabled FROM service_requests sr JOIN users u ON u.id=sr.user_id WHERE sr.id=?").bind(orderId).first<any>();
+  if(!r?.telegram_user_id||Number(r.notifications_enabled??1)!==1)return;
+  const raw=String(r.language||'en').toLowerCase(),lang=['uk','pl','en','de','fr'].includes(raw)?raw:'en';
+  const names:any={
+   status:{uk:'Статус',pl:'Status',en:'Status',de:'Status',fr:'Statut'},
+   payment:{uk:'Оплата',pl:'Płatność',en:'Payment',de:'Zahlung',fr:'Paiement'},
+   scheduled:{uk:'Початок роботи',pl:'Początek pracy',en:'Work start',de:'Arbeitsbeginn',fr:'Début du travail'},
+   deadline:{uk:'Дедлайн',pl:'Termin',en:'Deadline',de:'Frist',fr:'Échéance'},
+   duration:{uk:'Час виконання',pl:'Czas realizacji',en:'Execution time',de:'Ausführungszeit',fr:'Temps d’exécution'},
+   responsible:{uk:'Відповідальний',pl:'Odpowiedzialny',en:'Responsible',de:'Verantwortlich',fr:'Responsable'},
+   price:{uk:'Кінцева сума',pl:'Kwota końcowa',en:'Final amount',de:'Endbetrag',fr:'Montant final'},
+   discount:{uk:'Знижка',pl:'Rabat',en:'Discount',de:'Rabatt',fr:'Remise'},
+   accelerated:{uk:'Прискорена робота',pl:'Tryb ekspresowy',en:'Expedited work',de:'Express-Arbeit',fr:'Travail accéléré'},
+   services:{uk:'Послуги',pl:'Usługi',en:'Services',de:'Leistungen',fr:'Services'},
+   options:{uk:'Додаткові опції',pl:'Opcje dodatkowe',en:'Extra options',de:'Zusatzoptionen',fr:'Options supplémentaires'},
+   extra_added:{uk:'Додано до замовлення',pl:'Dodano do zlecenia',en:'Added to order',de:'Zum Auftrag hinzugefügt',fr:'Ajouté à la commande'},
+   extra_removed:{uk:'Прибрано із замовлення',pl:'Usunięto ze zlecenia',en:'Removed from order',de:'Aus Auftrag entfernt',fr:'Retiré de la commande'}
+  };
+  const title=lang==='uk'?'✏️ <b>Замовлення оновлено</b>':lang==='pl'?'✏️ <b>Zlecenie zaktualizowane</b>':lang==='de'?'✏️ <b>Auftrag aktualisiert</b>':lang==='fr'?'✏️ <b>Commande mise à jour</b>':'✏️ <b>Order updated</b>';
+  const format=(v:any)=>{if(v===null||v===undefined||v==='')return '—';if(Array.isArray(v))return v.length?v.join(', '):'—';if(typeof v==='boolean')return v?'ON':'OFF';const s=String(v);return /^\d{4}-\d{2}-\d{2}T/.test(s)?s.slice(0,16).replace('T',' '):s};
+  const lines=changes.slice(0,12).map(ch=>{const label=names[ch.key]?.[lang]||names[ch.key]?.en||ch.key;if(ch.detail)return '• <b>'+htmlEscape(label)+':</b> '+htmlEscape(ch.detail);return '• <b>'+htmlEscape(label)+':</b> '+htmlEscape(format(ch.before))+' → '+htmlEscape(format(ch.after))});
+  await sendMessage(env,Number(r.telegram_user_id),title+'\n\n📋 <b>CHD-'+orderId+'</b>\n'+lines.join('\n'));
+ }catch(e){console.error('desktop order change notification failed',orderId,e)}
+};
+
+
 export const defaultWorkspace={
  schemaVersion:1,
  locked:true,
