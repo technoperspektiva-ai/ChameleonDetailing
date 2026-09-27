@@ -3256,12 +3256,17 @@
 .bot-health-note{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px;align-items:start;padding:9px;border:1px solid rgba(216,166,84,.14);border-radius:9px;background:rgba(216,166,84,.04)}
 .bot-health-note svg{width:16px;height:16px;color:var(--warning)}
 .bot-health-note p{margin:0;font-size:8px;line-height:1.45;color:var(--text-muted)}
-.bot-health-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:9px}
+.bot-health-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:9px}
 .bot-health-kpis>span{display:grid;gap:1px;padding:7px 8px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.012)}
 .bot-health-kpis b{font-size:13px}
 .bot-health-kpis small{font-size:7px!important;color:var(--text-muted)!important}
 .bot-health-trend{height:58px;display:flex;align-items:flex-end;gap:3px;padding:7px 2px;border-bottom:1px solid var(--border)}
 .bot-health-trend i{flex:1;min-width:2px;max-width:12px;border-radius:2px 2px 0 0;background:linear-gradient(180deg,var(--accent),rgba(221,184,111,.35))}
+.bot-health-analysis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.bot-health-analysis>div{display:grid;gap:4px;padding:8px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.012)}
+.bot-health-analysis>div>b{font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em}
+.bot-health-analysis span{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:8px}
+.bot-health-analysis span strong{font-size:8px;color:var(--text)}
 .bot-health-users{display:grid;margin-top:4px}
 .bot-health-users>div{min-height:39px;display:flex;align-items:center;justify-content:space-between;gap:10px;border-bottom:1px solid var(--border)}
 .bot-health-users>div:last-child{border-bottom:0}
@@ -3278,11 +3283,13 @@
 :root[data-desktop-theme="light"] .staff-list>button:hover{background:rgba(120,90,40,.04)!important}
 :root[data-desktop-theme="light"] .staff-list>button.active{background:rgba(138,100,46,.09)!important}
 @media(max-width:1280px){
+ .bot-health-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
  .team-layout,.team-lower-grid{grid-template-columns:1fr}
  .staff-list{max-height:330px}
  .staff-edit-strip{grid-template-columns:1fr auto 1fr auto}
 }
 @media(max-width:820px){
+ .bot-health-kpis,.bot-health-analysis{grid-template-columns:repeat(2,minmax(0,1fr))}
  .team-workspace .team-kpis,.staff-detail-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
  .team-layout{grid-template-columns:1fr}
  .staff-edit-strip{grid-template-columns:1fr}
