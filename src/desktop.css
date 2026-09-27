@@ -1510,3 +1510,279 @@
  .service-translations>div{grid-template-columns:1fr}
  .translation-head{grid-row:auto}
 }
+
+/* v1.6 — Bot Panel parity Control Hub */
+.control-hero{
+ display:flex;
+ align-items:flex-end;
+ justify-content:space-between;
+ gap:20px;
+ margin-bottom:15px;
+ padding:3px 2px;
+}
+.control-hero h2{margin:5px 0 4px;font-size:25px;letter-spacing:-.035em}
+.control-hero p{margin:0;max-width:760px;color:var(--desk-muted);font-size:10px;line-height:1.55}
+.control-tabs{
+ display:flex;
+ gap:6px;
+ overflow:auto;
+ padding-bottom:10px;
+ margin-bottom:8px;
+}
+.control-tabs button{
+ flex:0 0 auto;
+ min-height:36px;
+ padding:0 12px;
+ border:1px solid var(--desk-line);
+ border-radius:10px;
+ background:var(--desk-panel);
+ color:var(--desk-muted);
+ font-size:9px;
+ font-weight:800;
+ cursor:pointer;
+}
+.control-tabs button.active{
+ background:color-mix(in srgb,var(--desk-accent) 10%,var(--desk-panel2));
+ color:var(--desk-text);
+ border-color:color-mix(in srgb,var(--desk-accent) 22%,var(--desk-line));
+}
+.control-grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:14px;
+ align-items:start;
+}
+.control-form{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:9px;
+}
+.control-form label{
+ display:grid;
+ gap:5px;
+ color:var(--desk-muted);
+ font-size:8px;
+ font-weight:780;
+}
+.control-form input,
+.control-form select,
+.settings-stack input,
+.settings-stack select,
+.multiplier-list input,
+.schedule-editor input{
+ width:100%;
+ min-height:38px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ padding:0 9px;
+ font:inherit;
+ font-size:9px;
+ outline:none;
+}
+.control-form>button{
+ min-height:39px;
+ padding:0 12px;
+ border:1px solid var(--desk-line);
+ border-radius:10px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ display:flex;
+ align-items:center;
+ justify-content:center;
+ gap:6px;
+ font-size:9px;
+ font-weight:850;
+ cursor:pointer;
+}
+.control-form>button svg{width:13px}
+.access-actions{
+ grid-column:1/-1;
+ display:grid;
+ grid-template-columns:repeat(3,1fr);
+ gap:6px;
+}
+.access-actions button{
+ min-height:38px;
+ border:1px solid var(--desk-line);
+ border-radius:10px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ font-size:9px;
+ font-weight:800;
+}
+.access-actions button.active{background:color-mix(in srgb,var(--desk-accent) 9%,var(--desk-panel2));border-color:color-mix(in srgb,var(--desk-accent) 22%,var(--desk-line))}
+.access-actions button.danger{color:var(--desk-red)}
+.compact-list{
+ display:grid;
+ gap:5px;
+ max-height:360px;
+ overflow:auto;
+}
+.compact-list>div{
+ min-height:40px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:10px;
+ padding:7px 8px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+ font-size:9px;
+}
+.compact-list>div>span{min-width:0;display:grid;gap:2px}
+.compact-list b{font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compact-list small{color:var(--desk-muted);font-size:8px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compact-list strong{font-size:8px;color:var(--desk-accent);white-space:nowrap}
+.compact-list button{
+ min-height:28px;
+ padding:0 8px;
+ border:1px solid var(--desk-line);
+ border-radius:8px;
+ background:var(--desk-panel);
+ color:var(--desk-muted);
+ font-size:8px;
+}
+.compact-list button svg{width:12px}
+.settings-stack{display:grid;gap:6px}
+.setting-line{
+ display:grid;
+ grid-template-columns:minmax(130px,1fr) minmax(110px,1fr) 54px;
+ gap:7px;
+ align-items:center;
+ min-height:38px;
+ padding:5px 0;
+ border-bottom:1px solid color-mix(in srgb,var(--desk-line) 75%,transparent);
+}
+.setting-line:last-child{border-bottom:0}
+.setting-line>span{font-size:9px;color:var(--desk-muted)}
+.setting-line button,
+.multiplier-list button,
+.schedule-editor button{
+ min-height:32px;
+ border:1px solid var(--desk-line);
+ border-radius:8px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ font-size:8px;
+ font-weight:800;
+}
+.multiplier-list{display:grid;gap:5px}
+.multiplier-list>div{
+ display:grid;
+ grid-template-columns:minmax(110px,1fr) 90px 60px 54px;
+ gap:7px;
+ align-items:center;
+ padding:6px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+}
+.multiplier-list b{font-size:9px}
+.multiplier-list label{display:flex;align-items:center;gap:5px;font-size:8px;color:var(--desk-muted)}
+.schedule-editor{display:grid;gap:6px}
+.schedule-editor>div{
+ display:grid;
+ grid-template-columns:46px 90px 110px 110px 56px;
+ gap:8px;
+ align-items:center;
+ padding:6px 7px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+}
+.schedule-editor b{font-size:9px}
+.schedule-editor label{font-size:8px;color:var(--desk-muted);display:flex;gap:5px;align-items:center}
+.content-editor-grid{
+ display:grid;
+ grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:14px;
+}
+.content-locale-list{
+ display:grid;
+ gap:6px;
+}
+.content-locale-list>div{
+ display:grid;
+ grid-template-columns:36px minmax(0,1fr) 52px;
+ gap:7px;
+ align-items:start;
+}
+.content-locale-list b{font-size:9px;padding-top:8px;color:var(--desk-muted)}
+.content-locale-list textarea{
+ min-height:68px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ padding:8px;
+ font:inherit;
+ font-size:9px;
+ resize:vertical;
+}
+.content-locale-list button{
+ min-height:32px;
+ border:1px solid var(--desk-line);
+ border-radius:8px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ font-size:8px;
+}
+.permission-grid{display:grid;gap:5px}
+.permission-grid button{
+ min-height:37px;
+ border:1px solid var(--desk-line);
+ border-radius:9px;
+ background:var(--desk-panel2);
+ color:var(--desk-text);
+ padding:0 9px;
+ display:flex;
+ align-items:center;
+ justify-content:space-between;
+ gap:8px;
+ font-size:8px;
+ text-align:left;
+}
+.permission-grid button:disabled{opacity:.5}
+
+.theme-light .control-tabs button,
+.theme-light .control-form input,
+.theme-light .control-form select,
+.theme-light .settings-stack input,
+.theme-light .settings-stack select,
+.theme-light .multiplier-list input,
+.theme-light .schedule-editor input,
+.theme-light .compact-list>div,
+.theme-light .multiplier-list>div,
+.theme-light .schedule-editor>div,
+.theme-light .content-locale-list textarea,
+.theme-light .permission-grid button{
+ background:#f7f1e5;
+ border-color:#d8cfbd;
+ color:#2c3129;
+}
+.theme-light .control-tabs button.active{background:#e9eedc;color:#40571d}
+.theme-light .control-form>button,
+.theme-light .setting-line button,
+.theme-light .multiplier-list button,
+.theme-light .schedule-editor button,
+.theme-light .content-locale-list button{
+ background:#fffaf0;
+ border-color:#d8cfbd;
+ color:#3b4037;
+}
+.desk-state.inline{min-height:260px;background:transparent;color:var(--desk-text)}
+
+@media(max-width:1100px){
+ .control-grid,.content-editor-grid{grid-template-columns:1fr}
+}
+@media(max-width:760px){
+ .control-form{grid-template-columns:1fr}
+ .access-actions{grid-template-columns:1fr}
+ .setting-line{grid-template-columns:1fr}
+ .multiplier-list>div{grid-template-columns:1fr 1fr}
+ .schedule-editor>div{grid-template-columns:1fr 1fr}
+ .content-locale-list>div{grid-template-columns:1fr}
+}
