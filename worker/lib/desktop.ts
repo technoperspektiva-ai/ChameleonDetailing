@@ -2,6 +2,7 @@ import type {Env} from './types';
 import {ensureDb,getSetting,setSetting} from './db';
 import {managerBlockEnabled} from './permissions';
 import {sendMessage} from './telegram';
+import {buildReport,type ReportType} from './reports';
 
 export type DesktopPermission='desktop_access'|'sales_access'|'broadcast_access'|'reports_access'|'financial_access'|'clients_access'|'workspace_editor';
 type StaffRole='OWNER'|'ADMIN'|'MANAGER';
@@ -40,7 +41,7 @@ export const defaultWorkspace={
   {id:'reports',label:'Звіти',icon:'file',group:'Management',roles:['OWNER','ADMIN']},
   {id:'staff',label:'Персонал',icon:'badge',group:'Management',roles:['OWNER','ADMIN']},
   {id:'audit',label:'Audit Log',icon:'history',group:'System',roles:['OWNER','ADMIN']},
-  {id:'workspace',label:'Layout Editor',icon:'layout',group:'System',roles:['OWNER']},
+  {id:'workspace',label:'Layout Editor',icon:'layout',group:'System',roles:['OWNER','ADMIN']},
   {id:'settings',label:'Налаштування',icon:'settings',group:'System',roles:['OWNER','ADMIN']}
  ],
  widgets:[
@@ -77,6 +78,7 @@ export async function ensureDesktopDb(env:Env){
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN accelerated INTEGER NOT NULL DEFAULT 0');
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN accelerated_surcharge REAL NOT NULL DEFAULT 0');
  await safeAlter(env,'ALTER TABLE service_requests ADD COLUMN responsible_staff_id INTEGER');
+ await safeAlter(env,'ALTER TABLE desktop_campaign_deliveries ADD COLUMN read_at TEXT');
  const defs:{role:string,key:DesktopPermission,value:number}[]=[];
  (['desktop_access','sales_access','broadcast_access','reports_access','financial_access','clients_access'] as DesktopPermission[]).forEach(key=>defs.push({role:'ADMIN',key,value:1}));
  defs.push({role:'ADMIN',key:'workspace_editor',value:0});
@@ -176,18 +178,39 @@ const nextCampaignTime=(row:any)=>{
 async function runCampaign(env:Env,row:any){
  if(!env.DB||!env.BOT_TOKEN)return;
  const recipients=await campaignRecipients(env,parse(row.audience_json,{type:'all'}));
- const run=await env.DB.prepare('INSERT INTO desktop_campaign_runs(campaign_id,recipient_count) VALUES(?,?)').bind(row.id,recipients.length).run();
- const runId=Number(run.meta.last_row_id);let sent=0,failed=0,blocked=0;
- for(const u of recipients){
-  if(String(row.type).toUpperCase()!=='IMPORTANT'&&Number(u.notifications_enabled||0)!==1)continue;
-  try{await sendMessage(env,Number(u.telegram_user_id),htmlEscape(row.text));sent++}
-  catch(e:any){failed++;if(/blocked|chat not found|deactivated/i.test(String(e?.message||e)))blocked++;await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status,error) VALUES(?,?,?,?,?)').bind(runId,row.id,u.id,'FAILED',String(e?.message||e).slice(0,500)).run();continue}
-  await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status) VALUES(?,?,?,?)').bind(runId,row.id,u.id,'SENT').run();
+ let run=await env.DB.prepare("SELECT * FROM desktop_campaign_runs WHERE campaign_id=? AND status='RUNNING' ORDER BY id DESC LIMIT 1").bind(row.id).first<any>();
+ if(!run){
+  const created=await env.DB.prepare('INSERT INTO desktop_campaign_runs(campaign_id,recipient_count) VALUES(?,?)').bind(row.id,recipients.length).run();
+  run={id:Number(created.meta.last_row_id),sent_count:0,failed_count:0,blocked_count:0};
+ }
+ const runId=Number(run.id);
+ const delivered=await env.DB.prepare('SELECT user_id FROM desktop_campaign_deliveries WHERE run_id=?').bind(runId).all<any>();
+ const doneIds=new Set((delivered.results||[]).map((x:any)=>Number(x.user_id)));
+ const eligible=recipients.filter((u:any)=>String(row.type).toUpperCase()==='IMPORTANT'||Number(u.notifications_enabled||0)===1);
+ const pending=eligible.filter((u:any)=>!doneIds.has(Number(u.id)));
+ const batch=pending.slice(0,40);
+ let sent=0,failed=0,blocked=0;
+ for(const u of batch){
+  try{
+   await sendMessage(env,Number(u.telegram_user_id),htmlEscape(row.text));
+   sent++;
+   await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status) VALUES(?,?,?,?)').bind(runId,row.id,u.id,'SENT').run();
+  }catch(e:any){
+   failed++;const message=String(e?.message||e);if(/blocked|chat not found|deactivated/i.test(message))blocked++;
+   await env.DB.prepare('INSERT OR IGNORE INTO desktop_campaign_deliveries(run_id,campaign_id,user_id,status,error) VALUES(?,?,?,?,?)').bind(runId,row.id,u.id,'FAILED',message.slice(0,500)).run();
+  }
+ }
+ await env.DB.prepare('UPDATE desktop_campaign_runs SET sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+? WHERE id=?').bind(sent,failed,blocked,runId).run();
+ await env.DB.prepare('UPDATE desktop_campaigns SET recipient_count=?,sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+?,last_run_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(eligible.length,sent,failed,blocked,row.id).run();
+ const remaining=pending.length-batch.length;
+ if(remaining>0){
+  await env.DB.prepare("UPDATE desktop_campaigns SET status='ACTIVE',next_run_at=datetime('now','+1 minute') WHERE id=?").bind(row.id).run();
+  return;
  }
  const done=Number(row.runs_completed||0)+1,next=nextCampaignTime(row),limit=Number(row.repeat_count||0),until=row.repeat_until?Date.parse(row.repeat_until):0;
  const finished=!next||(limit>0&&done>=limit)||(until>0&&Date.parse(next)>until);
- await env.DB.prepare("UPDATE desktop_campaign_runs SET finished_at=CURRENT_TIMESTAMP,sent_count=?,failed_count=?,blocked_count=?,status='DONE' WHERE id=?").bind(sent,failed,blocked,runId).run();
- await env.DB.prepare("UPDATE desktop_campaigns SET status=?,next_run_at=?,runs_completed=?,recipient_count=?,sent_count=sent_count+?,failed_count=failed_count+?,blocked_count=blocked_count+?,last_run_at=CURRENT_TIMESTAMP,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(finished?'COMPLETED':'ACTIVE',finished?null:next,done,recipients.length,sent,failed,blocked,row.id).run();
+ await env.DB.prepare("UPDATE desktop_campaign_runs SET finished_at=CURRENT_TIMESTAMP,status='DONE' WHERE id=?").bind(runId).run();
+ await env.DB.prepare("UPDATE desktop_campaigns SET status=?,next_run_at=?,runs_completed=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(finished?'COMPLETED':'ACTIVE',finished?null:next,done,row.id).run();
 }
 export async function runDesktopScheduledJobs(env:Env){
  if(!env.DB||!env.BOT_TOKEN)return;
@@ -257,10 +280,34 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  if(url.pathname==='/api/desktop/services'&&request.method==='GET'){const r=await env.DB!.prepare("SELECT s.id,s.slug,s.enabled,s.duration_min,s.category,COALESCE(t.title,s.slug) title,p.base_price,p.base_currency FROM services s LEFT JOIN service_translations t ON t.service_id=s.id AND t.locale='uk' LEFT JOIN service_prices p ON p.service_id=s.id ORDER BY s.sort_order,s.id").all<any>();return reply({services:r.results||[]});}
  if(url.pathname==='/api/desktop/staff'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT id,telegram_user_id,username,first_name,role,status,last_seen_at FROM users WHERE role IN ('OWNER','ADMIN','MANAGER') ORDER BY role,id").all<any>();return reply({staff:r.results||[]});}
  if(url.pathname==='/api/desktop/audit'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT a.*,u.first_name,u.username,u.role FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.id DESC LIMIT 300").all<any>();return reply({events:r.results||[]});}
+ if(url.pathname.startsWith('/api/desktop/reports/')&&request.method==='GET'){
+  if(!perms.reports_access)return reply({error:'Reports access is disabled.'},403);
+  const type=String(url.pathname.split('/').pop()||'business') as ReportType;
+  const allowed=['users','vip','orders','payments','revenue','referrals','retention','blacklist','whitelist','staff','reviews','suggestions','business'];
+  if(!allowed.includes(type))return reply({error:'Unsupported report type.'},400);
+  const days=Math.max(0,Math.min(3650,Number(url.searchParams.get('days')||30)));
+  const localeRaw=String(url.searchParams.get('locale')||'uk').toLowerCase(),locale=(localeRaw==='pl'?'pl':localeRaw==='en'?'en':'uk') as 'uk'|'pl'|'en';
+  const {filename,buffer}=await buildReport(env,type,days,locale);
+  await log(env,staff.user_id,'desktop.report.export','report',type,null,{days,filename,locale});
+  return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
+ }
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='GET'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);const r=await env.DB!.prepare('SELECT * FROM desktop_campaigns ORDER BY id DESC LIMIT 100').all<any>();return reply({campaigns:r.results||[]});}
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const aud=b.audience||{type:'all'},recipients=await campaignRecipients(env,aud),when=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');const status=b.sendNow?'SCHEDULED':when?'SCHEDULED':'DRAFT';const r=await env.DB!.prepare('INSERT INTO desktop_campaigns(type,text,audience_json,schedule_at,timezone,repeat_type,repeat_interval,repeat_count,repeat_until,status,next_run_at,recipient_count,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(String(b.type||'STANDARD').toUpperCase(),text,JSON.stringify(aud),when||null,String(b.timezone||'Europe/Warsaw'),String(b.repeatType||'ONCE').toUpperCase(),Math.max(1,Number(b.repeatInterval||1)),b.repeatCount?Number(b.repeatCount):null,b.repeatUntil||null,status,when||null,recipients.length,staff.user_id,staff.user_id).run();await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(r.meta.last_row_id),null,{status,recipients:recipients.length});return reply({ok:true,id:r.meta.last_row_id,recipients:recipients.length});}
  const campaignMatch=url.pathname.match(/^\/api\/desktop\/campaigns\/(\d+)$/);
  if(campaignMatch&&request.method==='PATCH'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const id=Number(campaignMatch[1]),b=await body(request),old=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(id).first<any>();if(!old)return reply({error:'Campaign not found.'},404);let status=String(old.status),next=old.next_run_at;if(b.action==='pause')status='PAUSED';if(b.action==='resume'){status='SCHEDULED';next=old.next_run_at||new Date().toISOString()}if(b.action==='cancel'){status='CANCELLED';next=null}if(b.action==='send_now'){status='SCHEDULED';next=new Date().toISOString()}await env.DB!.prepare('UPDATE desktop_campaigns SET status=?,next_run_at=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(status,next,staff.user_id,id).run();await log(env,staff.user_id,'desktop.campaign.update','desktop_campaign',String(id),old,{status,next});return reply({ok:true});}
+ if(url.pathname==='/api/desktop/personal-workspace'&&request.method==='GET'){
+  const r=await env.DB!.prepare('SELECT config_json FROM desktop_personal_workspace WHERE user_id=?').bind(staff.user_id).first<any>();
+  return reply({config:parse(r?.config_json,{})});
+ }
+ if(url.pathname==='/api/desktop/personal-workspace'&&request.method==='PUT'){
+  await writable(env);const b=await body(request);
+  const config={compact:!!b.compact,sidebarCollapsed:!!b.sidebarCollapsed,density:['compact','comfortable'].includes(String(b.density))?String(b.density):'comfortable',favoritePages:Array.isArray(b.favoritePages)?b.favoritePages.map(String).slice(0,12):[]};
+  await env.DB!.prepare("INSERT INTO desktop_personal_workspace(user_id,config_json) VALUES(?,?) ON CONFLICT(user_id) DO UPDATE SET config_json=excluded.config_json,updated_at=CURRENT_TIMESTAMP").bind(staff.user_id,JSON.stringify(config)).run();
+  return reply({ok:true,config});
+ }
+ if(url.pathname==='/api/desktop/personal-workspace'&&request.method==='DELETE'){
+  await writable(env);await env.DB!.prepare('DELETE FROM desktop_personal_workspace WHERE user_id=?').bind(staff.user_id).run();return reply({ok:true});
+ }
  if(url.pathname==='/api/desktop/workspace'&&request.method==='GET'){const [draft,active,versions]=await Promise.all([env.DB!.prepare('SELECT * FROM desktop_workspace_draft WHERE id=1').first<any>(),env.DB!.prepare('SELECT * FROM desktop_workspace_versions WHERE is_active=1 ORDER BY version_number DESC LIMIT 1').first<any>(),env.DB!.prepare('SELECT id,version_number,comment,created_by,created_at,is_active FROM desktop_workspace_versions ORDER BY version_number DESC LIMIT 30').all<any>()]);return reply({draft:{config:parse(draft?.config_json,defaultWorkspace),locked:Number(draft?.locked||0)===1},active:{version:Number(active?.version_number||1),config:parse(active?.config_json,defaultWorkspace)},versions:versions.results||[]});}
  if(url.pathname==='/api/desktop/workspace/draft'&&request.method==='PUT'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request),d=await env.DB!.prepare('SELECT locked FROM desktop_workspace_draft WHERE id=1').first<any>();if(Number(d?.locked||0)===1&&!b.unlock)return reply({error:'Workspace is locked.'},409);const cfg=cleanWorkspace(b.config);await env.DB!.prepare('UPDATE desktop_workspace_draft SET config_json=?,locked=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(JSON.stringify(cfg),b.locked?1:0,staff.user_id).run();return reply({ok:true,config:cfg});}
  if(url.pathname==='/api/desktop/workspace/lock'&&request.method==='POST'){if(!perms.workspace_editor)return reply({error:'Workspace Editor access is disabled.'},403);await writable(env);const b=await body(request);await env.DB!.prepare('UPDATE desktop_workspace_draft SET locked=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=1').bind(b.locked===false?0:1,staff.user_id).run();return reply({ok:true});}
