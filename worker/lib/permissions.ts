@@ -10,25 +10,29 @@ export type Permission=
  'content.edit'|'localization.edit'|
  'orders.read'|'orders.manage'|
  'analytics.full'|'analytics.basic'|
- 'audit.read'|'settings.edit'|'reports.export'|'reports.operational.export';
+ 'audit.read'|'settings.edit'|'reports.export'|'reports.operational.export'|
+ 'sales.access'|'desktop.access'|'broadcast.manage'|'workspace.edit'|'clients.read'|'finance.read';
 
 const map:Record<AppRole,Set<Permission>>={
  OWNER:new Set([
   'user.read','user.create','user.update','vip.assign','vip.remove','whitelist.manage','blacklist.manage',
   'manager.create','manager.remove','admin.create','admin.remove','service.edit','pricing.edit','calculator.edit','content.edit','localization.edit',
-  'orders.read','orders.manage','analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export'
+  'orders.read','orders.manage','analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export',
+  'sales.access','desktop.access','broadcast.manage','workspace.edit','clients.read','finance.read'
  ]),
  ADMIN:new Set([
   'user.read','user.create','user.update','vip.assign','vip.remove','whitelist.manage','blacklist.manage','manager.create','manager.remove',
   'service.edit','pricing.edit','calculator.edit','content.edit','localization.edit','orders.read','orders.manage',
-  'analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export'
+  'analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export',
+  'sales.access','desktop.access','broadcast.manage','workspace.edit','clients.read','finance.read'
  ]),
  // Manager uses the same capability primitives, but every admin-like block is
  // additionally gated by manager_permissions in D1 through canStaff().
  MANAGER:new Set([
   'user.read','user.create','user.update','vip.assign','vip.remove','whitelist.manage','blacklist.manage',
   'service.edit','pricing.edit','calculator.edit','content.edit','localization.edit','orders.read','orders.manage',
-  'analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export'
+  'analytics.full','analytics.basic','audit.read','settings.edit','reports.export','reports.operational.export',
+  'sales.access','desktop.access','broadcast.manage','workspace.edit','clients.read','finance.read'
  ]),
  CLIENT:new Set()
 };
@@ -39,7 +43,8 @@ const permissionBlock:Partial<Record<Permission,string>>={
  'vip.assign':'vip','vip.remove':'vip','whitelist.manage':'whitelist','blacklist.manage':'blacklist',
  'service.edit':'services','pricing.edit':'pricing','calculator.edit':'calculator','content.edit':'content','localization.edit':'languages',
  'orders.read':'orders','orders.manage':'orders','analytics.full':'analytics','analytics.basic':'analytics','audit.read':'audit','settings.edit':'settings',
- 'reports.export':'reports','reports.operational.export':'reports'
+ 'reports.export':'reports','reports.operational.export':'reports',
+ 'sales.access':'sales','desktop.access':'desktop','broadcast.manage':'campaigns','workspace.edit':'workspace','clients.read':'clients','finance.read':'financial'
 };
 
 export async function managerBlockEnabled(env:Env,key:string){
