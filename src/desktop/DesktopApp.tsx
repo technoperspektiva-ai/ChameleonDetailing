@@ -15,6 +15,7 @@ import {Calendar} from './features/calendar/Calendar';
 import {ToastHost,showError} from './components/Toast';
 import {Tabs,Skeleton,Modal} from './components/primitives';
 import {normalizeDesktopLocale,desktopLocaleNames,type DesktopLocale} from '../desktopLocales';
+import '../desktop.css';
 import './styles/tokens.css';
 import './styles/components.css';
 import './styles/shell.css';
