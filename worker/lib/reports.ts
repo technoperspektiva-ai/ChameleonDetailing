@@ -238,6 +238,44 @@ export async function buildReport(env:Env,type:ReportType,days=30,locale:ReportL
  if(type==='business')filename=`business_report_${monthStamp()}.xlsx`;return {filename,buffer:buildXlsx(wb,locale)}
 }
 
+export async function buildStaffMemberReport(env:Env,staffId:number,days=0,locale:ReportLocale='en'){
+ if(!env.DB)throw new Error('D1 is not connected');await ensureDb(env);
+ const person=await env.DB.prepare("SELECT id,telegram_user_id,username,first_name,staff_display_name,role,status,last_seen_at,management_language,COALESCE(bot_status,'ACTIVE') bot_status FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER')").bind(staffId).first<any>();
+ if(!person)throw new Error('Staff not found');
+ const since=days>0?Date.now()-Math.max(1,Math.min(3650,days))*86400000:0;
+ const [orderRows,offerRows,paymentRows,activityRows]=await Promise.all([
+  rows(env,"SELECT r.id,r.status,r.payment_status,r.service_slug,r.car_name,r.car_plate,r.scheduled_for,r.deadline_at,r.final_job_price,r.calculated_price,r.currency,r.completed_at,r.created_at,u.first_name,u.username FROM service_requests r LEFT JOIN users u ON u.id=r.user_id WHERE r.staff_deleted_at IS NULL AND COALESCE(r.responsible_staff_id,r.assigned_manager_id)=? ORDER BY r.id DESC",staffId),
+  rows(env,"SELECT po.id,po.status,po.final_price,po.currency,po.note,po.created_at,po.sent_at,u.first_name,u.username FROM personal_offers po LEFT JOIN users u ON u.id=po.user_id WHERE po.created_by=? ORDER BY po.id DESC",staffId),
+  rows(env,"SELECT p.id,p.service_request_id,p.amount,p.currency,p.reporting_amount,p.reporting_currency,p.method,p.status,p.paid_at,p.created_at FROM payments p JOIN service_requests r ON r.id=p.service_request_id WHERE p.status='PAID' AND COALESCE(r.responsible_staff_id,r.assigned_manager_id)=? ORDER BY p.id DESC",staffId),
+  rows(env,"SELECT action,entity_type,entity_id,created_at FROM audit_log WHERE actor_user_id=? ORDER BY id DESC LIMIT 1000",staffId)
+ ]);
+ const within=(x:any,key='created_at')=>!since||Date.parse(String(x?.[key]||''))>=since;
+ const orders=orderRows.filter((x:any)=>within(x,'created_at')),offers=offerRows.filter((x:any)=>within(x,'created_at')),payments=paymentRows.filter((x:any)=>within(x,'paid_at')||within(x,'created_at')),activity=activityRows.filter((x:any)=>within(x,'created_at'));
+ const active=orders.filter((x:any)=>['REQUESTED','PENDING_CONFIRMATION','CONFIRMED','CAR_ACCEPTED','IN_PROGRESS','INSPECTION','READY'].includes(String(x.status))),completed=orders.filter((x:any)=>x.status==='COMPLETED');
+ const revenueByCurrency=new Map<string,number>();for(const x of payments){const cur=String(x.reporting_currency||x.currency||'PLN'),amount=Number(x.reporting_amount||x.amount||0);revenueByCurrency.set(cur,(revenueByCurrency.get(cur)||0)+amount)}
+ const revenue=[...revenueByCurrency.entries()].map(([currency,amount])=>({currency,amount:Math.round(amount*100)/100}));
+ const wb:Sheet[]=[];
+ addSheet(wb,'Staff Summary',[{header:'Metric',key:'metric'},{header:'Value',key:'value'}],[
+  {metric:reportLabel(locale,'Work name'),value:person.staff_display_name||person.first_name||person.username||person.id},
+  {metric:reportLabel(locale,'Role'),value:person.role},{metric:reportLabel(locale,'Status'),value:person.status},{metric:reportLabel(locale,'Last seen'),value:person.last_seen_at},
+  {metric:reportLabel(locale,'Orders'),value:orders.length},{metric:reportLabel(locale,'Active orders'),value:active.length},{metric:reportLabel(locale,'Completed orders'),value:completed.length},{metric:reportLabel(locale,'Offers created'),value:offers.length},
+  ...revenue.map(x=>({metric:reportLabel(locale,'Revenue')+' '+x.currency,value:x.amount}))
+ ]);
+ addSheet(wb,'Assigned Orders',[{header:'Internal ID',key:'id'},{header:'User',key:'client'},{header:'Service',key:'service_slug'},{header:'Vehicle',key:'vehicle'},{header:'Status',key:'status'},{header:'Payment status',key:'payment_status'},{header:'Scheduled for',key:'scheduled_for'},{header:'Deadline',key:'deadline_at'},{header:'Amount',key:'amount'},{header:'Currency',key:'currency'},{header:'Completed',key:'completed_at'}],orders.map((x:any)=>({...x,client:x.first_name||x.username||'',vehicle:[x.car_name,x.car_plate].filter(Boolean).join(' · '),amount:Number(x.final_job_price??x.calculated_price??0)})));
+ addSheet(wb,'Offers',[{header:'Internal ID',key:'id'},{header:'User',key:'client'},{header:'Status',key:'status'},{header:'Amount',key:'final_price'},{header:'Currency',key:'currency'},{header:'Created',key:'created_at'}],offers.map((x:any)=>({...x,client:x.first_name||x.username||''})));
+ addSheet(wb,'Payments',[{header:'Internal ID',key:'id'},{header:'Order ID',key:'service_request_id'},{header:'Amount',key:'amount'},{header:'Currency',key:'currency'},{header:'Reporting amount',key:'reporting_amount'},{header:'Reporting currency',key:'reporting_currency'},{header:'Method',key:'method'},{header:'Paid at',key:'paid_at'}],payments);
+ addSheet(wb,'Staff Activity',[{header:'Action',key:'action'},{header:'Entity type',key:'entity_type'},{header:'Entity ID',key:'entity_id'},{header:'Created',key:'created_at'}],activity);
+ const safe=String(person.staff_display_name||person.username||person.id).replace(/[^a-zA-Z0-9_-]+/g,'_').replace(/^_+|_+$/g,'').slice(0,40)||String(person.id);
+ return {filename:`staff_${safe}_${dateStamp()}.xlsx`,buffer:buildXlsx(wb,locale),person,summary:{orders:orders.length,active:active.length,completed:completed.length,offers:offers.length,revenue}};
+}
+
+export async function sendStaffMemberReportDocument(env:Env,chatId:number,actorUserId:number,staffId:number,days=0){
+ if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN missing');if(!env.DB)throw new Error('D1 is not connected');await ensureDb(env);
+ const lang=await env.DB.prepare('SELECT management_language,language FROM users WHERE id=?').bind(actorUserId).first<any>().catch(()=>null),locale=reportLocaleFrom(lang?.management_language,lang?.language),result=await buildStaffMemberReport(env,staffId,days,locale);
+ const form=new FormData();form.set('chat_id',String(chatId));form.set('caption','📊 Chameleon Detailing — '+reportLabel(locale,'Staff report')+' · '+String(result.person.staff_display_name||result.person.first_name||result.person.username||staffId));form.set('reply_markup',JSON.stringify(reportMessageControls(locale)));form.set('document',new Blob([result.buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),result.filename);
+ const res=await fetch('https://api.telegram.org/bot'+env.BOT_TOKEN+'/sendDocument',{method:'POST',body:form}),data:any=await res.json();if(!res.ok||!data.ok)throw new Error(data?.description||'Telegram sendDocument failed');
+ await env.DB.prepare('INSERT INTO audit_log(actor_user_id,action,entity_type,entity_id,new_data_json) VALUES(?,?,?,?,?)').bind(actorUserId,'staff.report.export','user',String(staffId),JSON.stringify({days,filename:result.filename,locale})).run();return {ok:true,filename:result.filename,locale,summary:result.summary};
+}
 export async function sendReportDocument(env:Env,chatId:number,actorUserId:number,type:ReportType,days=30){
  if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN missing');
  if(!env.DB)throw new Error('D1 is not connected');
