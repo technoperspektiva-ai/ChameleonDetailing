@@ -33,8 +33,8 @@ const log=async(env:Env,actor:number,action:string,type?:string,id?:string,oldVa
 export const defaultWorkspace={
  schemaVersion:1,
  locked:true,
- defaultPage:'dashboard',
- theme:{accent:'#a4ff00',mode:'dark',radius:18,density:'comfortable',fontScale:1,animations:true,sidebarStyle:'glass'},
+ defaultPage:'orders',
+ theme:{accent:'#7aa63a',mode:'light',radius:18,density:'comfortable',fontScale:1,animations:true,sidebarStyle:'glass'},
  sidebar:[
   {id:'dashboard',label:'Dashboard',icon:'home',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
   {id:'orders',label:'Замовлення',icon:'clipboard',group:'Operations',roles:['OWNER','ADMIN','MANAGER']},
@@ -221,6 +221,16 @@ async function runCampaign(env:Env,row:any){
  await env.DB.prepare("UPDATE desktop_campaign_runs SET finished_at=CURRENT_TIMESTAMP,status='DONE' WHERE id=?").bind(runId).run();
  await env.DB.prepare("UPDATE desktop_campaigns SET status=?,next_run_at=?,runs_completed=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(finished?'COMPLETED':'ACTIVE',finished?null:next,done,row.id).run();
 }
+export async function enqueueDesktopCampaign(env:Env,actorId:number,text:string,opts?:{type?:string;audience?:any;scheduleAt?:string|null;timezone?:string;repeatType?:string;repeatInterval?:number;repeatCount?:number|null;repeatUntil?:string|null}){
+ await ensureDesktopDb(env);
+ const clean=String(text||'').trim();if(!clean)throw new Error('Message text is required.');
+ const audience=opts?.audience||{type:'all'};
+ const recipients=await campaignRecipients(env,audience);
+ const when=opts?.scheduleAt||new Date().toISOString();
+ const r=await env.DB!.prepare('INSERT INTO desktop_campaigns(type,text,audience_json,schedule_at,timezone,repeat_type,repeat_interval,repeat_count,repeat_until,status,next_run_at,recipient_count,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)')
+  .bind(String(opts?.type||'STANDARD').toUpperCase(),clean,JSON.stringify(audience),when,String(opts?.timezone||'Europe/Warsaw'),String(opts?.repeatType||'ONCE').toUpperCase(),Math.max(1,Number(opts?.repeatInterval||1)),opts?.repeatCount??null,opts?.repeatUntil??null,'SCHEDULED',when,recipients.length,actorId,actorId).run();
+ return {id:Number(r.meta.last_row_id),recipients:recipients.length};
+}
 export async function runDesktopScheduledJobs(env:Env){
  if(!env.DB||!env.BOT_TOKEN)return;
  await ensureDesktopDb(env);
@@ -295,6 +305,34 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   ]);
   return reply({services:main.results||[],options:extras.results||[],total:Number((main.results||[]).length)+Number((extras.results||[]).length)});
  }
+
+ const servicePriceMatch=url.pathname.match(/^\/api\/desktop\/services\/(\d+)$/);
+ if(servicePriceMatch&&request.method==='PATCH'){
+  if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
+  await writable(env);const id=Number(servicePriceMatch[1]),b=await body(request);
+  const old=await env.DB!.prepare('SELECT s.*,p.base_price,p.base_currency,p.currency_mode,p.usd_override,p.uah_override,p.pln_override FROM services s LEFT JOIN service_prices p ON p.service_id=s.id WHERE s.id=?').bind(id).first<any>();
+  if(!old)return reply({error:'Service not found.'},404);
+  if(Object.prototype.hasOwnProperty.call(b,'price')||Object.prototype.hasOwnProperty.call(b,'currency')){
+   const price=Number(Object.prototype.hasOwnProperty.call(b,'price')?b.price:old.base_price||0),currency=String(b.currency||old.base_currency||'PLN').toUpperCase();
+   if(!Number.isFinite(price)||price<0||!['PLN','UAH','USD'].includes(currency))return reply({error:'Invalid price/currency.'},400);
+   await env.DB!.prepare("INSERT INTO service_prices(service_id,base_price,base_currency,updated_by) VALUES(?,?,?,?) ON CONFLICT(service_id) DO UPDATE SET base_price=excluded.base_price,base_currency=excluded.base_currency,updated_by=excluded.updated_by,updated_at=CURRENT_TIMESTAMP").bind(id,price,currency,staff.user_id).run();
+  }
+  if(Object.prototype.hasOwnProperty.call(b,'enabled'))await env.DB!.prepare('UPDATE services SET enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.enabled?1:0,id).run();
+  if(Object.prototype.hasOwnProperty.call(b,'durationMin'))await env.DB!.prepare('UPDATE services SET duration_min=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(Math.max(0,Math.round(Number(b.durationMin)||0)),id).run();
+  const now=await env.DB!.prepare('SELECT s.*,p.base_price,p.base_currency FROM services s LEFT JOIN service_prices p ON p.service_id=s.id WHERE s.id=?').bind(id).first<any>();
+  await log(env,staff.user_id,'desktop.service.update','service',String(id),old,now);return reply({ok:true,service:now});
+ }
+ const optionPriceMatch=url.pathname.match(/^\/api\/desktop\/service-options\/(\d+)$/);
+ if(optionPriceMatch&&request.method==='PATCH'){
+  if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Owner/Admin required.'},403);
+  await writable(env);const id=Number(optionPriceMatch[1]),b=await body(request),old=await env.DB!.prepare('SELECT * FROM service_options WHERE id=?').bind(id).first<any>();
+  if(!old)return reply({error:'Option not found.'},404);
+  const price=Object.prototype.hasOwnProperty.call(b,'price')?Number(b.price):Number(old.price||0),currency=String(b.currency||old.base_currency||'PLN').toUpperCase();
+  if(!Number.isFinite(price)||price<0||!['PLN','UAH','USD'].includes(currency))return reply({error:'Invalid price/currency.'},400);
+  await env.DB!.prepare('UPDATE service_options SET price=?,base_currency=?,enabled=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(price,currency,Object.prototype.hasOwnProperty.call(b,'enabled')?(b.enabled?1:0):Number(old.enabled||0),id).run();
+  const now=await env.DB!.prepare('SELECT * FROM service_options WHERE id=?').bind(id).first<any>();
+  await log(env,staff.user_id,'desktop.service_option.update','service_option',String(id),old,now);return reply({ok:true,option:now});
+ }
  if(url.pathname==='/api/desktop/staff'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT id,telegram_user_id,username,first_name,role,status,last_seen_at FROM users WHERE role IN ('OWNER','ADMIN','MANAGER') ORDER BY role,id").all<any>();return reply({staff:r.results||[]});}
  if(url.pathname==='/api/desktop/audit'&&request.method==='GET'){if(!['OWNER','ADMIN'].includes(staff.role))return reply({error:'Not allowed.'},403);const r=await env.DB!.prepare("SELECT a.*,u.first_name,u.username,u.role FROM audit_log a LEFT JOIN users u ON u.id=a.actor_user_id ORDER BY a.id DESC LIMIT 300").all<any>();return reply({events:r.results||[]});}
  if(url.pathname.startsWith('/api/desktop/reports/')&&request.method==='GET'){
@@ -309,7 +347,7 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   return new Response(buffer,{headers:{'content-type':'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet','content-disposition':'attachment; filename="'+filename+'"','cache-control':'no-store'}});
  }
  if(url.pathname==='/api/desktop/campaigns'&&request.method==='GET'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);const r=await env.DB!.prepare('SELECT * FROM desktop_campaigns ORDER BY id DESC LIMIT 100').all<any>();return reply({campaigns:r.results||[]});}
- if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const aud=b.audience||{type:'all'},recipients=await campaignRecipients(env,aud),when=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');const status=b.sendNow?'SCHEDULED':when?'SCHEDULED':'DRAFT';const r=await env.DB!.prepare('INSERT INTO desktop_campaigns(type,text,audience_json,schedule_at,timezone,repeat_type,repeat_interval,repeat_count,repeat_until,status,next_run_at,recipient_count,created_by,updated_by) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').bind(String(b.type||'STANDARD').toUpperCase(),text,JSON.stringify(aud),when||null,String(b.timezone||'Europe/Warsaw'),String(b.repeatType||'ONCE').toUpperCase(),Math.max(1,Number(b.repeatInterval||1)),b.repeatCount?Number(b.repeatCount):null,b.repeatUntil||null,status,when||null,recipients.length,staff.user_id,staff.user_id).run();await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(r.meta.last_row_id),null,{status,recipients:recipients.length});return reply({ok:true,id:r.meta.last_row_id,recipients:recipients.length});}
+ if(url.pathname==='/api/desktop/campaigns'&&request.method==='POST'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const b=await body(request),text=String(b.text||'').trim();if(!text)return reply({error:'Message text is required.'},400);const scheduleAt=b.sendNow?new Date().toISOString():String(b.scheduleAt||'');if(!b.sendNow&&!scheduleAt)return reply({error:'Schedule date/time is required.'},400);const queued=await enqueueDesktopCampaign(env,staff.user_id,text,{type:b.type||'STANDARD',audience:b.audience||{type:'all'},scheduleAt,timezone:b.timezone||'Europe/Warsaw',repeatType:b.repeatType||'ONCE',repeatInterval:Number(b.repeatInterval||1),repeatCount:b.repeatCount?Number(b.repeatCount):null,repeatUntil:b.repeatUntil||null});await log(env,staff.user_id,'desktop.campaign.create','desktop_campaign',String(queued.id),null,{status:'SCHEDULED',recipients:queued.recipients});if(b.sendNow)await runDesktopScheduledJobs(env);const row=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(queued.id).first<any>();return reply({ok:true,id:queued.id,recipients:queued.recipients,campaign:row});}
  const campaignMatch=url.pathname.match(/^\/api\/desktop\/campaigns\/(\d+)$/);
  if(campaignMatch&&request.method==='PATCH'){if(!perms.broadcast_access)return reply({error:'Broadcast access is disabled.'},403);await writable(env);const id=Number(campaignMatch[1]),b=await body(request),old=await env.DB!.prepare('SELECT * FROM desktop_campaigns WHERE id=?').bind(id).first<any>();if(!old)return reply({error:'Campaign not found.'},404);let status=String(old.status),next=old.next_run_at;if(b.action==='pause')status='PAUSED';if(b.action==='resume'){status='SCHEDULED';next=old.next_run_at||new Date().toISOString()}if(b.action==='cancel'){status='CANCELLED';next=null}if(b.action==='send_now'){status='SCHEDULED';next=new Date().toISOString()}await env.DB!.prepare('UPDATE desktop_campaigns SET status=?,next_run_at=?,updated_by=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(status,next,staff.user_id,id).run();await log(env,staff.user_id,'desktop.campaign.update','desktop_campaign',String(id),old,{status,next});return reply({ok:true});}
  if(url.pathname==='/api/desktop/personal-workspace'&&request.method==='GET'){
