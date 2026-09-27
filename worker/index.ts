@@ -328,13 +328,15 @@ export default {
     return json({ok:true,id:res.meta.last_row_id,quote:q});
    }
    if(url.pathname==='/api/orders'){
-    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);const r=await env.DB!.prepare('SELECT * FROM service_requests WHERE user_id=? AND client_deleted_at IS NULL AND staff_deleted_at IS NULL ORDER BY id DESC LIMIT 50').bind(u.id).all<any>();const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
+    const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({orders:[]});await ensureDb(env);
+    const r=await env.DB!.prepare("SELECT sr.*,COALESCE(rs.staff_display_name,rs.first_name,rs.username) responsible_name FROM service_requests sr LEFT JOIN users rs ON rs.id=COALESCE(sr.responsible_staff_id,sr.assigned_manager_id) WHERE sr.user_id=? AND sr.client_deleted_at IS NULL AND sr.staff_deleted_at IS NULL ORDER BY sr.id DESC LIMIT 50").bind(u.id).all<any>();
+    const orders=[] as any[];for(const row of r.results||[]){const ex=await env.DB!.prepare('SELECT title_snapshot title,price_snapshot price,currency FROM service_request_extras WHERE request_id=? ORDER BY id').bind(row.id).all<any>();orders.push({...row,extra_services:ex.results||[]})}return json({orders});
    }
 
    const getOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
    if(getOrderMatch&&request.method==='GET'){
     const u=await auth(env,url.searchParams.get('initData')||'');if(u.demo)return json({order:null});await ensureDb(env);const id=Number(getOrderMatch[1]);
-    const row=await env.DB!.prepare('SELECT id,user_id,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,payment_status,calculated_price,final_job_price,currency,created_at,completed_at,car_id,car_name,car_plate FROM service_requests WHERE id=? AND user_id=? AND staff_deleted_at IS NULL AND client_deleted_at IS NULL').bind(id,u.id).first<any>();
+    const row=await env.DB!.prepare("SELECT sr.id,sr.user_id,sr.service_slug,sr.services_json,sr.options_json,sr.vehicle_slug,sr.condition_slug,sr.request_type,sr.status,sr.payment_status,sr.calculated_price,sr.final_job_price,sr.currency,sr.created_at,sr.completed_at,sr.car_id,sr.car_name,sr.car_plate,sr.responsible_staff_id,COALESCE(rs.staff_display_name,rs.first_name,rs.username) responsible_name FROM service_requests sr LEFT JOIN users rs ON rs.id=COALESCE(sr.responsible_staff_id,sr.assigned_manager_id) WHERE sr.id=? AND sr.user_id=? AND sr.staff_deleted_at IS NULL AND sr.client_deleted_at IS NULL").bind(id,u.id).first<any>();
     if(!row)return json({error:'Request not found'},404);return json({order:row});
    }
    const deleteOrderMatch=url.pathname.match(/^\/api\/orders\/(\d+)$/);
