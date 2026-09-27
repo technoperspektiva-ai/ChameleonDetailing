@@ -1,6 +1,7 @@
 import type {Env} from './types';
 import {ensureDb,event,getSetting} from './db';
 import {sendMessage} from './telegram';
+import {convertCurrency,normalizeCurrency} from './currency';
 
 type ReferralLocale='uk'|'pl'|'en'|'de'|'fr';
 const l5=(locale:ReferralLocale,uk:string,pl:string,en:string,de:string,fr:string)=>locale==='uk'?uk:locale==='pl'?pl:locale==='de'?de:locale==='fr'?fr:en;
@@ -33,13 +34,15 @@ export async function grantReferralRewardsIfEligible(env:Env,requestId:number,ev
  }
  if(!granted)return 0;
 
- const people=await env.DB.prepare('SELECT id,telegram_user_id,language FROM users WHERE id IN (?,?)').bind(ref.referrer_user_id,req.user_id).all<any>();
+ const people=await env.DB.prepare('SELECT id,telegram_user_id,language,preferred_currency FROM users WHERE id IN (?,?)').bind(ref.referrer_user_id,req.user_id).all<any>();
  for(const person of people.results||[]){
   if(!person.telegram_user_id)continue;
   const raw=String(person.language||'en').toLowerCase(),loc=(['uk','pl','en','de','fr'].includes(raw)?raw:'en') as ReferralLocale,isReferrer=Number(person.id)===Number(ref.referrer_user_id);
+  const preferred=normalizeCurrency(person.preferred_currency||'PLN');
+  const visibleReward=isReferrer?(type==='PERCENT'?'-'+value+'%':type==='FIXED'?'-'+Number(convertCurrency(value,normalizeCurrency(currency),preferred).toFixed(2))+' '+preferred:''):friendServiceId>0?l5(loc,'безкоштовна послуга','bezpłatna usługa','free service','kostenlose Leistung','service gratuit'):'';
   const msg=isReferrer
-   ?l5(loc,'🎁 <b>Реферальний бонус активовано!</b>\n\nДруг успішно скористався Chameleon Detailing. Бонус уже доступний і застосовується до наступного відповідного розрахунку.','🎁 <b>Bonus polecający aktywowany!</b>\n\nZnajomy skorzystał z Chameleon Detailing. Bonus jest już dostępny przy kolejnym odpowiednim rozliczeniu.','🎁 <b>Referral reward activated!</b>\n\nYour friend successfully used Chameleon Detailing. Your reward is ready for the next eligible quote.','🎁 <b>Empfehlungsbonus aktiviert!</b>\n\nIhr Freund hat Chameleon Detailing genutzt. Ihr Bonus ist für die nächste passende Kalkulation verfügbar.','🎁 <b>Bonus de parrainage activé !</b>\n\nVotre ami a utilisé Chameleon Detailing. Votre bonus est disponible pour le prochain calcul éligible.')
-   :l5(loc,'🎁 <b>Бонус за запрошення активовано!</b>\n\nВаш бонус доступний для відповідної послуги в калькуляторі.','🎁 <b>Bonus za polecenie aktywowany!</b>\n\nTwój bonus jest dostępny dla odpowiedniej usługi w kalkulatorze.','🎁 <b>Invitation reward activated!</b>\n\nYour reward is available for the eligible service in the calculator.','🎁 <b>Einladungsbonus aktiviert!</b>\n\nIhr Bonus ist für die passende Leistung im Rechner verfügbar.','🎁 <b>Bonus d’invitation activé !</b>\n\nVotre bonus est disponible pour le service éligible dans le calculateur.');
+   ?l5(loc,'🎁 <b>Реферальний бонус активовано!</b>\n\nВаш бонус: <b>'+visibleReward+'</b>. Він уже активний у калькуляторі та застосовується автоматично до наступного відповідного розрахунку.','🎁 <b>Bonus polecający aktywowany!</b>\n\nTwój bonus: <b>'+visibleReward+'</b>. Jest już aktywny w kalkulatorze i zastosuje się automatycznie do następnej odpowiedniej wyceny.','🎁 <b>Referral reward activated!</b>\n\nYour reward: <b>'+visibleReward+'</b>. It is already active in the calculator and will apply automatically to the next eligible quote.','🎁 <b>Empfehlungsbonus aktiviert!</b>\n\nIhr Bonus: <b>'+visibleReward+'</b>. Er ist bereits im Rechner aktiv und wird automatisch auf die nächste passende Kalkulation angewendet.','🎁 <b>Bonus de parrainage activé !</b>\n\nVotre bonus : <b>'+visibleReward+'</b>. Il est déjà actif dans le calculateur et s’appliquera automatiquement au prochain calcul éligible.')
+   :l5(loc,'🎁 <b>Бонус за запрошення активовано!</b>\n\nВаш бонус: <b>'+visibleReward+'</b>. Він уже доступний у калькуляторі.','🎁 <b>Bonus za polecenie aktywowany!</b>\n\nTwój bonus: <b>'+visibleReward+'</b>. Jest już dostępny w kalkulatorze.','🎁 <b>Invitation reward activated!</b>\n\nYour reward: <b>'+visibleReward+'</b>. It is already available in the calculator.','🎁 <b>Einladungsbonus aktiviert!</b>\n\nIhr Bonus: <b>'+visibleReward+'</b>. Er ist bereits im Rechner verfügbar.','🎁 <b>Bonus d’invitation activé !</b>\n\nVotre bonus : <b>'+visibleReward+'</b>. Il est déjà disponible dans le calculateur.');
   await sendMessage(env,Number(person.telegram_user_id),msg).catch(()=>{});
  }
  await event(env,req.user_id,'referral_rewards_granted',{referralId:ref.id,requestId,eventType,granted});
