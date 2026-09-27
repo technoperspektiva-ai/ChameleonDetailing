@@ -185,9 +185,9 @@ const writable=async(env:Env)=>{const m=await mode(env);if(m==='READ_ONLY')throw
 
 const orderRows=async(env:Env,search='',status='')=>{
  const args:any[]=[];let where="sr.staff_deleted_at IS NULL";
- if(search){where+=" AND (CAST(sr.id AS TEXT) LIKE ? OR lower(COALESCE(u.username,'')) LIKE lower(?) OR COALESCE(cp.phone_number,'') LIKE ? OR lower(COALESCE(c.plate,'')) LIKE lower(?) OR lower(COALESCE(c.brand,'')||' '||COALESCE(c.model,'')) LIKE lower(?))";const q='%'+search.replace(/^CHD-/i,'').replace(/^@/,'')+'%';args.push(q,q,q,q,q)}
+ if(search){where+=" AND (CAST(sr.id AS TEXT) LIKE ? OR lower(COALESCE(u.username,'')) LIKE lower(?) OR COALESCE(cp.phone_number,'') LIKE ? OR lower(COALESCE(c.plate,'')) LIKE lower(?) OR lower(COALESCE(c.brand,'')||' '||COALESCE(c.model,'')) LIKE lower(?) OR lower(COALESCE(u.first_name,'')||' '||COALESCE(u.last_name,'')) LIKE lower(?))";const q='%'+search.replace(/^CHD-/i,'').replace(/^@/,'')+'%';args.push(q,q,q,q,q,q)}
  if(status){where+=' AND sr.status=?';args.push(status)}
- const q="SELECT sr.id,sr.status,sr.payment_status,sr.request_type,sr.scheduled_for,sr.created_at,sr.completed_at,sr.final_job_price,sr.calculated_price,sr.currency,sr.service_slug,sr.services_json,sr.options_json,sr.car_id,sr.staff_note,sr.accelerated,sr.accelerated_surcharge,u.first_name,u.username,u.telegram_user_id,cp.phone_number,c.name car_name,c.brand,c.model,c.modification,c.body_type,c.plate,c.has_ceramic,rs.first_name responsible_name FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_profiles cp ON cp.user_id=u.id LEFT JOIN client_cars c ON c.id=sr.car_id LEFT JOIN users rs ON rs.id=sr.responsible_staff_id WHERE "+where+" ORDER BY sr.id DESC LIMIT 250";
+ const q="SELECT sr.id,sr.user_id,sr.responsible_staff_id,cp.client_tier,(SELECT title FROM service_translations WHERE service_id=(SELECT id FROM services WHERE slug=sr.service_slug) AND locale='uk' LIMIT 1) service_title,sr.status,sr.payment_status,sr.request_type,sr.scheduled_for,sr.created_at,sr.completed_at,sr.final_job_price,sr.calculated_price,sr.currency,sr.service_slug,sr.services_json,sr.options_json,sr.car_id,sr.staff_note,sr.accelerated,sr.accelerated_surcharge,u.first_name,u.username,u.telegram_user_id,cp.phone_number,c.name car_name,c.brand,c.model,c.modification,c.body_type,c.plate,c.has_ceramic,rs.first_name responsible_name FROM service_requests sr LEFT JOIN users u ON u.id=sr.user_id LEFT JOIN client_profiles cp ON cp.user_id=u.id LEFT JOIN client_cars c ON c.id=sr.car_id LEFT JOIN users rs ON rs.id=sr.responsible_staff_id WHERE "+where+" ORDER BY sr.id DESC LIMIT 250";
  const r=await env.DB!.prepare(q).bind(...args).all<any>();return r.results||[];
 };
 const orderDetail=async(env:Env,id:number)=>{
@@ -360,15 +360,34 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
  }
  if(url.pathname==='/api/desktop/search'&&request.method==='GET'){if(!perms.sales_access)return reply({error:'Sales access is disabled.'},403);return reply({results:await desktopSalesSearch(env,url.searchParams.get('q')||'',40)});}
  if(url.pathname==='/api/desktop/orders'&&request.method==='GET')return reply({orders:await orderRows(env,url.searchParams.get('q')||'',url.searchParams.get('status')||'')});
+ if(url.pathname==='/api/desktop/orders'&&request.method==='POST'){
+  if(!perms.clients_access||(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders'))))return reply({error:'Orders management is disabled.'},403);
+  await writable(env);const b=await body(request),userId=Number(b.userId),carId=Number(b.carId),serviceId=Number(b.serviceId);
+  const client=await env.DB!.prepare("SELECT id,status FROM users WHERE id=? AND role='CLIENT'").bind(userId).first<any>();
+  if(!client||client.status!=='ACTIVE')return reply({error:'Оберіть активного клієнта.'},400);
+  const car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=? AND user_id=?').bind(carId,userId).first<any>();
+  const service=await env.DB!.prepare('SELECT s.slug,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(serviceId).first<any>();
+  if(!car||!service)return reply({error:'Перевірте автомобіль та послугу.'},400);
+  if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
+  const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,request_type,calculated_price,currency,scheduled_for,staff_note,responsible_staff_id,created_by_staff_id) VALUES(?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?)").bind(userId,carId,car.name,car.plate||null,service.slug,JSON.stringify([service.slug]),'[]',Number(service.base_price),service.base_currency||'PLN',b.scheduledFor?new Date(b.scheduledFor).toISOString():null,String(b.staffNote||'').slice(0,3000),staff.user_id,staff.user_id).run();
+  const id=Number(r.meta.last_row_id);await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceId});return reply({ok:true,id});
+ }
  const orderMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)$/);
  if(orderMatch&&request.method==='GET')return reply({order:await orderDetail(env,Number(orderMatch[1]))});
  if(orderMatch&&request.method==='PATCH'){
   if(staff.role==='MANAGER'&&!(await managerBlockEnabled(env,'orders')))return reply({error:'Orders management is disabled for Manager.'},403);
   await writable(env);const id=Number(orderMatch[1]),b=await body(request),old=await orderDetail(env,id);if(!old)return reply({error:'Order not found.'},404);
+  if(b.status&&!['REQUESTED','PENDING_CONFIRMATION','CONFIRMED','CAR_ACCEPTED','IN_PROGRESS','INSPECTION','READY','COMPLETED','CANCELLED','REJECTED'].includes(b.status))return reply({error:'Некоректний статус.'},400);
+  if(b.paymentStatus&&!['PENDING','UNPAID','PAID','REFUNDED'].includes(b.paymentStatus))return reply({error:'Некоректний статус оплати.'},400);
+  if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
+  if(b.finalPrice!==undefined&&(!Number.isFinite(Number(b.finalPrice))||Number(b.finalPrice)<0))return reply({error:'Сума має бути невід’ємним числом.'},400);
+  if(b.acceleratedSurcharge!==undefined&&(!Number.isFinite(Number(b.acceleratedSurcharge))||Number(b.acceleratedSurcharge)<0))return reply({error:'Некоректна надбавка.'},400);
+  if(b.responsibleStaffId){const person=await env.DB!.prepare("SELECT id FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER') AND status='ACTIVE'").bind(Number(b.responsibleStaffId)).first<any>();if(!person)return reply({error:'Співробітника не знайдено.'},400)}
   const fields:{key:string,col:string}[]=[{key:'status',col:'status'},{key:'paymentStatus',col:'payment_status'},{key:'scheduledFor',col:'scheduled_for'},{key:'staffNote',col:'staff_note'},{key:'responsibleStaffId',col:'responsible_staff_id'}];
   for(const f of fields)if(Object.prototype.hasOwnProperty.call(b,f.key)){await env.DB!.prepare('UPDATE service_requests SET '+f.col+'=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b[f.key]||null,id).run()}
   if(Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET final_job_price=?,price_adjustment_reason=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(Number(b.finalPrice),String(b.priceReason||'Desktop adjustment').slice(0,300),id).run();
-  if(Object.prototype.hasOwnProperty.call(b,'accelerated'))await env.DB!.prepare('UPDATE service_requests SET accelerated=?,accelerated_surcharge=?,final_job_price=COALESCE(calculated_price,0)+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.accelerated?1:0,Number(b.acceleratedSurcharge||0),b.accelerated?Number(b.acceleratedSurcharge||0):0,id).run();
+  if(Object.prototype.hasOwnProperty.call(b,'accelerated')&&Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET accelerated=?,accelerated_surcharge=?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.accelerated?1:0,Number(b.acceleratedSurcharge||0),id).run();
+  if(Object.prototype.hasOwnProperty.call(b,'accelerated')&&!Object.prototype.hasOwnProperty.call(b,'finalPrice'))await env.DB!.prepare('UPDATE service_requests SET accelerated=?,accelerated_surcharge=?,final_job_price=COALESCE(calculated_price,0)+?,updated_at=CURRENT_TIMESTAMP WHERE id=?').bind(b.accelerated?1:0,Number(b.acceleratedSurcharge||0),b.accelerated?Number(b.acceleratedSurcharge||0):0,id).run();
   const now=await orderDetail(env,id);await log(env,staff.user_id,'desktop.order.update','service_request',String(id),old,now);if(Object.prototype.hasOwnProperty.call(b,'status')&&String(old.status)!==String(now?.status))await notifyClientOrderNeutral(env,id,String(now?.status||b.status));return reply({ok:true,order:now});
  }
  const orderSelectionMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)\/catalog-selection$/);
