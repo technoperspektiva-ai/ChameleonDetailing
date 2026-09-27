@@ -1340,6 +1340,13 @@ ${esc(caption)}
    return;
   }
   await tgApi(env,'answerCallbackQuery',{callback_query_id:cb.id}).catch(()=>{});
+  const managementCallback=/^(?:staff:panel|panel:(?!client)|sales:|order:|orderassign:|orderextra:|service:|serviceaddon:|extra:|optionvip|vipprice|social|specialist|theme:|desktopmode:|campaign:|manager|auditmode:|projectreset:|action:)/.test(String(cb.data||''));
+  if(managementCallback){
+   const actor=await getRole(env,cb.from);
+   if(['ADMIN','MANAGER'].includes(actor.role)&&!String(actor.u?.staff_display_name||'').trim()){
+    if(!await requireStaffDisplayName(env,cb.message,cb.from,actor.u,actor.role))return;
+   }
+  }
   const msgCtl=(cb.data||'').match(/^msgctl:(pin|unpin|read):(uk|pl|en|de|fr)$/);if(msgCtl){
    const action=msgCtl[1],loc=msgCtl[2] as BotLocale,chatId=cb.message.chat.id,messageId=cb.message.message_id;
    if(cb.message.chat.type==='private'&&Number(cb.from.id)!==Number(chatId))return;
