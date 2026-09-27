@@ -15,6 +15,8 @@ function initials(value:string){
  return value.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'CH';
 }
 
+function vehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('suv')?'suv':raw.includes('van')||raw.includes('bus')?'van':raw.includes('hatch')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp'}
+
 function monthGrid(date:Date,orders:Order[]){
  const first=new Date(date.getFullYear(),date.getMonth(),1);
  const last=new Date(date.getFullYear(),date.getMonth()+1,0);
@@ -110,7 +112,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
     </section>
 
     <section className="premium-focus-card premium-surface">
-     {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><CarFront/><span>{focus.plate||'CHAMELEON'}</span></div>
+     {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><img className="premium-focus-car-image" src={vehicleImage(focus.body_type)} alt={[focus.brand,focus.model].filter(Boolean).join(' ')||'Автомобіль'}/><span>{focus.plate||'CHAMELEON'}</span></div>
       <div className="premium-focus-content">
        <header><div><span className="premium-eyebrow">Активне замовлення</span><h2>{[focus.brand,focus.model].filter(Boolean).join(' ')||'Замовлення CHD-'+focus.id}</h2></div><StatusBadge status={focus.status}/></header>
        <div className="premium-focus-tabs" aria-label="Розділи замовлення"><button className="active" onClick={()=>goto('orders/'+focus.id+'/overview')}>Деталі</button><button onClick={()=>goto('orders/'+focus.id+'/services')}>Послуги</button><button onClick={()=>goto('orders/'+focus.id+'/checklist')}>Чек-лист</button><button onClick={()=>goto('orders/'+focus.id+'/photos')}>Фото</button></div>
@@ -118,11 +120,11 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
         <div><dt><Users/>Клієнт</dt><dd>{focus.first_name}</dd></div>
         <div><dt><Phone/>Телефон</dt><dd>{focus.phone_number||'Не вказано'}</dd></div>
         <div><dt><Wrench/>Послуга</dt><dd>{focus.service_title||focus.service_slug||'Комплексний детейлінг'}</dd></div>
-        <div><dt><Clock3/>Початок</dt><dd>{focus.scheduled_for?businessTime(focus.scheduled_for):'Без часу'}</dd></div>
+        <div><dt><Clock3/>Початок</dt><dd>{focus.confirmed_at?businessTime(focus.confirmed_at):focus.status==='CONFIRMED'?'Щойно підтверджено':focus.scheduled_for?'План '+businessTime(focus.scheduled_for):'Після підтвердження'}</dd></div>
         <div><dt><CarFront/>Номер</dt><dd>{focus.plate||'—'}</dd></div>
         <div><dt><UsersRound/>Майстер</dt><dd>{focus.responsible_name||'Не призначено'}</dd></div>
        </dl>
-       <div className="premium-focus-actions"><button className="premium-complete" onClick={()=>goto('orders/'+focus.id)}><CheckCircle2/>Відкрити замовлення</button><button aria-label="Оплата та додаткові дії" onClick={()=>goto('orders/'+focus.id+'/payment')}><MoreHorizontal/></button></div>
+       <div className="premium-contact-actions"><button disabled={!focus.phone_number} title="Подзвонити клієнту" onClick={()=>{if(focus.phone_number)location.href='tel:'+focus.phone_number}}><Phone/></button><button disabled={!focus.username} title="Написати в Telegram" onClick={()=>{if(focus.username)window.open('https://t.me/'+String(focus.username).replace(/^@/,''),'_blank','noopener,noreferrer')}}><MessageCircle/></button></div><div className="premium-focus-actions"><button className="premium-complete" onClick={()=>goto('orders/'+focus.id)}><CheckCircle2/>Відкрити замовлення</button><button aria-label="Оплата та додаткові дії" onClick={()=>goto('orders/'+focus.id+'/payment')}><MoreHorizontal/></button></div>
       </div></>:<EmptyState>Активних замовлень поки немає.</EmptyState>}
     </section>
 
