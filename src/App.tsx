@@ -134,7 +134,7 @@ function Unavailable404({locale}:{locale:Locale}){
   de:{title:'404',text:'Der Service ist vorübergehend nicht verfügbar.',hint:'Bitte versuchen Sie es später erneut.'},
   fr:{title:'404',text:'Le service est temporairement indisponible.',hint:'Veuillez réessayer plus tard.'}
  }[locale]||{title:'404',text:'Service temporarily unavailable.',hint:'Please try again later.'};
- return <div className="state-screen unavailable-404"><img src="/brand/chameleon-logo.webp" className="state-logo" alt=""/><span className="eyebrow">CHAMELEON DETAILING</span><h1>{copy.title}</h1><p>{copy.text}</p><small>{copy.hint}</small></div>
+ return <div className="state-screen unavailable-404"><img src="/brand/chameleon-logo.webp" className="logo xl" alt=""/><span className="eyebrow">CHAMELEON DETAILING</span><h1>{copy.title}</h1><p>{copy.text}</p><small>{copy.hint}</small></div>
 }
 function StateScreen({title,text,action,actionLabel}:any){return <div className="state-screen"><img src="/brand/chameleon-logo.webp" className="logo xl" alt=""/><h1>{title}</h1><p>{text}</p>{action&&<button className="primary" onClick={action}>{actionLabel}</button>}</div>}
 function HolidayBanner({t,schedule,locale}:any){return <div className="holiday-banner"><Clock3/><div><b>{t('holiday.title')}</b><span>{t('holiday.text')}{schedule.nextWorkingAt?` · ${new Date(schedule.nextWorkingAt).toLocaleString(locale==='uk'?'uk-UA':locale==='pl'?'pl-PL':'en-US')}`:''}</span></div></div>}
