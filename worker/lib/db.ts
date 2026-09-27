@@ -22,7 +22,7 @@ export async function ensureDb(env:Env){
   await env.DB.batch([
    env.DB.prepare("SELECT management_language,photo_url,notifications_enabled,staff_display_name,staff_name_set_at,staff_name_updated_by,bot_status,bot_unavailable_at,bot_last_error,bot_status_updated_at FROM users LIMIT 1"),
    env.DB.prepare("SELECT phone_number,phone_verified_via_telegram,paid_jobs_count,lifetime_value FROM client_profiles LIMIT 1"),
-   env.DB.prepare("SELECT services_json,client_deleted_at,staff_deleted_at,car_id,promotion_id,personal_discount_id FROM service_requests LIMIT 1"),
+   env.DB.prepare("SELECT services_json,client_deleted_at,staff_deleted_at,car_id,promotion_id,personal_discount_id,responsible_staff_id,estimated_duration_min,duration_overridden,deadline_at FROM service_requests LIMIT 1"),
    env.DB.prepare("SELECT services_json,promotion_id,personal_discount_id FROM calculator_sessions LIMIT 1"),
    env.DB.prepare("SELECT brand,model,modification,body_type,plate,has_ceramic,owner_phone FROM client_cars LIMIT 1"),
    env.DB.prepare("SELECT value FROM settings WHERE key='maintenance.enabled' LIMIT 1"),
@@ -148,6 +148,10 @@ CREATE INDEX IF NOT EXISTS idx_events_type_time ON analytics_events(event_type,c
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN personal_discount_id INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN offer_id INTEGER");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN created_by_staff_id INTEGER");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN responsible_staff_id INTEGER");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN estimated_duration_min INTEGER");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN duration_overridden INTEGER NOT NULL DEFAULT 0");
+ await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN deadline_at TEXT");
  await safeAlter(env,"ALTER TABLE service_options ADD COLUMN icon_key TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN services_json TEXT");
  await safeAlter(env,"ALTER TABLE service_requests ADD COLUMN car_id INTEGER");
