@@ -431,3 +431,145 @@
     max-width:calc(100vw - 20px)!important;
   }
 }
+
+
+/* iPhone hardening pass: prevent legacy desktop grids from colliding on narrow screens. */
+@media (max-width:680px){
+  html.desktop-route .premium-dashboard-grid,
+  html.desktop-route .premium-dashboard-main,
+  html.desktop-route .premium-dashboard-rail,
+  html.desktop-route .premium-quick-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+
+  html.desktop-route .premium-timeline-row{
+    grid-template-columns:44px minmax(0,1fr) auto!important;
+    gap:8px!important;
+    min-height:64px!important;
+    padding:9px 10px!important;
+  }
+  html.desktop-route .premium-timeline-row .premium-car-thumb,
+  html.desktop-route .premium-timeline-row .premium-assignee,
+  html.desktop-route .premium-timeline-row .premium-more{
+    display:none!important;
+  }
+  html.desktop-route .premium-job-main{
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  html.desktop-route .premium-job-main strong,
+  html.desktop-route .premium-job-main span{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+
+  html.desktop-route .premium-section-head{
+    flex-wrap:wrap!important;
+    gap:8px!important;
+  }
+  html.desktop-route .premium-section-head>div{
+    min-width:0!important;
+    flex:1 1 180px!important;
+    flex-wrap:wrap!important;
+  }
+
+  html.desktop-route .calendar-layout{
+    display:grid!important;
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    min-width:0!important;
+    gap:10px!important;
+  }
+  html.desktop-route .calendar-grid{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    overflow:auto!important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  html.desktop-route .system-hero{
+    grid-template-columns:minmax(0,1fr)!important;
+    align-items:start!important;
+    gap:12px!important;
+    padding:16px!important;
+  }
+  html.desktop-route .system-mode-chip{
+    min-width:0!important;
+    width:max-content!important;
+    max-width:100%!important;
+  }
+  html.desktop-route .system-section .setting-line,
+  html.desktop-route .multiplier-list>div{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:7px!important;
+    align-items:stretch!important;
+  }
+  html.desktop-route .system-section .setting-line>*,
+  html.desktop-route .multiplier-list>div>*{
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  html.desktop-route .service-catalog-summary,
+  html.desktop-route .payments-head,
+  html.desktop-route .workspace-editor-head,
+  html.desktop-route .broadcast-hero,
+  html.desktop-route .team-toolbar,
+  html.desktop-route .desk-panel-head{
+    flex-wrap:wrap!important;
+    align-items:flex-start!important;
+  }
+
+  html.desktop-route .service-rule-grid,
+  html.desktop-route .service-link-grid,
+  html.desktop-route .permission-grid,
+  html.desktop-route .control-grid,
+  html.desktop-route .desk-grid-2,
+  html.desktop-route .broadcast-stats,
+  html.desktop-route .broadcast-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+
+  html.desktop-route .order-drawer-hero,
+  html.desktop-route .desk-order-car.order-car-card{
+    grid-template-columns:minmax(0,1fr)!important;
+    width:100%!important;
+    min-width:0!important;
+  }
+  html.desktop-route .order-drawer-state{
+    justify-items:start!important;
+    text-align:left!important;
+  }
+  html.desktop-route .order-car-art{
+    width:100%!important;
+    max-width:260px!important;
+    height:110px!important;
+    justify-self:center!important;
+  }
+
+  html.desktop-route .desk-segment,
+  html.desktop-route .desk-tabs,
+  html.desktop-route .tabs{
+    max-width:100%!important;
+    min-width:0!important;
+  }
+
+  html.desktop-route .desktop-content img{
+    max-width:100%!important;
+  }
+
+  /* Last-resort containment for feature cards with legacy fixed widths. */
+  html.desktop-route .desktop-content :where(section,article,form,.desk-panel,.premium-surface,.system-section,.team-workspace,.broadcast-workspace){
+    min-width:0!important;
+    max-width:100%!important;
+  }
+
+  html.desktop-route .desktop-content :where(.desk-panel,.premium-surface,.system-hero,.team-workspace,.broadcast-workspace){
+    overflow:hidden!important;
+  }
+}

@@ -5,6 +5,7 @@ import {api} from '../../api/desktopApi';
 import type {Order,Bootstrap} from '../../types/desktop';
 import {Skeleton,EmptyState,StatusBadge} from '../../components/primitives';
 import {businessDate,businessTime} from '../../format';
+import {vehicleArtwork} from '../../config/vehicleArtwork';
 
 const closed=new Set(['CANCELLED','REJECTED','COMPLETED']);
 const working=new Set(['CAR_ACCEPTED','IN_PROGRESS','INSPECTION']);
@@ -17,7 +18,6 @@ function initials(value:string){
  return value.split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]?.toUpperCase()).join('')||'CH';
 }
 
-function vehicleImage(body?:string|null){const raw=String(body||'').toLowerCase().replace(/[_\s]+/g,'-');const type=raw.includes('large')&&raw.includes('suv')?'large-suv':raw.includes('велики')&&raw.includes('сув')?'large-suv':raw.includes('suv')||raw.includes('сув')?'suv':raw.includes('van')||raw.includes('bus')||raw.includes('бус')?'van':raw.includes('hatch')||raw.includes('хетч')||raw.includes('універс')?'hatchback':'sedan';return '/vehicle-types/'+type+'.webp?v=20260927-3'}
 
 function monthGrid(date:Date,orders:Order[]){
  const first=new Date(date.getFullYear(),date.getMonth(),1);
@@ -105,7 +105,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
      <div className="premium-timeline">
       {scheduled.map((x,index)=><button key={x.id} className="premium-timeline-row" onClick={()=>goto('orders/'+x.id)}>
        <div className="premium-time"><span>{businessTime(x.scheduled_for!)}</span><i className={working.has(x.status)?'is-live':''}/>{index<scheduled.length-1&&<b/>}</div>
-       <div className="premium-car-thumb"><img src={vehicleImage(x.body_type)} alt="" aria-hidden="true"/></div>
+       <div className="premium-car-thumb"><img src={vehicleArtwork(x.body_type)} alt="" aria-hidden="true"/></div>
        <div className="premium-job-main"><strong>{[x.brand,x.model].filter(Boolean).join(' ')||'CHD-'+x.id}</strong><span>{x.service_title||x.service_slug||'Детейлінг'}{x.plate?' · '+x.plate:''}</span></div>
        <StatusBadge status={x.status}/>
        <div className="premium-assignee">{x.responsible_name?<><span>{initials(x.responsible_name)}</span><small>{x.responsible_name}</small></>:<small>Без майстра</small>}</div>
@@ -116,7 +116,7 @@ export function Today({boot,goto,create}:{boot:Bootstrap;goto:(p:string)=>void;c
     </section>
 
     <section className="premium-focus-card premium-surface">
-     {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><img className="premium-focus-car-image" src={vehicleImage(focus.body_type)} alt={[focus.brand,focus.model].filter(Boolean).join(' ')||'Автомобіль'}/><span>{focus.plate||'CHAMELEON'}</span></div>
+     {focus?<><div className="premium-focus-visual"><div className="premium-focus-glow"/><img className="premium-focus-car-image" src={vehicleArtwork(focus.body_type)} alt={[focus.brand,focus.model].filter(Boolean).join(' ')||'Автомобіль'}/><span>{focus.plate||'CHAMELEON'}</span></div>
       <div className="premium-focus-content">
        {focusPool.length>1&&<div className="premium-focus-switcher" aria-label="Швидкий перехід між замовленнями"><button aria-label="Попереднє замовлення" onClick={()=>stepFocus(-1)}><ChevronLeft/></button><div>{focusPool.map((x,i)=><button key={x.id} className={i===focusIndex?'active':''} onClick={()=>setFocusIndex(i)}>CHD-{x.id}</button>)}</div><button aria-label="Наступне замовлення" onClick={()=>stepFocus(1)}><ChevronRight/></button></div>}
        <header><div><span className="premium-eyebrow">Активне замовлення</span><h2>{[focus.brand,focus.model].filter(Boolean).join(' ')||'Замовлення CHD-'+focus.id}</h2></div><div className="premium-focus-status-stack"><StatusBadge status={focus.status}/><span className="premium-master-pill"><UsersRound/>{focus.responsible_name||'Майстер не призначений'}</span></div></header>
