@@ -220,7 +220,7 @@ export default {
      fr:{'referral.title':'Inviter un ami chez Chameleon','referral.subtitle':'Partagez un service de confiance. Votre ami accède rapidement à Chameleon Detailing dans Telegram.','referral.share_text':'Je recommande Chameleon Detailing 🦎 Choisissez un service, consultez le prix et envoyez une demande dans Telegram.'}
     };
     const content={...defaults[locale]};
-    if(env.DB){await ensureDb(env);const r=await env.DB.prepare("SELECT key,value FROM content_blocks WHERE locale=? AND value<>''").bind(locale).all<any>();for(const row of r.results||[])content[row.key]=row.value}
+    if(env.DB){await ensureDb(env);const r=await env.DB.prepare("SELECT key,value FROM content_blocks WHERE locale=? AND value<>''").bind(locale).all<any>();for(const row of r.results||[])content[row.key]=String(row.value||'').replace(/\\\\n/g,'\n')}
     return json({content});
    }
    if(url.pathname==='/api/preferences/currency'&&request.method==='POST'){
