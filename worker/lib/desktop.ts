@@ -582,10 +582,10 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   if(!m)return reply({error:'Use a JPG, PNG or WEBP image.'},400);
   const binary=atob(m[2]);if(binary.length>5*1024*1024)return reply({error:'Image is too large. Maximum 5 MB.'},413);
   const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-  const owner=Number(env.OWNER_TELEGRAM_ID||0);if(!owner)return reply({error:'OWNER_TELEGRAM_ID is not configured.'},503);
-  const uploaded=await uploadPhoto(env,owner,bytes.buffer as ArrayBuffer,m[1],String(b.fileName||'broadcast.jpg').slice(0,120));
+  const stagingChat=Number(staff.telegram_user_id||env.OWNER_TELEGRAM_ID||0);if(!stagingChat)return reply({error:'Telegram chat for photo upload is unavailable.'},503);
+  const uploaded=await uploadPhoto(env,stagingChat,bytes.buffer as ArrayBuffer,m[1],String(b.fileName||'broadcast.jpg').slice(0,120));
   const photos=Array.isArray(uploaded?.photo)?uploaded.photo:[],fileId=photos.length?String(photos[photos.length-1]?.file_id||''):'';
-  if(uploaded?.message_id)await tgApi(env,'deleteMessage',{chat_id:owner,message_id:Number(uploaded.message_id)}).catch(()=>{});
+  if(uploaded?.message_id)await tgApi(env,'deleteMessage',{chat_id:stagingChat,message_id:Number(uploaded.message_id)}).catch(()=>{});
   if(!fileId)return reply({error:'Telegram did not return a photo file_id.'},502);
   return reply({ok:true,fileId});
  }
