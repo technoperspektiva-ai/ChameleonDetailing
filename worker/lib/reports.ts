@@ -4,7 +4,7 @@ import {ensureDb} from './db';
 export type ReportType='users'|'vip'|'orders'|'payments'|'revenue'|'referrals'|'retention'|'blacklist'|'whitelist'|'staff'|'reviews'|'suggestions'|'business';
 type Col={header:string;key:string};
 type Sheet={name:string;columns:Col[];rows:any[]};
-type ReportLocale='uk'|'pl'|'en';
+export type ReportLocale='uk'|'pl'|'en'|'de'|'fr';
 
 const reportText:Record<string,[string,string,string]>={
  'Report':['Звіт','Raport','Report'],
@@ -138,15 +138,17 @@ const reportText:Record<string,[string,string,string]>={
  'Telegram photo file ID':['Telegram photo file ID','Telegram photo file ID','Telegram photo file ID'],
  'Language':['Мова','Język','Language']
 };
-const reportLabel=(locale:ReportLocale,key:string)=>{const v=reportText[key];return v?(locale==='uk'?v[0]:locale==='pl'?v[1]:v[2]):key};
-const reportLocaleFrom=(v:unknown,fallback:unknown='en'):ReportLocale=>{const a=String(v||'').toLowerCase(),b=String(fallback||'').toLowerCase();return a==='uk'||a==='pl'||a==='en'?a as ReportLocale:b==='uk'||b==='pl'||b==='en'?b as ReportLocale:'en'};
+const deText:Record<string,string>={'Staff report':'Mitarbeiterbericht','Staff Activity':'Mitarbeiteraktivität','Staff':'Mitarbeiter','Name':'Name','Role':'Rolle','Status':'Status','Last seen':'Letzte Aktivität','Orders':'Aufträge','Active':'Aktiv','Completed':'Abgeschlossen','Revenue':'Umsatz','Currency':'Währung','Created':'Erstellt','User':'Kunde','Service':'Leistung','Vehicle':'Fahrzeug','Scheduled for':'Geplant für','Payment status':'Zahlungsstatus','Action':'Aktion','Entity type':'Objekttyp','Entity ID':'Objekt-ID','Work name':'Arbeitsname','Active orders':'Aktive Aufträge','Completed orders':'Abgeschlossene Aufträge','Offers created':'Erstellte Angebote','Staff Summary':'Mitarbeiterübersicht','Assigned Orders':'Zugewiesene Aufträge','Offers':'Angebote','Deadline':'Frist'};
+const frText:Record<string,string>={'Staff report':'Rapport du personnel','Staff Activity':'Activité du personnel','Staff':'Membre','Name':'Nom','Role':'Rôle','Status':'Statut','Last seen':'Dernière activité','Orders':'Commandes','Active':'Actif','Completed':'Terminées','Revenue':'Revenu','Currency':'Devise','Created':'Créé','User':'Client','Service':'Service','Vehicle':'Véhicule','Scheduled for':'Planifié pour','Payment status':'Statut du paiement','Action':'Action','Entity type':'Type d’objet','Entity ID':'ID objet','Work name':'Nom de travail','Active orders':'Commandes actives','Completed orders':'Commandes terminées','Offers created':'Offres créées','Staff Summary':'Résumé du membre','Assigned Orders':'Commandes assignées','Offers':'Offres','Deadline':'Échéance'};
+const reportLabel=(locale:ReportLocale,key:string)=>{if(locale==='de'&&deText[key])return deText[key];if(locale==='fr'&&frText[key])return frText[key];const v=reportText[key];return v?(locale==='uk'?v[0]:locale==='pl'?v[1]:v[2]):key};
+const reportLocaleFrom=(v:unknown,fallback:unknown='en'):ReportLocale=>{const allowed=['uk','pl','en','de','fr'],a=String(v||'').toLowerCase(),b=String(fallback||'').toLowerCase();return (allowed.includes(a)?a:allowed.includes(b)?b:'en') as ReportLocale};
 const reportTypeLabel=(locale:ReportLocale,type:ReportType)=>reportLabel(locale,({
  users:'Users report',vip:'VIP report',orders:'Orders report',payments:'Payments report',revenue:'Revenue report',referrals:'Referrals report',retention:'Retention report',blacklist:'Blacklist report',whitelist:'Whitelist report',staff:'Staff report',reviews:'Reviews report',suggestions:'Suggestions report',business:'Business report'
 } as Record<ReportType,string>)[type]);
 const reportRangeLabel=(locale:ReportLocale,days:number)=>days>0?String(days)+' '+reportLabel(locale,'days'):reportLabel(locale,'All period');
 const reportMessageControls=(locale:ReportLocale)=>({inline_keyboard:[[
- {text:locale==='uk'?'📌 Закріпити':locale==='pl'?'📌 Przypnij':'📌 Pin',callback_data:'msgctl:pin:'+locale},
- {text:locale==='uk'?'✅ Прочитано':locale==='pl'?'✅ Przeczytano':'✅ Read',callback_data:'msgctl:read:'+locale}
+ {text:locale==='uk'?'📌 Закріпити':locale==='pl'?'📌 Przypnij':locale==='de'?'📌 Anheften':locale==='fr'?'📌 Épingler':'📌 Pin',callback_data:'msgctl:pin:'+locale},
+ {text:locale==='uk'?'✅ Прочитано':locale==='pl'?'✅ Przeczytano':locale==='de'?'✅ Gelesen':locale==='fr'?'✅ Lu':'✅ Read',callback_data:'msgctl:read:'+locale}
 ]]});
 const localizeReportValue=(locale:ReportLocale,key:string,value:unknown)=>{
  if(value===null||value===undefined)return value;
