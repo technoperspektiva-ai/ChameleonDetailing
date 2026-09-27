@@ -58,7 +58,7 @@ export function CreateOrder({userId,close,created}:{userId?:number;close:()=>voi
  const activeServices=services.filter(x=>Number(x.enabled)!==0);
  const activeOptions=options.filter(x=>Number(x.enabled)!==0);
 
- const servicePrice=(x:any)=>Number(x.display_price??x.base_price??x.price??0);
+ const servicePrice=(x:any)=>Number(x?.display_price??x?.base_price??x?.price??0);
  const primaryService=activeServices.find(x=>String(x.id)===service);
  const selectedAdditional=activeServices.filter(x=>additionalServices.includes(Number(x.id))&&String(x.id)!==service);
  const selectedOptions=activeOptions.filter(x=>optionIds.includes(Number(x.id)));
