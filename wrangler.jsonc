@@ -11,6 +11,7 @@
   },
   "vars": {
     "APP_NAME": "ChameleonDetailing",
+    "APP_URL": "https://chameleondetailing.black-sci-official.workers.dev",
     "BOT_USERNAME": "ChameleonDetailing_bot",
     "OWNER_TELEGRAM_ID": "375938798",
     "DEFAULT_LOCALE": "en",
