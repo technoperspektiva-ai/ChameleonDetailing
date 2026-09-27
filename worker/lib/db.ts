@@ -12,6 +12,27 @@ async function safeAlter(env:Env,sql:string){
 export async function ensureDb(env:Env){
  if(!env.DB)return false;
  if(ready)return true;
+
+ // Production D1 is persistent across Worker deployments. On a fresh isolate we only
+ // need to verify that the current schema is already present; rerunning the entire
+ // migration + seed sequence on the first Mini App auth is unnecessarily expensive
+ // and can make Telegram session bootstrap fail before the UI opens.
+ try{
+  await env.DB.batch([
+   env.DB.prepare("SELECT management_language,photo_url,notifications_enabled FROM users LIMIT 1"),
+   env.DB.prepare("SELECT phone_number,phone_verified_via_telegram,paid_jobs_count,lifetime_value FROM client_profiles LIMIT 1"),
+   env.DB.prepare("SELECT services_json,client_deleted_at,staff_deleted_at,car_id,promotion_id,personal_discount_id FROM service_requests LIMIT 1"),
+   env.DB.prepare("SELECT services_json,promotion_id,personal_discount_id FROM calculator_sessions LIMIT 1"),
+   env.DB.prepare("SELECT brand,model,modification,body_type,plate,has_ceramic,owner_phone FROM client_cars LIMIT 1"),
+   env.DB.prepare("SELECT value FROM settings WHERE key='maintenance.enabled' LIMIT 1")
+  ]);
+  ready=true;
+  return true;
+ }catch{
+  // Missing table/column means this database genuinely needs the compatibility
+  // bootstrap below. Keep the existing migration path for new/older databases.
+ }
+
  await env.DB.exec(`
 CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,telegram_user_id INTEGER NOT NULL UNIQUE,username TEXT,first_name TEXT,last_name TEXT,language TEXT NOT NULL DEFAULT 'en',management_language TEXT,preferred_currency TEXT NOT NULL DEFAULT 'PLN',role TEXT NOT NULL DEFAULT 'CLIENT',status TEXT NOT NULL DEFAULT 'ACTIVE',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,photo_url TEXT,notifications_enabled INTEGER NOT NULL DEFAULT 1);
 CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_tier TEXT NOT NULL DEFAULT 'STANDARD',phone_number TEXT,phone_verified_via_telegram INTEGER NOT NULL DEFAULT 0,phone_shared_at TEXT,preferred_contact_method TEXT,notes TEXT,vip_since TEXT,assigned_manager_id INTEGER,first_paid_job_at TEXT,last_paid_job_at TEXT,paid_jobs_count INTEGER NOT NULL DEFAULT 0,lifetime_value REAL NOT NULL DEFAULT 0);
