@@ -454,10 +454,11 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   }
 
   const serviceIds=[...new Set((Array.isArray(b.serviceIds)?b.serviceIds:[b.serviceId,...(Array.isArray(b.additionalServiceIds)?b.additionalServiceIds:[])]).map((x:any)=>Number(x)).filter((x:number)=>x>0))];
-  if(!serviceIds.length)return reply({error:'Оберіть хоча б одну послугу.'},400);
+  const customPrimaryRaw=b.customPrimary||{},customPrimaryTitle=String(customPrimaryRaw.title||'').trim().slice(0,120),customPrimaryPrice=Math.max(0,Number(customPrimaryRaw.price||0)),customPrimaryDuration=Math.max(5,Math.min(10080,Number(customPrimaryRaw.durationMin||60)));
+  if(!serviceIds.length&&!customPrimaryTitle)return reply({error:'Оберіть послугу або введіть разову роботу.'},400);
   const services:any[]=[];
   for(const sid of serviceIds){const row=await env.DB!.prepare('SELECT s.id,s.slug,s.duration_min,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(sid).first<any>();if(!row)return reply({error:'Одна з послуг більше недоступна.'},400);services.push(row)}
-  const target=normalizeCurrency(b.currency||services[0].base_currency||'PLN');
+  const target=normalizeCurrency(b.currency||services[0]?.base_currency||customPrimaryRaw.currency||'PLN');
   const optionIds=[...new Set((Array.isArray(b.optionIds)?b.optionIds:[]).map((x:any)=>Number(x)).filter((x:number)=>x>0))];
   const options:any[]=[];
   for(const oid of optionIds){const row=await env.DB!.prepare("SELECT o.id,o.slug,o.price,o.base_currency,COALESCE(t.title,o.slug) title FROM service_options o LEFT JOIN service_option_translations t ON t.option_id=o.id AND t.locale='uk' WHERE o.id=? AND o.enabled=1").bind(oid).first<any>();if(row)options.push(row)}
@@ -466,13 +467,16 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
   const scheduled=b.scheduledFor?new Date(b.scheduledFor).toISOString():null;
   const status=['REQUESTED','PENDING_CONFIRMATION','CONFIRMED'].includes(String(b.status||''))?String(b.status):'PENDING_CONFIRMATION';
-  const duration=Math.max(5,Math.min(10080,Number(b.estimatedDurationMin||services.reduce((sum:number,x:any)=>sum+Number(x.duration_min||60),0)||60)));
+  const autoDuration=services.reduce((sum:number,x:any)=>sum+Number(x.duration_min||60),0)+(customPrimaryTitle?customPrimaryDuration:0);
+  const duration=Math.max(5,Math.min(10080,Number(b.estimatedDurationMin||autoDuration||60)));
   const durationOverridden=Object.prototype.hasOwnProperty.call(b,'estimatedDurationMin')?1:0;
   const responsibleId=Number(b.responsibleStaffId||staff.user_id);
   const responsible=await env.DB!.prepare("SELECT id FROM users WHERE id=? AND role IN ('OWNER','ADMIN','MANAGER') AND status='ACTIVE'").bind(responsibleId).first<any>();
   if(!responsible)return reply({error:'Відповідального не знайдено.'},400);
 
-  const servicesTotal=services.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.base_price||0),normalizeCurrency(x.base_currency||target),target),0);
+  const catalogServicesTotal=services.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.base_price||0),normalizeCurrency(x.base_currency||target),target),0);
+  const customPrimaryTotal=customPrimaryTitle?convertCurrency(customPrimaryPrice,normalizeCurrency(customPrimaryRaw.currency||target),target):0;
+  const servicesTotal=catalogServicesTotal+customPrimaryTotal;
   const optionsTotal=options.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.price||0),normalizeCurrency(x.base_currency||target),target),0);
   const customTotal=customExtras.reduce((sum:number,x:any)=>sum+convertCurrency(Number(x.price||0),x.currency,target),0);
   const beforeDiscount=Math.max(0,servicesTotal+optionsTotal+customTotal);
@@ -481,11 +485,12 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const finalPrice=Object.prototype.hasOwnProperty.call(b,'finalPrice')?Math.max(0,Number(b.finalPrice||0)):Math.max(0,beforeDiscount-discountAmount);
   const confirmedAt=status==='CONFIRMED'?new Date().toISOString():null;
   const deadline=confirmedAt?new Date(Date.parse(confirmedAt)+duration*60000).toISOString():null;
-  const slugs=services.map(x=>String(x.slug)),optionSlugs=options.map(x=>String(x.slug));
+  const slugs=services.map(x=>String(x.slug));if(customPrimaryTitle&&!slugs.length)slugs.push('manual-work');const optionSlugs=options.map(x=>String(x.slug));
   const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,vehicle_slug,condition_slug,request_type,status,base_price_snapshot,options_total_snapshot,discount_snapshot,calculated_price,final_job_price,price_adjustment_reason,currency,scheduled_for,confirmed_at,staff_note,responsible_staff_id,assigned_manager_id,created_by_staff_id,estimated_duration_min,duration_overridden,deadline_at) VALUES(?,?,?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)").bind(userId,carId,car?.name||[car?.brand,car?.model].filter(Boolean).join(' ')||null,car?.plate||null,slugs[0],JSON.stringify(slugs),JSON.stringify(optionSlugs),String(b.vehicleSlug||car?.body_type||'')||null,String(b.conditionSlug||'')||null,status,servicesTotal,optionsTotal,discountAmount,beforeDiscount,finalPrice,discountAmount>0?'Desktop create discount '+discountPercent.toFixed(2)+'%':'Desktop manual order',target,scheduled,confirmedAt,String(b.staffNote||'').slice(0,3000),responsibleId,responsibleId,staff.user_id,duration,durationOverridden,deadline).run();
   const id=Number(r.meta.last_row_id);
+  if(customPrimaryTitle)await env.DB!.prepare("INSERT INTO service_request_extras(request_id,service_id,service_slug,title_snapshot,price_snapshot,currency,added_by) VALUES(?,NULL,'manual-work',?,?,?,?)").bind(id,customPrimaryTitle,customPrimaryTotal,target,staff.user_id).run();
   for(const x of customExtras){const targetPrice=convertCurrency(x.price,x.currency,target);await env.DB!.prepare("INSERT INTO service_request_extras(request_id,service_id,service_slug,title_snapshot,price_snapshot,currency,added_by) VALUES(?,NULL,'custom',?,?,?,?)").bind(id,x.title,targetPrice,target,staff.user_id).run()}
-  await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceIds,optionIds,customExtras:customExtras.map((x:any)=>x.title),currency:target,discountPercent,discountAmount,finalPrice,status,responsibleId});
+  await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceIds,customPrimary:customPrimaryTitle||null,optionIds,customExtras:customExtras.map((x:any)=>x.title),currency:target,discountPercent,discountAmount,finalPrice,status,responsibleId});
   if(status==='CONFIRMED')await syncOrderTiming(env,id,false);
   return reply({ok:true,id,userId,carId,total:finalPrice,currency:target});
  }
