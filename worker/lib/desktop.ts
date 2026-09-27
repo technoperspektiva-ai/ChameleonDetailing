@@ -389,10 +389,11 @@ export async function handleDesktopApi(request:Request,env:Env,url:URL):Promise<
   const client=await env.DB!.prepare("SELECT id,status FROM users WHERE id=? AND role='CLIENT'").bind(userId).first<any>();
   if(!client||client.status!=='ACTIVE')return reply({error:'Оберіть активного клієнта.'},400);
   const car=await env.DB!.prepare('SELECT * FROM client_cars WHERE id=? AND user_id=?').bind(carId,userId).first<any>();
-  const service=await env.DB!.prepare('SELECT s.slug,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(serviceId).first<any>();
+  const service=await env.DB!.prepare('SELECT s.slug,s.duration_min,p.base_price,p.base_currency FROM services s JOIN service_prices p ON p.service_id=s.id WHERE s.id=? AND s.enabled=1 AND s.archived=0').bind(serviceId).first<any>();
   if(!car||!service)return reply({error:'Перевірте автомобіль та послугу.'},400);
   if(b.scheduledFor&&!Number.isFinite(Date.parse(b.scheduledFor)))return reply({error:'Некоректна дата.'},400);
-  const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,request_type,calculated_price,currency,scheduled_for,staff_note,responsible_staff_id,created_by_staff_id) VALUES(?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?)").bind(userId,carId,car.name,car.plate||null,service.slug,JSON.stringify([service.slug]),'[]',Number(service.base_price),service.base_currency||'PLN',b.scheduledFor?new Date(b.scheduledFor).toISOString():null,String(b.staffNote||'').slice(0,3000),staff.user_id,staff.user_id).run();
+  const scheduled=b.scheduledFor?new Date(b.scheduledFor).toISOString():null,duration=Math.max(5,Math.min(10080,Number(service.duration_min||60))),deadline=scheduled?new Date(Date.parse(scheduled)+duration*60000).toISOString():null;
+  const r=await env.DB!.prepare("INSERT INTO service_requests(user_id,car_id,car_name,car_plate,service_slug,services_json,options_json,request_type,calculated_price,currency,scheduled_for,staff_note,responsible_staff_id,created_by_staff_id,estimated_duration_min,duration_overridden,deadline_at) VALUES(?,?,?,?,?,?,?,'STANDARD',?,?,?,?,?,?,?,0,?)").bind(userId,carId,car.name,car.plate||null,service.slug,JSON.stringify([service.slug]),'[]',Number(service.base_price),service.base_currency||'PLN',scheduled,String(b.staffNote||'').slice(0,3000),staff.user_id,staff.user_id,duration,deadline).run();
   const id=Number(r.meta.last_row_id);await log(env,staff.user_id,'desktop.order.create','service_request',String(id),null,{userId,carId,serviceId});return reply({ok:true,id});
  }
  const orderMatch=url.pathname.match(/^\/api\/desktop\/orders\/(\d+)$/);
