@@ -377,6 +377,7 @@ async function showMenuSizePicker(env:Env,msg:TgMessage,from:TgFrom,id:string){
 const backPanel=(localeOrExtra:BotLocale|any[]='en',extra:any[]=[])=>{const locale:BotLocale=Array.isArray(localeOrExtra)?'en':localeOrExtra;const rows=Array.isArray(localeOrExtra)?localeOrExtra:extra;return {inline_keyboard:[...rows,[{text:pcopy(locale).back,callback_data:'panel:home'}]]}};
 const confirmKb=(locale:BotLocale,yesCb:string,noCb='panel:home')=>({inline_keyboard:[[{text:pcopy(locale).confirm,callback_data:yesCb},{text:pcopy(locale).cancel,callback_data:noCb}]]});
 
+async function isPermanentlyBanned(env:Env,telegramUserId:number){if(!env.DB)return false;await ensureDb(env);const row=await env.DB.prepare('SELECT 1 ok FROM permanent_bans WHERE telegram_user_id=? LIMIT 1').bind(telegramUserId).first<any>().catch(()=>null);return !!row}
 async function registerUser(env:Env,from:TgFrom){const owner=isOwner(env,from.id);const u=await upsertUser(env,asUser(from),owner);await event(env,u.id,'bot_start');return u}
 async function getRole(env:Env,from:TgFrom):Promise<{u:any;role:Role}>{const u=await registerUser(env,from);return {u,role:(isOwner(env,from.id)?'OWNER':String(u.role||'CLIENT')) as Role}}
 async function rememberPanel(env:Env,chatId:number,messageId:number){if(!env.DB)return;await ensureDb(env);await env.DB.prepare(`INSERT INTO bot_ui_state(chat_id,panel_message_id) VALUES(?,?) ON CONFLICT(chat_id) DO UPDATE SET panel_message_id=excluded.panel_message_id,updated_at=CURRENT_TIMESTAMP`).bind(chatId,messageId).run().catch(()=>{})}
@@ -1115,6 +1116,14 @@ export async function notifyNewOrder(env:Env,orderId:number){
 }
 
 export async function handleBotUpdate(env:Env,origin:string,update:TgUpdate){
+ const actor=(update as any).message?.from||(update as any).callback_query?.from;
+ if(actor&&!isOwner(env,Number(actor.id))&&await isPermanentlyBanned(env,Number(actor.id))){
+  const blockedMsg=(update as any).message;
+  if(blockedMsg?.chat?.type==='private'&&blockedMsg?.message_id)await deleteMessageSafe(env,Number(blockedMsg.chat.id),Number(blockedMsg.message_id));
+  const blockedCb=(update as any).callback_query;
+  if(blockedCb?.id)await tgApi(env,'answerCallbackQuery',{callback_query_id:blockedCb.id}).catch(()=>{});
+  return;
+ }
  const msg=update.message;
  if(msg){
   if(msg.contact){await saveContact(env,origin,msg);return}
