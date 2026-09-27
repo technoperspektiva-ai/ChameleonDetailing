@@ -12,7 +12,7 @@ export const api={
   let last:unknown=null;
   for(let attempt=0;attempt<3;attempt++){
    try{return await json<Session>('/api/auth/telegram',{method:'POST',body:JSON.stringify({initData:liveInitData||initData()})})}
-   catch(e){last=e;const msg=e instanceof Error?e.message:String(e||'');if(/DIRECT_WEB_DISABLED|Invalid or expired Telegram session|BOT_TOKEN/i.test(msg))throw e;if(attempt<2)await new Promise(r=>setTimeout(r,350*(attempt+1)))}
+   catch(e){last=e;const msg=e instanceof Error?e.message:String(e||'');if(/DIRECT_WEB_DISABLED|SERVICE_TEMPORARILY_UNAVAILABLE_404|Invalid or expired Telegram session|BOT_TOKEN/i.test(msg))throw e;if(attempt<2)await new Promise(r=>setTimeout(r,350*(attempt+1)))}
   }
   throw last instanceof Error?last:new Error(String(last||'Session request failed'));
  },
