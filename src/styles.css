@@ -772,3 +772,101 @@ nav button.active::after{bottom:1px}
  .order-card-assignee-status{max-width:50%}
  .order-master{font-size:.61rem;padding:5px 7px}
 }
+
+
+/* v1.2.12 — restore Mini App glass surfaces */
+/* Some later component passes made several surfaces too opaque in Telegram iOS.
+   Restore the original glass hierarchy without making text or controls low-contrast. */
+.service-card,
+.list-card,
+.ref-card,
+.profile-card,
+.settings-card,
+.order-card,
+.empty-card,
+.client-car-card,
+.garage-add-card{
+ background:
+  linear-gradient(155deg,
+   color-mix(in srgb,var(--neon-color) 5%,rgba(18,25,18,.70)),
+   color-mix(in srgb,var(--neon-color) 2%,rgba(7,12,8,.56))
+  )!important;
+ border-color:color-mix(in srgb,var(--neon-color) 13%,rgba(255,255,255,.10))!important;
+ -webkit-backdrop-filter:blur(18px) saturate(1.08);
+ backdrop-filter:blur(18px) saturate(1.08);
+ box-shadow:
+  inset 0 1px 0 rgba(255,255,255,.025),
+  inset 0 0 28px color-mix(in srgb,var(--neon-color) 2.5%,transparent),
+  0 14px 36px rgba(0,0,0,.16);
+}
+
+/* Orders page: Refresh is a quiet utility control, not a full-width CTA. */
+.orders-refresh.secondary.wide{
+ width:max-content!important;
+ min-width:0!important;
+ min-height:44px!important;
+ margin:0 0 14px auto!important;
+ padding:0 14px!important;
+ display:flex!important;
+ flex-direction:row!important;
+ align-items:center!important;
+ justify-content:center!important;
+ gap:8px!important;
+ border-radius:14px!important;
+ border:1px solid color-mix(in srgb,var(--neon-color) 17%,rgba(255,255,255,.10))!important;
+ background:
+  linear-gradient(145deg,
+   color-mix(in srgb,var(--neon-color) 5%,rgba(18,24,19,.68)),
+   rgba(7,11,8,.52)
+  )!important;
+ color:#e7eee4!important;
+ -webkit-backdrop-filter:blur(16px) saturate(1.08);
+ backdrop-filter:blur(16px) saturate(1.08);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.03),0 8px 24px rgba(0,0,0,.14)!important;
+ font-size:.78rem!important;
+ font-weight:780!important;
+}
+.orders-refresh.secondary.wide svg{
+ width:17px!important;
+ height:17px!important;
+ flex:0 0 auto!important;
+ color:color-mix(in srgb,var(--neon-color) 68%,#d9e4d6)!important;
+ stroke-width:1.8!important;
+}
+.orders-refresh.secondary.wide:active{
+ transform:scale(.98);
+ border-color:color-mix(in srgb,var(--neon-color) 34%,rgba(255,255,255,.12))!important;
+ background:color-mix(in srgb,var(--neon-color) 6%,rgba(12,18,13,.66))!important;
+}
+.orders-refresh.secondary.wide:disabled{opacity:.58}
+
+/* Desktop price-change note should read as part of the card, not as a solid banner. */
+.order-adjustment-note{
+ background:
+  linear-gradient(135deg,
+   color-mix(in srgb,var(--neon-color) 5%,rgba(20,24,16,.44)),
+   rgba(19,15,8,.34)
+  )!important;
+ border-color:color-mix(in srgb,var(--neon-color) 17%,rgba(255,255,255,.08))!important;
+ -webkit-backdrop-filter:blur(12px);
+ backdrop-filter:blur(12px);
+ box-shadow:inset 0 1px 0 rgba(255,255,255,.02);
+}
+
+/* Keep secondary controls translucent where they sit on top of themed artwork. */
+.garage-completed-button,
+.garage-edit-button,
+.completed-orders-btn,
+.car-quick-actions button{
+ background:rgba(15,21,16,.58)!important;
+ -webkit-backdrop-filter:blur(12px) saturate(1.06);
+ backdrop-filter:blur(12px) saturate(1.06);
+}
+
+@media(max-width:420px){
+ .orders-refresh.secondary.wide{
+  min-height:42px!important;
+  padding-inline:12px!important;
+  font-size:.74rem!important;
+ }
+}
