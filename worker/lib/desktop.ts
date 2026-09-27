@@ -363,7 +363,7 @@ const cleanWorkspace=(input:any)=>{
   x:Math.max(0,Math.min(11,Number(w.x)||0)),y:Math.max(0,Number(w.y)||0),width:Math.max(1,Math.min(12,Number(w.width)||3)),height:Math.max(1,Math.min(12,Number(w.height)||1)),
   minWidth:Math.max(1,Math.min(12,Number(w.minWidth)||1)),minHeight:Math.max(1,Number(w.minHeight)||1),hidden:!!w.hidden,visible:w.visible!==false,desktopVisible:w.desktopVisible!==false,telegramVisible:!!w.telegramVisible,roles:roles(w.roles),systemCritical:w.systemCritical!==false
  })).filter((w:any)=>w.id):defaultWorkspace.widgets;
- return {schemaVersion:2,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:Array.isArray(x.presets)?x.presets.slice(0,30):defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings,kanbanLabels:x.kanbanLabels&&typeof x.kanbanLabels==='object'?x.kanbanLabels:{},telegramMenu:x.telegramMenu&&typeof x.telegramMenu==='object'?x.telegramMenu:{}};
+ return {schemaVersion:2,locked:!!x.locked,defaultPage:String(x.defaultPage||'orders'),theme:{...defaultWorkspace.theme,...(x.theme&&typeof x.theme==='object'?x.theme:{})},sidebar,widgets,layouts:x.layouts&&typeof x.layouts==='object'?x.layouts:defaultWorkspace.layouts,presets:Array.isArray(x.presets)?x.presets.slice(0,30):defaultWorkspace.presets,mappings:x.mappings&&typeof x.mappings==='object'?x.mappings:defaultWorkspace.mappings,kanbanLabels:x.kanbanLabels&&typeof x.kanbanLabels==='object'?x.kanbanLabels:{},telegramMenu:{}};
 };
 
 
