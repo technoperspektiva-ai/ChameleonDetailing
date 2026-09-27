@@ -24,7 +24,8 @@ export async function ensureDb(env:Env){
    env.DB.prepare("SELECT services_json,client_deleted_at,staff_deleted_at,car_id,promotion_id,personal_discount_id FROM service_requests LIMIT 1"),
    env.DB.prepare("SELECT services_json,promotion_id,personal_discount_id FROM calculator_sessions LIMIT 1"),
    env.DB.prepare("SELECT brand,model,modification,body_type,plate,has_ceramic,owner_phone FROM client_cars LIMIT 1"),
-   env.DB.prepare("SELECT value FROM settings WHERE key='maintenance.enabled' LIMIT 1")
+   env.DB.prepare("SELECT value FROM settings WHERE key='maintenance.enabled' LIMIT 1"),
+   env.DB.prepare("SELECT telegram_user_id FROM permanent_bans LIMIT 1")
   ]);
   ready=true;
   return true;
@@ -39,6 +40,7 @@ CREATE TABLE IF NOT EXISTS client_profiles(user_id INTEGER PRIMARY KEY,client_ti
 CREATE TABLE IF NOT EXISTS vip_history(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,tier TEXT NOT NULL,assigned_by INTEGER,assigned_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,removed_by INTEGER,removed_at TEXT,removal_reason TEXT,metadata_json TEXT);
 CREATE TABLE IF NOT EXISTS whitelist(user_id INTEGER PRIMARY KEY,created_by INTEGER,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS blacklist(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL,public_reason TEXT NOT NULL,internal_note TEXT,blocked_by INTEGER,blocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,expires_at TEXT,is_active INTEGER NOT NULL DEFAULT 1,unblocked_by INTEGER,unblocked_at TEXT);
+CREATE TABLE IF NOT EXISTS permanent_bans(telegram_user_id INTEGER PRIMARY KEY,reason TEXT,blocked_by INTEGER,blocked_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS services(id INTEGER PRIMARY KEY AUTOINCREMENT,slug TEXT NOT NULL UNIQUE,enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,category TEXT NOT NULL DEFAULT 'DETAILING',duration_min INTEGER NOT NULL DEFAULT 60,archived INTEGER NOT NULL DEFAULT 0,image_url TEXT,icon_key TEXT,is_popular INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS service_translations(service_id INTEGER NOT NULL,locale TEXT NOT NULL,title TEXT NOT NULL,description TEXT NOT NULL,PRIMARY KEY(service_id,locale));
 CREATE TABLE IF NOT EXISTS service_prices(service_id INTEGER PRIMARY KEY,base_price REAL NOT NULL,base_currency TEXT NOT NULL DEFAULT 'PLN',currency_mode TEXT NOT NULL DEFAULT 'LIVE',usd_override REAL,uah_override REAL,pln_override REAL,enabled INTEGER NOT NULL DEFAULT 1,updated_by INTEGER,updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
