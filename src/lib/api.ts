@@ -35,5 +35,6 @@ export const api={
  carHistory:(id:number)=>json<any>(`/api/cars/${id}/history?initData=${encodeURIComponent(initData())}`),
  status:()=>json<any>('/api/system/status'),
  profilePhotoUrl:()=>`/api/profile/photo?initData=${encodeURIComponent(initData())}`,
- referral:()=>json<{ok:boolean;code:string;url:string}>('/api/referrals/create',{method:'POST',body:JSON.stringify({initData:initData()})})
+ referral:()=>json<{ok:boolean;code:string;url:string}>('/api/referrals/create',{method:'POST',body:JSON.stringify({initData:initData()})}),
+ referralStatus:(currency='PLN')=>json<{reward:Session['referralReward']}>(`/api/referrals/status?currency=${encodeURIComponent(currency)}&initData=${encodeURIComponent(initData())}`)
 };
