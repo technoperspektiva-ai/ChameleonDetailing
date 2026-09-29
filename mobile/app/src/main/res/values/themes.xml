@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Chameleon" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/chameleon_black</item>
+        <item name="android:navigationBarColor">@color/chameleon_black</item>
+        <item name="android:windowBackground">@color/chameleon_black</item>
+        <item name="android:colorAccent">@color/chameleon_gold</item>
+    </style>
+</resources>
