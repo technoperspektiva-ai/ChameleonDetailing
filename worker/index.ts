@@ -8,6 +8,7 @@ import {handleBotUpdate,ensureTelegramWebhook,telegramBotHealth,telegramWebhookS
 import {runReactivationCampaigns} from './lib/campaigns';
 import {handleDesktopApi,runDesktopScheduledJobs} from './lib/desktop';
 import {reconcileReferralRewards} from './lib/referrals';
+import {handleNativeApi,resolveNativeSession} from './lib/native';
 
 const VERSION='1.3.0';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
@@ -42,6 +43,15 @@ async function processTelegramUpdate(env:Env,origin:string,update:any){
 
 async function auth(env:Env,initData:string){
  if(!initData)return {id:0,telegram_user_id:0,first_name:'Guest',username:'preview',language:'en',preferred_currency:env.DEFAULT_CURRENCY,role:'CLIENT',client_tier:'STANDARD',demo:true};
+ if(initData.startsWith('native:')){
+  const native=await resolveNativeSession(env,initData.slice(7));
+  if(!native)throw new Error('NATIVE_SESSION_INVALID');
+  if(env.DB&&native.role==='CLIENT'){
+   const blocked=await getActiveBlock(env,native.id);
+   if(blocked)throw new Error('SERVICE_TEMPORARILY_UNAVAILABLE_404');
+  }
+  return native;
+ }
  if(!env.BOT_TOKEN)throw new Error('BOT_TOKEN is not configured');
  const v=await validateInitData(initData,env.BOT_TOKEN);
  if(!v)throw new Error('Invalid or expired Telegram session');
@@ -145,6 +155,10 @@ export default {
     if(!expected||supplied!==expected)return json({error:'Unauthorized'},401);
     return json({health:await telegramBotHealth(env),debug:await getBotDebug(env),expectedWebhook:url.origin+'/api/telegram/webhook'});
    }
+   if(url.pathname.startsWith('/api/native/')){
+    const nativeResponse=await handleNativeApi(request,env,url);
+    if(nativeResponse)return nativeResponse;
+   }
    if(url.pathname.startsWith('/api/desktop/')){
     const desktopResponse=await handleDesktopApi(request,env,url);
     if(desktopResponse)return desktopResponse;
@@ -179,6 +193,7 @@ export default {
    }
    if(url.pathname==='/api/profile/photo'&&request.method==='GET'){
     const u=await auth(env,url.searchParams.get('initData')||'');
+    if(u.native_provider&&u.photo_url)return Response.redirect(String(u.photo_url),302);
     if(u.demo||!env.BOT_TOKEN)return new Response(null,{status:404});
     try{
      const photos=await tgApi(env,'getUserProfilePhotos',{user_id:u.telegram_user_id,limit:1});

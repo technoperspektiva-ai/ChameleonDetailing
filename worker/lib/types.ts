@@ -13,6 +13,7 @@ export interface Env {
  SESSION_SECRET?: string;
  APP_URL?: string;
  PAYMENT_PROVIDER?: string;
+ GOOGLE_WEB_CLIENT_ID?: string;
 }
 export type TelegramUser={id:number;first_name:string;last_name?:string;username?:string;language_code?:string;photo_url?:string};
 export type AppRole='OWNER'|'ADMIN'|'MANAGER'|'CLIENT';
