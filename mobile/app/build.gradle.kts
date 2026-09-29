@@ -55,7 +55,7 @@ kotlin { jvmToolchain(17) }
 
 dependencies {
     implementation(project(":shared"))
-    implementation("androidx.core:core-ktx:1.19.1")
+    implementation("androidx.core:core-ktx:1.17.0")
     implementation("androidx.activity:activity-ktx:1.13.0")
     implementation("androidx.appcompat:appcompat:1.8.0")
     implementation("androidx.browser:browser:1.10.0")
