@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Chameleon Detailing</string>
+    <string name="splash_caption">Все найкраще тут</string>
+    <string name="login_title">Chameleon Detailing</string>
+    <string name="login_text">Увійдіть, щоб відкрити свій профіль, автомобілі та замовлення.</string>
+    <string name="google_sign_in">Продовжити з Google</string>
+    <string name="offline_title">Немає з’єднання з мережею</string>
+    <string name="offline_text">Схоже, Chameleon зараз не може підключитися до інтернету. Перевірте Wi‑Fi або мобільні дані — ми продовжимо, щойно зв’язок відновиться.</string>
+    <string name="retry_connection">Перевірити з’єднання</string>
+    <string name="waiting_network">Очікуємо на мережу…</string>
+    <string name="connection_restored">З’єднання відновлено ✓</string>
+    <string name="exit_title">Вийти з Chameleon?</string>
+    <string name="exit_text">Ви точно хочете закрити застосунок?</string>
+    <string name="stay">Залишитися</string>
+    <string name="exit">Вийти</string>
+    <string name="auth_config_missing">Для Google входу потрібно додати GOOGLE_SERVER_CLIENT_ID у gradle.properties.</string>
+    <string name="auth_failed">Не вдалося увійти. Спробуйте ще раз.</string>
+</resources>
