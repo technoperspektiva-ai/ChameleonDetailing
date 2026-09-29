@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="chameleon_black">#050805</color>
+    <color name="chameleon_surface">#0B100C</color>
+    <color name="chameleon_surface_2">#111712</color>
+    <color name="chameleon_gold">#DDB86F</color>
+    <color name="chameleon_green">#8DFF16</color>
+    <color name="chameleon_text">#F5F3EC</color>
+    <color name="chameleon_muted">#9CA39B</color>
+</resources>
