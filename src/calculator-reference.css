@@ -540,3 +540,57 @@
  .calculator-preview-car-title small{display:none}
  .calculator-preview-car-data{max-width:58%}
 }
+
+/* Reference gap fixes */
+.calculator-preview-hero{
+ display:grid;
+ grid-template-columns:minmax(0,1fr) auto;
+ gap:18px;
+ align-items:end;
+ max-width:none;
+}
+.calculator-preview-hero-copy{min-width:0}
+.calculator-preview-hero-copy>span{
+ display:flex;align-items:center;gap:11px;color:#edd094;font-size:.58rem;font-weight:780;letter-spacing:.29em
+}
+.calculator-preview-hero-copy>span::before{content:"";width:32px;height:2px;background:#d8ab58}
+.calculator-preview-hero-copy h1{
+ max-width:11.2ch;margin:10px 0 0;font-size:clamp(2.1rem,9.6vw,3.35rem);line-height:.96;
+ letter-spacing:-.055em;font-weight:740;text-wrap:balance
+}
+.calculator-preview-hero-copy p{max-width:30ch;margin:13px 0 0;color:#a4aba2;font-size:.90rem;line-height:1.42}
+.calculator-preview-manifesto{
+ display:block;
+ min-width:88px;
+ padding:0 0 24px 14px;
+ color:#d3b779;
+ font-size:.54rem;
+ line-height:1.75;
+ letter-spacing:.30em;
+ font-weight:800;
+ position:relative;
+}
+.calculator-preview-manifesto i{
+ position:absolute;left:0;top:2px;bottom:24px;width:2px;background:#d7ad60;box-shadow:0 0 10px rgba(215,173,96,.25)
+}
+.calculator-preview-car::before{
+ content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+ background:
+  linear-gradient(180deg,rgba(255,255,255,.018),transparent 26%),
+  radial-gradient(circle at 84% 88%,rgba(164,255,0,.055),transparent 26%),
+  linear-gradient(90deg,transparent 0 71%,rgba(216,171,89,.025) 72% 72.4%,transparent 73%);
+}
+.calculator-preview-car-image{
+ transform:scale(1.07) translateX(1%);
+ opacity:.98;
+}
+.calculator-preview-car-data{margin-top:68px}
+.calculator-preview-section-title{margin-top:26px}
+.calculator-preview-lock{margin-top:9px;color:#858c84}
+@media(max-width:420px){
+ .calculator-preview-manifesto{min-width:70px;font-size:.47rem;letter-spacing:.25em;padding-left:10px}
+}
+@media(max-width:360px){
+ .calculator-preview-manifesto{display:none}
+ .calculator-preview-hero{grid-template-columns:1fr}
+}
