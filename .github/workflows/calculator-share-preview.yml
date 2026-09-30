@@ -48,6 +48,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           PREVIEW_URL: ${{ steps.tunnel.outputs.url }}
-        run: gh pr comment 3 --body "🔎 Calculator preview: ${PREVIEW_URL}?designPreview=1"
+        run: |
+          gh pr comment 3 --body "🔎 Calculator preview: ${PREVIEW_URL}?designPreview=1"
       - name: Keep preview alive
         run: sleep 3000
