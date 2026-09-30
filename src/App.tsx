@@ -67,7 +67,8 @@ const applyTheme=(theme?:Session['theme'])=>{
 };
 
 export function App(){
- const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return v==='calculator'||v==='orders'||v==='cars'?v:'home'},[]);
+ const designPreview=useMemo(()=>new URLSearchParams(location.search).get('designPreview')==='1',[]);
+ const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return designPreview?'calculator':v==='calculator'||v==='orders'||v==='cars'?v:'home'},[designPreview]);
  const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[serviceOptions,setServiceOptions]=useState<ServiceOption[]>([]),[content,setContent]=useState<Record<string,string>>({}),[socials,setSocials]=useState<SocialLink[]>([]),[specialists,setSpecialists]=useState<Specialist[]>([]),[cars,setCars]=useState<ClientCar[]>([]),[tab,setTab]=useState<Tab>(initialTab);
  const initialLocale=useMemo(()=>normalizeLocale(localStorage.getItem('chameleon.locale')||telegramLanguage()||navigator.language),[]);
  const [locale,setLocaleState]=useState<Locale>(initialLocale),[currency,setCurrency]=useState('PLN');
@@ -78,7 +79,7 @@ export function App(){
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
  useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor,session?.theme?.seasonalMode,session?.theme?.seasonalTheme]);
- useEffect(()=>{initTelegram();(async()=>{const started=Date.now();try{
+ useEffect(()=>{if(designPreview){setLocale('uk');setCurrency('UAH');setSplash(false);return}initTelegram();(async()=>{const started=Date.now();try{
    setStartup({stage:'AUTH',progress:35,error:''});
    const s=await api.session();
    setStartup({stage:'PROFILE',progress:55,error:''});
@@ -91,23 +92,24 @@ export function App(){
    setServices(sv.services);setServiceOptions(opt.options||[]);setContent(ct.content||{});setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[]);setCars(Array.isArray(cr.cars)?cr.cars:[]);
    setStartup({stage:'READY',progress:100,error:''});
    const elapsed=Date.now()-started;if(elapsed<motion.splashMin)await wait(motion.splashMin-elapsed);await wait(160);setSplash(false);
-  }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}if(raw==='SERVICE_TEMPORARILY_UNAVAILABLE_404'){setServiceUnavailable(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
- useEffect(()=>{if(!session)return;Promise.all([api.services(locale,currency),api.options(locale,currency),api.content(locale)]).then(([x,opt,ct])=>{setServices(x.services);setServiceOptions(opt.options||[]);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session]);
- useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>Promise.all([api.socials(),api.specialists()]).then(([sc,sp])=>{if(stopped)return;setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[])}).catch(()=>{});const timer=setInterval(refresh,30000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
+  }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}if(raw==='SERVICE_TEMPORARILY_UNAVAILABLE_404'){setServiceUnavailable(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[designPreview]);
+ useEffect(()=>{if(designPreview||!session)return;Promise.all([api.services(locale,currency),api.options(locale,currency),api.content(locale)]).then(([x,opt,ct])=>{setServices(x.services);setServiceOptions(opt.options||[]);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session,designPreview]);
+ useEffect(()=>{if(designPreview||!session)return;let stopped=false;const refresh=()=>Promise.all([api.socials(),api.specialists()]).then(([sc,sp])=>{if(stopped)return;setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[])}).catch(()=>{});const timer=setInterval(refresh,30000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  // Staff can change opening hours from Telegram while the Mini App is already open.
  // Refresh runtime business state automatically so the closed/open banner follows D1
  // without forcing the client to kill and reopen Telegram.
- useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
+ useEffect(()=>{if(designPreview||!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  const goto=(x:Tab)=>{haptic();setTab(x);scrollTo({top:0,behavior:'smooth'})};
+ if(designPreview)return <CalculatorReferencePreview/>;
  if(splash)return <StartupSplash locale={locale} startup={startup} onRetry={()=>location.reload()} t={t}/>;
  if(directWebBlocked)return <DirectWebGate locale={locale}/>;
  if(serviceUnavailable||session?.blocked)return <Unavailable404 locale={locale}/>;
  if(!session)return <StateScreen title="Chameleon Detailing" text={startup.error||t('errors.startup')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
  if(session.maintenance&&session.user.role!=='OWNER')return <StateScreen title={t('maintenance.title')} text={t('maintenance.text')} action={()=>location.reload()} actionLabel={t('common.retry')}/>;
- return <div className="app"><SeasonalDecor theme={session.theme?.seasonalTheme}/>
+ return <div className={`app ${tab==='calculator'?'calculator-reference-active':''}`}><SeasonalDecor theme={session.theme?.seasonalTheme}/>
   <header><div className="brand"><img className="logo" src="/brand/chameleon-logo.webp" alt="Chameleon Detailing"/><div><b>Chameleon Detailing</b><span>{t('common.miniApp')}</span></div></div><button className="pill" aria-label={t('profile.language')} onClick={cycleLocale}><Globe2 size={16}/>{localeLabels[locale]}</button></header>
   <main>
-   {!session.schedule.isOpen&&<HolidayBanner t={t} schedule={session.schedule} locale={locale}/>}
+   {!session.schedule.isOpen&&tab!=='calculator'&&<HolidayBanner t={t} schedule={session.schedule} locale={locale}/>}
    {tab==='home'&&<HomePage t={t} services={services} goto={goto} currency={currency} content={content} socials={socials} specialists={specialists} locale={locale}/>}
    {tab==='services'&&<ServicesPage t={t} services={services} goto={goto} currency={currency}/>}
    {tab==='calculator'&&<CalculatorPage t={t} services={services} options={serviceOptions} currency={currency} schedule={session.schedule} cars={cars} refreshCars={()=>api.cars().then(x=>setCars(x.cars||[]))} locale={locale} goto={goto} referralReward={session.referralReward}/>}
@@ -147,6 +149,74 @@ function SpecialistsSection({items,locale}:{items:Specialist[];locale:Locale}){i
 function HomePage({t,services,goto,currency,content,socials,specialists,locale}:any){const [sharing,setSharing]=useState(false);const referralTitle=content?.['referral.title']||t('home.referral'),referralSubtitle=content?.['referral.subtitle']||t('home.referralSubtitle'),referralShare=content?.['referral.share_text']||t('home.referralShare');const invite=async()=>{if(sharing)return;haptic();setSharing(true);try{const r=await api.referral();shareTelegramLink(r.url,referralShare);notify('success')}catch{notify('error')}finally{setSharing(false)}};return <><section className="hero"><div className="hero-copy"><div className="eyebrow">{t('home.eyebrow')}</div><h1>{t('home.hero')}</h1><p>{t('home.subtitle')}</p><button className="primary" onClick={()=>goto('calculator')}><Calculator/> <span>{t('home.calculate')}</span><ChevronRight/></button></div><div className="hero-mascot" aria-hidden="true"><img src="/brand/chameleon-logo.webp" alt=""/></div><div className="hero-badges"><span><ShieldCheck/>{t('home.benefitClean')}</span><span><Droplets/>{t('home.benefitProtection')}</span><span><Gem/>{t('home.benefitPremium')}</span></div></section><section><div className="section-title"><h2>{t('home.popular')}</h2><button onClick={()=>goto('services')}>{t('nav.services')}<ChevronRight/></button></div><div className="service-grid">{services.filter((s:any)=>Boolean(s.isPopular)).slice(0,4).map((s:any)=><article className="service-card" key={s.slug}><ServiceArt service={s}/><div><h3>{s.title}</h3><p>{s.description}</p><b>{t('home.from')} {money(s.basePrice,s.currency||currency)}</b>{s.standardBasePrice!=null&&Number(s.standardBasePrice)!==Number(s.basePrice)&&<small className="vip-price-note">{s.promotion?`🏷 -${s.promotion.percentDiscount}%`:`💎 ${t('vip.activePrice')}`} · <del>{money(s.standardBasePrice,s.currency||currency)}</del></small>}</div></article>)}</div></section><SpecialistsSection items={specialists||[]} locale={locale}/><SocialLinksSection items={socials||[]} locale={locale}/><button className="ref-card referral-button" onClick={invite} disabled={sharing} aria-busy={sharing}><Gift/><div><h3>{referralTitle}</h3><p>{sharing?t('home.referralPreparing'):referralSubtitle}</p></div>{sharing?<Loader2 className="spin"/>:<ChevronRight/>}</button></>}
 function ServicesPage({t,services,goto,currency}:any){return <section><div className="page-head"><span>02</span><div><h1>{t('services.title')}</h1><p>{t('services.subtitle')}</p></div></div><div className="stack">{services.map((s:any)=><article className="list-card" key={s.slug}><ServiceArt service={s} small/><div className="grow"><h3>{s.title}</h3><p>{s.description}</p><b>{t('home.from')} {money(s.basePrice,s.currency||currency)} · {s.durationMin} {t('common.minutes')}</b>{s.standardBasePrice!=null&&Number(s.standardBasePrice)!==Number(s.basePrice)&&<small className="vip-price-note">{s.promotion?`🏷 -${s.promotion.percentDiscount}%`:`💎 ${t('vip.activePrice')}`} · <del>{money(s.standardBasePrice,s.currency||currency)}</del></small>}</div><button className="icon-btn" aria-label={t('home.calculate')} onClick={()=>goto('calculator')}><ChevronRight/></button></article>)}</div></section>}
 const ui3=(locale:Locale,uk:string,pl:string,en:string)=>locale==='uk'?uk:locale==='pl'?pl:en;
+function CalculatorReferencePreview(){
+ const [other,setOther]=useState(false);
+ const [selected,setSelected]=useState('full-detailing');
+ const serviceCards=[
+  {slug:'full-detailing',title:'Повний детейлінг',sub:'Комплексне очищення всередині та зовні',kind:'car'},
+  {slug:'interior-detailing',title:'Детейлінг інтер’єру',sub:'Свіжий, чистий і комфортний салон',kind:'interior'},
+  {slug:'ceramic-coating',title:'Керамічне покриття',sub:'Довготривалий захист та глибокий блиск',kind:'shield'},
+  {slug:'extras',title:'Додаткові послуги',sub:'Окремі процедури для вашого авто',kind:'sparkles'}
+ ];
+ return <div className="calculator-visual-preview">
+  <header className="calculator-preview-header">
+   <div className="brand"><img className="logo" src="/brand/chameleon-logo.webp" alt=""/><div><b>Chameleon Detailing</b><span>МІНІ-ЗАСТОСУНОК</span></div></div>
+   <button className="calculator-preview-lang">UA</button>
+  </header>
+
+  <main className="calculator-preview-main">
+   <div className="calculator-preview-progress">
+    <div className="done"><i><Check/></i><span>Автомобіль</span></div><b className="done"/>
+    <div className="active"><i>2</i><span>Напрямок догляду</span></div><b/>
+    <div><i>3</i><span>Результат</span></div>
+   </div>
+
+   <div className="calculator-preview-hero">
+    <div className="calculator-preview-hero-copy">
+     <span>ПЕРСОНАЛЬНИЙ ПІДХІД</span>
+     <h1>Розпочнемо з вашого автомобіля</h1>
+     <p>Це допоможе підібрати ідеальні рішення та показати точну ціну.</p>
+    </div>
+    <div className="calculator-preview-manifesto"><i/>БІЛЬШЕ<br/>НІЖ ДЕТЕЙЛІНГ</div>
+   </div>
+
+   <button className={`calculator-preview-car ${!other?'selected':''}`} onClick={()=>setOther(false)}>
+    <span className="calculator-preview-car-check">{!other?<Check/>:null}</span>
+    <span className="calculator-preview-car-title"><b>Моє авто</b><small>Вибрати зі свого автопарку</small></span>
+    <span className="calculator-preview-change"><Pencil/>Змінити</span>
+    <span className="calculator-preview-car-data">
+      <img className="calculator-preview-audi-logo" src="/car-brand-icons/audi.png" alt="Audi"/>
+      <span><strong>Audi A3</strong><small>Sedan</small><em>HA 7535 NA</em></span>
+    </span>
+    <img src="/preview/audi-a3-premium.webp" alt="Audi A3" className="calculator-preview-car-image"/>
+   </button>
+
+   <button className={`calculator-preview-other ${other?'selected':''}`} onClick={()=>setOther(true)}>
+    <span className="radio">{other?<Check/>:null}</span><Car/>
+    <span><b>Інше авто</b><small>Разове замовлення без збереженого профілю</small></span><ChevronRight/>
+   </button>
+
+   <div className="calculator-preview-section-title"><span>ОБЕРІТЬ НАПРЯМОК ДОГЛЯДУ</span><small>Крок 2 з 3</small></div>
+   <div className="calculator-preview-service-grid">
+    {serviceCards.map(s=><button key={s.slug} className={selected===s.slug?'selected':''} onClick={()=>setSelected(s.slug)}>
+      <span className="icon">{s.kind==='car'?<Car/>:s.kind==='interior'?<UserRound/>:s.kind==='shield'?<ShieldCheck/>:<Sparkles/>}</span>
+      <span className="copy"><b>{s.title}</b><small>{s.sub}</small></span>
+      <i>{selected===s.slug?<Check/>:<ChevronRight/>}</i>
+    </button>)}
+   </div>
+
+   <div className="calculator-preview-schedule"><Clock3/><span><b>Сьогодні сервіс не працює.</b><small>Найближчий запис: завтра · 09:00</small></span><ChevronRight/></div>
+   <div className="calculator-preview-lock"><ShieldCheck/> Персональна ціна буде зафіксована перед підтвердженням</div>
+   <div className="calculator-preview-space"/>
+  </main>
+
+  <div className="calculator-preview-cta"><div><small>ВІД</small><b>9 900 ₴</b></div><i/><button>Продовжити <ChevronRight/></button></div>
+  <nav className="calculator-preview-nav">
+   {[[Home,'Головна'],[Car,'Автопарк'],[Sparkles,'Послуги'],[Calculator,'Калькулятор'],[Crown,'VIP'],[UserRound,'Профіль']].map(([I,label]:any)=><button key={label} className={label==='Калькулятор'?'active':''}><I/><span>{label}</span></button>)}
+  </nav>
+ </div>
+}
+
 function CalculatorPage({t,services,options,currency,schedule,cars,refreshCars,locale,goto,referralReward}:any){
  const [step,setStep]=useState(0),[carMode,setCarMode]=useState<'own'|'other'|''>(''),[selected,setSelected]=useState<string[]>([]),[vehicle,setVehicle]=useState('sedan'),[condition,setCondition]=useState('normal'),[extra,setExtra]=useState<string[]>([]),[quote,setQuote]=useState<any>(null),[busy,setBusy]=useState(false),[sent,setSent]=useState(false),[processing,setProcessing]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[carId,setCarId]=useState<number|null>(null); const timers=useRef<any[]>([]);const [activeReward,setActiveReward]=useState<any>(referralReward||null);
  useEffect(()=>{setActiveReward(referralReward||null)},[referralReward?.id,referralReward?.type,referralReward?.value,referralReward?.currency,referralReward?.service]);
@@ -182,18 +252,69 @@ function CalculatorPage({t,services,options,currency,schedule,cars,refreshCars,l
  const title=current==='car-mode'?ui3(locale,'Яке авто обслуговуємо?','Które auto obsługujemy?','Which car are we servicing?'):current==='car-select'?ui3(locale,'Оберіть своє авто','Wybierz swoje auto','Choose your car'):current==='services'?t('calculator.need'):current==='vehicle'?t('calculator.vehicle'):current==='condition'?t('calculator.condition'):t('calculator.extras');
  const rewardCopy=locale==='uk'?'Реферальний бонус активний':locale==='pl'?'Bonus polecający jest aktywny':locale==='de'?'Empfehlungsbonus ist aktiv':locale==='fr'?'Le bonus de parrainage est actif':'Referral reward is active';
  const rewardValue=activeReward?.type==='PERCENT'?'-'+Number(activeReward.value||0)+'%':activeReward?.type==='FIXED'?'-'+money(activeReward.value,activeReward.currency||currency):activeReward?.type==='FREE_SERVICE'?(locale==='uk'?'Безкоштовна послуга':locale==='pl'?'Bezpłatna usługa':locale==='de'?'Kostenlose Leistung':locale==='fr'?'Service gratuit':'Free service'):'';
+
+ const visualStage=current==='car-mode'||current==='car-select'?1:current==='services'||current==='vehicle'||current==='condition'||current==='extras'?2:3;
+ const visualCar=selectedCar||((cars||[])[0]||null);
+ const visualVehicle=carVehicleType(visualCar?.bodyType)||vehicle||'sedan';
+ const visualCarImage=(vehicles.find(([id])=>id===visualVehicle)?.[2])||'/miniapp-vehicle-icons/sedan.webp';
+ const visualNextWorking=schedule?.nextWorkingAt?new Date(schedule.nextWorkingAt).toLocaleString(locale==='uk'?'uk-UA':locale==='pl'?'pl-PL':'en-US',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+
  const rewardHint=locale==='uk'?'застосується автоматично у розрахунку':locale==='pl'?'zastosuje się automatycznie w kalkulacji':locale==='de'?'wird automatisch in der Kalkulation angewendet':locale==='fr'?'s’applique automatiquement au calcul':'applies automatically in the quote';
- return <section><div className="calc-top"><div className="steps">{flow.map((_,i)=><i className={i<=step?'on':''} key={i}>{i<step?<Check/>:i+1}</i>)}</div><h1>{title}</h1></div>
- {activeReward&&<div className="referral-active-bonus"><Gift/><div><b>{rewardCopy}</b><small>{rewardValue}{activeReward.service?' · '+activeReward.service:''} · {rewardHint}</small></div></div>}
- {current==='car-mode'&&<div className="choice-list car-mode-choice"><Choice on={()=>{setCarMode('own');if((cars||[]).length===1)setCarId(cars[0].id)}} active={carMode==='own'} title={ui3(locale,'Моє авто','Moje auto','My car')} sub={ui3(locale,'Виберу автомобіль зі свого автопарку','Wybiorę auto z mojego garażu','Choose a saved car from my garage')} icon={<Car/>}/><Choice on={()=>{setCarMode('other');setCarId(null)}} active={carMode==='other'} title={ui3(locale,'Інше авто','Inne auto','Another car')} sub={ui3(locale,'Разове замовлення без збереженого профілю','Jednorazowe zlecenie bez zapisanego profilu','One-time request without a saved profile')} icon={<Car/>}/></div>}
- {current==='car-select'&&<div className="choice-list saved-car-choice">{(cars||[]).map((car:ClientCar)=><Choice key={car.id} on={()=>{setCarId(car.id);const v=carVehicleType(car.bodyType);if(v)setVehicle(v);if(car.package)applyPackage(car)}} active={carId===car.id} title={car.name} sub={[car.brand,car.model,car.plate,car.bodyType?bodyTypeLabel(locale,carVehicleType(car.bodyType)||car.bodyType):''].filter(Boolean).join(' · ')} icon={<BrandBadge brand={car.brand}/>}/>) }{!(cars||[]).length&&<button className="add-car-inline" onClick={()=>goto('cars')}>{ui3(locale,'У вас ще немає авто в автопарку. Додайте його у вкладці «Автопарк».','Nie masz jeszcze auta w garażu. Dodaj je w zakładce „Garaż”.','You do not have a saved car yet. Add one in Garage.')}</button>}</div>}
- {current==='services'&&<div className="choice-list">{services.map((svc:Service)=>{const blocked=svc.slug==='full-detailing'&&fullDetailingBlocked;const blockedHint=ui3(locale,'Недоступно: повний детейлінг уже включає вибраний інтер’єр або екстер’єр.','Niedostępne: pełny detailing obejmuje już wybrany detailing wnętrza lub zewnętrza.','Unavailable: full detailing already includes the selected interior or exterior detailing.');return <Choice key={svc.slug} on={()=>toggleService(svc.slug)} active={selected.includes(svc.slug)} disabled={blocked} title={svc.title} sub={blocked?blockedHint:svc.description} icon={mainServiceSlugs.has(svc.slug)?<PremiumMainServiceIcon slug={svc.slug} label={svc.title}/>:hasApprovedIcon(svc.slug)?<ApprovedServiceIcon slug={svc.slug} label={svc.title}/>:<Sparkles className="service-generic-icon"/>}/>})}</div>}
- {current==='vehicle'&&<div className="choice-list vehicle-choice-list">{vehicles.map(([id,key,image])=><Choice key={id} on={()=>setVehicle(id)} active={vehicle===id} title={t(key)} icon={<img className="vehicle-choice-image" src={image} alt={t(key)}/>}/>)}</div>}
- {current==='condition'&&<div className="choice-list">{conditions.map(([id,key])=><Choice key={id} on={()=>setCondition(id)} active={condition===id} title={t(key)}/>)}</div>}
- {current==='extras'&&<div className="choice-list">{availableOptions.map((opt:ServiceOption)=><Choice key={opt.slug} on={()=>setExtra(extra.includes(opt.slug)?extra.filter(x=>x!==opt.slug):[...extra,opt.slug])} active={extra.includes(opt.slug)} title={opt.title} sub={`${opt.description?opt.description+' · ':''}+ ${money(opt.price,opt.currency||currency)}`} icon={hasApprovedIcon(opt.slug)?<ApprovedServiceIcon slug={opt.slug} label={opt.title}/>:<Sparkles className="service-generic-icon"/>}/>)}</div>}
- <div className="calc-actions">{step>0&&<button className="secondary" aria-label={t('common.back')} onClick={()=>setStep(step-1)}><ArrowLeft/></button>}<button className="primary grow" onClick={next} disabled={busy||!canContinue}>{busy?<Loader2 className="spin"/>:<span>{step===flow.length-1?t('home.calculate'):t('common.continue')}</span>}<ChevronRight/></button></div>
- {processing&&<ProcessingOverlay t={t} status={status}/>} {quote&&<ResultModal t={t} q={quote} sent={sent} busy={busy} error={error} schedule={schedule} locale={locale} onClose={()=>setQuote(null)} onEdit={()=>{setQuote(null);setStep(0)}} onSend={send}/>} {error&&!quote&&!processing&&<div className="inline-error"><TriangleAlert/>{error}</div>}
- </section>}
+ return <section className={`calculator-reference calculator-current-${current}`}>
+  <div className="calculator-ref-stagebar" aria-label={ui3(locale,'Етапи розрахунку','Etapy kalkulacji','Calculation steps')}>
+   {[
+    [1,ui3(locale,'Автомобіль','Samochód','Vehicle')],
+    [2,ui3(locale,'Напрямок догляду','Kierunek pielęgnacji','Care direction')],
+    [3,ui3(locale,'Результат','Wynik','Result')]
+   ].map(([n,label],idx)=><React.Fragment key={String(n)}><div className={`calculator-ref-stage ${Number(n)<visualStage?'done':Number(n)===visualStage?'active':''}`}><i>{Number(n)<visualStage?<Check/>:n}</i><span>{label}</span></div>{idx<2&&<b className={Number(n)<visualStage?'done':''}/>}</React.Fragment>)}
+  </div>
+
+  <div className="calculator-ref-hero">
+   <span className="calculator-ref-kicker">{ui3(locale,'ПЕРСОНАЛЬНИЙ ПІДХІД','INDYWIDUALNE PODEJŚCIE','PERSONAL APPROACH')}</span>
+   <h1>{current==='car-mode'?ui3(locale,'Розпочнемо з вашого автомобіля','Zacznijmy od Twojego samochodu','Let’s start with your car'):title}</h1>
+   {current==='car-mode'&&<p>{ui3(locale,'Це допоможе підібрати ідеальні рішення та показати точну ціну.','To pomoże dobrać idealne rozwiązania i pokazać dokładną cenę.','This helps us choose the right care and show an accurate price.')}</p>}
+  </div>
+
+  {activeReward&&<div className="referral-active-bonus calculator-ref-bonus"><Gift/><div><b>{rewardCopy}</b><small>{rewardValue}{activeReward.service?' · '+activeReward.service:''} · {rewardHint}</small></div></div>}
+
+  {current==='car-mode'&&<div className="calculator-ref-car-stack">
+   <button className={`calculator-ref-car ${carMode==='own'?'selected':''}`} onClick={()=>{setCarMode('own');if((cars||[]).length===1)setCarId(cars[0].id)}}>
+    <span className="calculator-ref-check">{carMode==='own'?<Check/>:null}</span>
+    <span className="calculator-ref-car-heading"><b>{ui3(locale,'Моє авто','Moje auto','My car')}</b><small>{ui3(locale,'Вибрати зі свого автопарку','Wybierz ze swojego garażu','Choose from your garage')}</small></span>
+    {(cars||[]).length>1&&<span className="calculator-ref-change">{ui3(locale,'Змінити','Zmień','Change')}<Pencil/></span>}
+    {visualCar?<span className="calculator-ref-car-meta"><BrandBadge brand={visualCar.brand}/><span><strong>{[visualCar.brand,visualCar.model].filter(Boolean).join(' ')||visualCar.name}</strong><small>{[visualCar.modification,visualCar.bodyType?bodyTypeLabel(locale,carVehicleType(visualCar.bodyType)||visualCar.bodyType):''].filter(Boolean).join(' · ')}</small>{visualCar.plate&&<em>{visualCar.plate}</em>}</span></span>:<span className="calculator-ref-car-meta empty"><Car/><span><strong>{ui3(locale,'Авто ще не додано','Nie dodano auta','No saved car')}</strong><small>{ui3(locale,'Додайте авто в Автопарк','Dodaj auto w Garażu','Add a car in Garage')}</small></span></span>}
+    <img className="calculator-ref-car-image" src={visualCarImage} alt=""/>
+   </button>
+   <button className={`calculator-ref-other ${carMode==='other'?'selected':''}`} onClick={()=>{setCarMode('other');setCarId(null)}}>
+    <span className="calculator-ref-radio">{carMode==='other'?<Check/>:null}</span><Car/><span><b>{ui3(locale,'Інше авто','Inne auto','Another car')}</b><small>{ui3(locale,'Разове замовлення без збереженого профілю','Jednorazowe zlecenie bez zapisanego profilu','One-time request without a saved profile')}</small></span><ChevronRight/>
+   </button>
+  </div>}
+
+  {current==='car-select'&&<div className="calculator-ref-saved-list">{(cars||[]).map((car:ClientCar)=>{const imageId=carVehicleType(car.bodyType)||'sedan';const image=(vehicles.find(([id])=>id===imageId)?.[2])||'/miniapp-vehicle-icons/sedan.webp';return <button key={car.id} className={`calculator-ref-saved-car ${carId===car.id?'selected':''}`} onClick={()=>{setCarId(car.id);const v=carVehicleType(car.bodyType);if(v)setVehicle(v);if(car.package)applyPackage(car)}}>
+    <span className="calculator-ref-check">{carId===car.id?<Check/>:null}</span><BrandBadge brand={car.brand}/><span className="grow"><b>{car.name}</b><small>{[car.brand,car.model,car.plate,car.bodyType?bodyTypeLabel(locale,carVehicleType(car.bodyType)||car.bodyType):''].filter(Boolean).join(' · ')}</small></span><img src={image} alt=""/>
+   </button>})}{!(cars||[]).length&&<button className="add-car-inline" onClick={()=>goto('cars')}>{ui3(locale,'У вас ще немає авто в автопарку. Додайте його у вкладці «Автопарк».','Nie masz jeszcze auta w garażu. Dodaj je w zakładce „Garaż”.','You do not have a saved car yet. Add one in Garage.')}</button>}</div>}
+
+  {current==='services'&&<><div className="calculator-ref-sectionline"><span>{ui3(locale,'ОБЕРІТЬ НАПРЯМОК ДОГЛЯДУ','WYBIERZ KIERUNEK PIELĘGNACJI','CHOOSE A CARE DIRECTION')}</span><small>{ui3(locale,'Крок 2 з 3','Krok 2 z 3','Step 2 of 3')}</small></div><div className="calculator-ref-service-grid">{services.map((svc:Service)=>{const blocked=svc.slug==='full-detailing'&&fullDetailingBlocked;const blockedHint=ui3(locale,'Недоступно: повний детейлінг уже включає вибраний інтер’єр або екстер’єр.','Niedostępne: pełny detailing obejmuje już wybrany detailing wnętrza lub zewnętrza.','Unavailable: full detailing already includes the selected interior or exterior detailing.');return <button key={svc.slug} className={`calculator-ref-service ${selected.includes(svc.slug)?'selected':''} ${blocked?'disabled':''}`} disabled={blocked} onClick={()=>toggleService(svc.slug)}>
+    <span className="calculator-ref-service-icon">{mainServiceSlugs.has(svc.slug)?<PremiumMainServiceIcon slug={svc.slug} label={svc.title}/>:hasApprovedIcon(svc.slug)?<ApprovedServiceIcon slug={svc.slug} label={svc.title}/>:<Sparkles className="service-generic-icon"/>}</span><span><b>{svc.title}</b><small>{blocked?blockedHint:svc.description}</small></span><i>{selected.includes(svc.slug)?<Check/>:<ChevronRight/>}</i>
+   </button>})}</div></>}
+
+  {current==='vehicle'&&<div className="choice-list vehicle-choice-list calculator-ref-secondary-list">{vehicles.map(([id,key,image])=><Choice key={id} on={()=>setVehicle(id)} active={vehicle===id} title={t(key)} icon={<img className="vehicle-choice-image" src={image} alt={t(key)}/>}/>)}</div>}
+  {current==='condition'&&<div className="choice-list calculator-ref-secondary-list">{conditions.map(([id,key])=><Choice key={id} on={()=>setCondition(id)} active={condition===id} title={t(key)}/>)}</div>}
+  {current==='extras'&&<div className="choice-list calculator-ref-secondary-list">{availableOptions.map((opt:ServiceOption)=><Choice key={opt.slug} on={()=>setExtra(extra.includes(opt.slug)?extra.filter(x=>x!==opt.slug):[...extra,opt.slug])} active={extra.includes(opt.slug)} title={opt.title} sub={`${opt.description?opt.description+' · ':''}+ ${money(opt.price,opt.currency||currency)}`} icon={hasApprovedIcon(opt.slug)?<ApprovedServiceIcon slug={opt.slug} label={opt.title}/>:<Sparkles className="service-generic-icon"/>}/>)}</div>}
+
+  <div className="calculator-ref-schedule"><Clock3/><span><b>{schedule?.isOpen?ui3(locale,'Сьогодні сервіс працює','Dziś serwis jest otwarty','Service is open today'):ui3(locale,'Сьогодні сервіс не працює.','Dziś serwis jest zamknięty.','Service is closed today.')}</b>{!schedule?.isOpen&&visualNextWorking&&<small>{ui3(locale,'Найближчий робочий час: ','Najbliższy termin: ','Next working time: ')+visualNextWorking}</small>}</span><ChevronRight/></div>
+
+  <div className="calc-actions calculator-ref-actions">
+   {step>0&&<button className="secondary" aria-label={t('common.back')} onClick={()=>setStep(step-1)}><ArrowLeft/></button>}
+   <button className="primary grow" onClick={next} disabled={busy||!canContinue}>{busy?<Loader2 className="spin"/>:<span>{step===flow.length-1?t('home.calculate'):t('common.continue')}</span>}<ChevronRight/></button>
+  </div>
+
+  {processing&&<ProcessingOverlay t={t} status={status}/>}
+  {quote&&<ResultModal t={t} q={quote} sent={sent} busy={busy} error={error} schedule={schedule} locale={locale} onClose={()=>setQuote(null)} onEdit={()=>{setQuote(null);setStep(0)}} onSend={send}/>}
+  {error&&!quote&&!processing&&<div className="inline-error"><TriangleAlert/>{error}</div>}
+ </section>
+}
+
 function ProcessingOverlay({t,status}:any){return <div className="overlay-backdrop"><div className="processing-card"><img src="/brand/chameleon-logo.webp" alt=""/><h3>{t('calculator.processing')}</h3><div className="loader-bar"><i/></div><p>{status}</p></div></div>}
 function ResultModal({t,q,sent,busy,error,schedule,onClose,onEdit,onSend,locale}:any){const standardTotal=Number(q.standardTotal??0);const referralLabel=locale==='uk'?'Реферальний бонус':locale==='pl'?'Bonus polecający':locale==='de'?'Empfehlungsbonus':locale==='fr'?'Bonus de parrainage':'Referral reward';const discountLabel=q.discountSource==='PERSONAL'?t('calculator.personalGift'):q.discountSource==='PROMOTION'?t('calculator.promotion'):q.discountSource==='REFERRAL'?referralLabel:q.discountSource==='MIXED'?(q.referralReward?referralLabel+' + '+ui3(locale,'інші знижки','inne rabaty','other discounts'):ui3(locale,'Знижки','Rabaty','Discounts')):t('calculator.vipDiscount');const ep=q.emergencyPreview;const emPct=ep?Math.round((Number(ep.multiplier||1)-1)*100):0;return <div className="modal-backdrop" onMouseDown={e=>{if(e.target===e.currentTarget)onClose()}}><div className="result-modal"><button className="modal-close" aria-label={t('common.close')} onClick={onClose}><X/></button><span className="eyebrow">✨ {t('calculator.result')}</span><strong>{money(q.finalPrice,q.currency)}</strong>{q.discount>0&&standardTotal>0&&<small className="result-note"><del>{money(standardTotal,q.currency)}</del> · {discountLabel}</small>}{Array.isArray(q.serviceBreakdown)&&q.serviceBreakdown.length>1&&<div className="service-breakdown-list">{q.serviceBreakdown.map((x:any)=><p key={x.service}><span>{x.service}</span><b>{money(x.subtotal,q.currency)}</b></p>)}</div>}<div className="breakdown"><p><span>{t('common.base')}</span><b>{money(q.basePrice,q.currency)}</b></p>{q.requiresVehicle&&<p><span>{t('common.vehicle')}</span><b>× {q.vehicleMultiplier}</b></p>}{q.requiresCondition&&<p><span>{t('common.condition')}</span><b>× {q.conditionMultiplier}</b></p>}<p><span>{t('common.options')}</span><b>{money(q.optionsTotal,q.currency)}</b></p>{q.discount>0&&<p className="lime"><span>{discountLabel}</span><b>-{money(q.discount,q.currency)}</b></p>}<p className="lime total-row"><span>{t('common.total')}</span><b>{money(q.finalPrice,q.currency)}</b></p>{ep&&<><p className="emergency-row"><span>{t('calculator.emergencyExtra')} · ×{Number(ep.multiplier).toFixed(2)} (+{emPct}%)</span><b>+{money(ep.surcharge,ep.currency||q.currency)}</b></p><p className="emergency-total"><span>{t('calculator.emergencyTotal')}</span><b>{money(ep.finalPrice,ep.currency||q.currency)}</b></p></>}</div>{q.fxTimestamp&&<small>{t('common.fx')}: {new Date(q.fxTimestamp).toLocaleString()}</small>}{ep&&<small className="emergency-hint">{t('calculator.emergencyHint')}</small>}{sent?<div className="success"><Check/>{t('calculator.sent')}</div>:<div className="modal-actions">{schedule.isOpen?<button className="primary" onClick={()=>onSend('STANDARD')} disabled={busy}>{t('calculator.send')}</button>:<><button className="primary" onClick={()=>onSend('DEFERRED')} disabled={busy}>{t('calculator.deferred')}</button>{schedule.emergencyEnabled&&ep&&<button className="warning-btn emergency-order-btn" onClick={()=>onSend('EMERGENCY')} disabled={busy}><span>{t('calculator.emergency')}</span></button>}</>}<button className="secondary wide" onClick={onEdit}>{t('calculator.edit')}</button></div>}{error&&<div className="inline-error"><TriangleAlert/>{error}</div>}</div></div>}
 function Choice({active,on,title,sub,icon,disabled=false}:any){return <button className={`choice ${active?'selected':''} ${disabled?'disabled':''}`} disabled={disabled} aria-disabled={disabled} onClick={()=>{if(disabled)return;haptic();on()}}>{icon&&<span className="choice-icon">{icon}</span>}<span className="grow"><b>{title}</b>{sub&&<small>{sub}</small>}</span><i>{active?<Check/>:disabled?<X/>:<ChevronRight/>}</i></button>}
