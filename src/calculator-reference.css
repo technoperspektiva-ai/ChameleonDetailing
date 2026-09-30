@@ -804,3 +804,316 @@
   .calculator-preview-cta{width:min(100% - 30px,500px);min-height:66px;border-radius:17px}
   .calculator-preview-nav button{min-height:53px}
 }
+
+
+/* v3.4 — reference-faithful scene, proportions and premium assets */
+.calculator-visual-preview{
+  position:relative;
+  isolation:isolate;
+  min-height:100dvh;
+  overflow-x:hidden;
+  background:#050705;
+}
+.calculator-visual-preview::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto;
+  z-index:-2;
+  height:980px;
+  background:
+    linear-gradient(180deg,rgba(3,5,3,.08) 0%,rgba(4,6,4,.16) 35%,rgba(4,6,4,.76) 84%,#050705 100%),
+    url('/preview/detailing-studio.webp') center top/cover no-repeat;
+  filter:saturate(.9) contrast(1.04) brightness(.78);
+}
+.calculator-visual-preview::after{
+  content:"";
+  position:absolute;
+  inset:0 0 auto;
+  z-index:-1;
+  height:980px;
+  pointer-events:none;
+  background:
+    radial-gradient(circle at 50% 36%,transparent 0 28%,rgba(0,0,0,.08) 60%,rgba(0,0,0,.42) 100%),
+    linear-gradient(90deg,rgba(0,0,0,.34),transparent 16%,transparent 84%,rgba(0,0,0,.28));
+}
+.calculator-preview-header{
+  position:relative;
+  top:auto;
+  min-height:64px;
+  padding:10px 18px 8px;
+  background:linear-gradient(180deg,rgba(4,6,4,.80),rgba(4,6,4,.28));
+  border-bottom:0;
+  backdrop-filter:none;
+}
+.calculator-preview-header .logo{width:46px;height:46px;filter:drop-shadow(0 0 12px rgba(164,255,0,.28))}
+.calculator-preview-header .brand{gap:12px}
+.calculator-preview-header .brand b{font-size:1rem}
+.calculator-preview-header .brand span{font-size:.49rem;letter-spacing:.24em;color:#b0b4ae}
+.calculator-preview-lang{
+  width:62px;height:48px;border-radius:16px;
+  background:rgba(12,15,12,.62);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+.calculator-preview-main{
+  width:min(100% - 32px,500px);
+  padding-top:6px;
+}
+.calculator-preview-main::before{display:none}
+
+.calculator-preview-progress{
+  grid-template-columns:auto 1fr auto 1fr auto;
+  gap:8px;
+  padding:0 2px;
+}
+.calculator-preview-progress>div{gap:8px}
+.calculator-preview-progress>div i{
+  width:38px;height:38px;
+  background:rgba(7,9,7,.74);
+  border:1px solid rgba(255,255,255,.21);
+}
+.calculator-preview-progress>div.done i{
+  background:rgba(9,15,7,.72);
+  color:#f5f7f2;
+  border-color:var(--neon-color);
+  box-shadow:0 0 0 2px rgba(164,255,0,.10),0 0 18px rgba(164,255,0,.38);
+}
+.calculator-preview-progress>div.active i{
+  border-color:#e4bd72;
+  color:#f7f4ea;
+  box-shadow:0 0 0 2px rgba(226,187,112,.08),0 0 15px rgba(226,187,112,.28);
+}
+.calculator-preview-progress>div span{font-size:.62rem;font-weight:730}
+.calculator-preview-progress>b{height:1px;background:rgba(255,255,255,.24)}
+.calculator-preview-progress>b.done{background:#d9ad5b}
+
+.calculator-preview-hero{
+  grid-template-columns:minmax(0,1fr) 84px;
+  gap:12px;
+  padding:24px 2px 15px;
+}
+.calculator-preview-hero-copy>span{font-size:.54rem;letter-spacing:.29em;color:#d7bd86}
+.calculator-preview-hero-copy>span::before{width:28px;background:#d8ad5c}
+.calculator-preview-hero-copy h1{
+  max-width:9.8ch;
+  margin-top:8px;
+  font-size:clamp(2.15rem,9.7vw,3rem);
+  line-height:.95;
+  letter-spacing:-.055em;
+  font-weight:760;
+}
+.calculator-preview-hero-copy p{
+  max-width:27ch;
+  margin-top:10px;
+  color:#c1c5bf;
+  font-size:.82rem;
+  line-height:1.35;
+}
+.calculator-preview-manifesto{
+  min-width:84px;
+  padding:0 0 18px 11px;
+  color:#d9bd82;
+  font-size:.46rem;
+  line-height:1.75;
+  letter-spacing:.27em;
+}
+.calculator-preview-manifesto i{bottom:18px;background:#d8ad5c}
+
+.calculator-preview-car{
+  min-height:238px;
+  padding:13px 14px;
+  border-radius:20px;
+  background:
+    linear-gradient(180deg,rgba(14,18,14,.58),rgba(8,11,8,.68)),
+    radial-gradient(circle at 68% 56%,rgba(215,173,92,.11),transparent 38%);
+  border-color:rgba(166,255,42,.88);
+  box-shadow:
+    0 0 0 1px rgba(164,255,0,.10),
+    0 0 24px rgba(164,255,0,.18),
+    inset 0 1px 0 rgba(255,255,255,.035);
+  backdrop-filter:blur(9px) saturate(1.06);
+}
+.calculator-preview-car.selected{
+  border-color:#aaff28;
+  box-shadow:
+    0 0 0 1px rgba(164,255,0,.10),
+    0 0 25px rgba(164,255,0,.23),
+    inset 0 1px 0 rgba(255,255,255,.04);
+}
+.calculator-preview-car::before{
+  background:
+    linear-gradient(180deg,rgba(255,255,255,.018),transparent 25%),
+    linear-gradient(90deg,transparent 0 61%,rgba(221,179,96,.045) 61.4%,transparent 62%);
+}
+.calculator-preview-car-check{width:38px;height:38px}
+.calculator-preview-car-title b{font-size:1rem}
+.calculator-preview-car-title small{font-size:.66rem;color:#b6bbb4}
+.calculator-preview-change{
+  min-width:94px;height:42px;justify-content:center;
+  border-color:rgba(224,181,100,.40);
+  background:rgba(24,22,17,.50);
+  color:#eccb88;
+}
+.calculator-preview-car-data{
+  grid-column:1/3;
+  max-width:36%;
+  margin-top:42px;
+  gap:9px;
+  align-items:flex-start;
+}
+.calculator-preview-audi-logo{
+  width:52px;
+  height:30px;
+  object-fit:contain;
+  object-position:left center;
+  filter:grayscale(1) brightness(2.25) contrast(.82);
+  opacity:.95;
+}
+.calculator-preview-car-data>span{gap:3px}
+.calculator-preview-car-data strong{font-size:.92rem}
+.calculator-preview-car-data small{font-size:.64rem;color:#b1b5af}
+.calculator-preview-car-data em{
+  margin-top:4px;
+  font-size:.66rem;
+  padding:4px 8px 4px 13px;
+}
+.calculator-preview-car-image{
+  right:-3%;
+  bottom:-4px;
+  width:71%;
+  height:76%;
+  object-fit:contain;
+  object-position:right bottom;
+  transform:none;
+  opacity:1;
+  filter:drop-shadow(0 18px 12px rgba(0,0,0,.52));
+}
+.calculator-preview-car.selected::after{
+  right:7%;bottom:-3px;width:57%;height:22px;
+  background:rgba(164,255,0,.18);filter:blur(16px);
+}
+
+.calculator-preview-other{
+  min-height:68px;
+  margin-top:8px;
+  padding:9px 13px;
+  border-radius:17px;
+  background:rgba(10,13,10,.64);
+  border-color:rgba(255,255,255,.13);
+  backdrop-filter:blur(8px);
+}
+.calculator-preview-other .radio{width:32px;height:32px}
+.calculator-preview-other>svg{color:#dfb766;width:25px}
+.calculator-preview-other b{font-size:.86rem}
+.calculator-preview-other small{font-size:.61rem;color:#b1b5af}
+
+.calculator-preview-section-title{margin:17px 2px 8px}
+.calculator-preview-section-title>span{font-size:.48rem;letter-spacing:.22em;color:#d5c7a4}
+.calculator-preview-section-title>span::before{width:28px;background:#d8ad5c}
+.calculator-preview-section-title small{font-size:.60rem;color:#d8b670}
+
+.calculator-preview-service-grid{gap:7px}
+.calculator-preview-service-grid>button{
+  min-height:86px;
+  grid-template-columns:34px minmax(0,1fr) 18px;
+  gap:7px;
+  padding:10px 9px;
+  border-radius:15px;
+  background:linear-gradient(145deg,rgba(13,16,13,.84),rgba(8,10,8,.72));
+  border-color:rgba(255,255,255,.11);
+  backdrop-filter:blur(7px);
+}
+.calculator-preview-service-grid>button.selected{
+  border-color:#aaff28;
+  box-shadow:0 0 18px rgba(164,255,0,.16),inset 0 0 0 1px rgba(164,255,0,.16);
+  background:linear-gradient(145deg,rgba(25,40,16,.80),rgba(9,14,9,.76));
+}
+.calculator-preview-service-grid .icon{
+  width:32px;height:32px;
+  color:var(--neon-color);
+}
+.calculator-preview-service-grid .icon svg{
+  width:30px;height:30px;stroke-width:1.8;
+  filter:drop-shadow(0 0 5px rgba(164,255,0,.16));
+}
+.calculator-preview-service-grid .copy{gap:3px;padding-top:0}
+.calculator-preview-service-grid .copy b{font-size:.67rem;line-height:1.08}
+.calculator-preview-service-grid .copy small{font-size:.52rem;line-height:1.28;color:#aeb3ad}
+.calculator-preview-service-grid>button>i svg{width:15px;height:15px}
+.calculator-preview-service-grid>button.selected>i{width:24px;height:24px}
+.calculator-preview-service-grid>button.selected>i svg{width:12px}
+
+.calculator-preview-schedule{
+  min-height:52px;
+  margin-top:8px;
+  padding:8px 11px;
+  border-radius:15px;
+  background:rgba(10,13,10,.72);
+  border-color:rgba(255,255,255,.12);
+  backdrop-filter:blur(7px);
+}
+.calculator-preview-schedule>svg:first-child{width:25px;height:25px;color:#e3b767}
+.calculator-preview-schedule b{font-size:.63rem}
+.calculator-preview-schedule small{font-size:.55rem;color:#aeb3ad}
+
+.calculator-preview-lock{font-size:.51rem;color:#9ba09a;margin:7px 0 8px}
+.calculator-preview-cta{
+  width:min(100% - 32px,500px);
+  min-height:64px;
+  border-radius:16px;
+  margin:0 auto 0;
+  box-shadow:0 0 32px rgba(164,255,0,.22),0 10px 28px rgba(0,0,0,.38);
+}
+.calculator-preview-cta small{font-size:.48rem}
+.calculator-preview-cta b{font-size:.96rem}
+.calculator-preview-cta>button{height:48px;font-size:.90rem}
+
+.calculator-preview-nav{
+  padding-top:6px;
+  background:rgba(4,6,4,.92);
+  border-top-color:rgba(255,255,255,.08);
+  backdrop-filter:blur(16px);
+}
+.calculator-preview-nav button{min-height:49px}
+.calculator-preview-nav button svg{width:20px;height:20px}
+.calculator-preview-nav button span{font-size:.51rem}
+.calculator-preview-nav button.active{color:#aaff28}
+
+@media(max-width:430px){
+  .calculator-preview-main{width:min(100% - 24px,500px)}
+  .calculator-preview-header{padding-inline:14px}
+  .calculator-preview-progress>div i{width:35px;height:35px}
+  .calculator-preview-progress>div span{font-size:.55rem}
+  .calculator-preview-hero{
+    grid-template-columns:minmax(0,1fr) 72px;
+    padding:21px 2px 14px;
+  }
+  .calculator-preview-hero-copy h1{
+    max-width:10ch;
+    font-size:clamp(2rem,9.8vw,2.55rem);
+  }
+  .calculator-preview-hero-copy p{font-size:.78rem}
+  .calculator-preview-manifesto{min-width:70px;font-size:.40rem;letter-spacing:.23em}
+
+  .calculator-preview-car{
+    min-height:224px;
+    padding:12px;
+  }
+  .calculator-preview-car-data{
+    max-width:38%;
+    margin-top:34px;
+  }
+  .calculator-preview-audi-logo{width:46px;height:26px}
+  .calculator-preview-car-image{
+    width:70%;
+    height:74%;
+    right:-4%;
+    bottom:-3px;
+  }
+  .calculator-preview-other{min-height:64px}
+  .calculator-preview-section-title{margin-top:15px}
+  .calculator-preview-service-grid>button{min-height:82px}
+  .calculator-preview-schedule{min-height:50px}
+  .calculator-preview-cta{width:min(100% - 24px,500px);min-height:62px}
+  .calculator-preview-nav button{min-height:47px}
+}
