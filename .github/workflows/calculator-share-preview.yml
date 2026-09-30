@@ -1,0 +1,24 @@
+name: calculator-share-preview
+on:
+  push:
+    branches:
+      - astra/calculator-reference-v2
+jobs:
+  share:
+    runs-on: ubuntu-latest
+    timeout-minutes: 55
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Start local preview
+        run: |
+          nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/vite-preview.log 2>&1 &
+          sleep 2
+          curl -I http://127.0.0.1:4173
+      - name: Open temporary public tunnel
+        run: npx wrangler tunnel quick-start http://127.0.0.1:4173
