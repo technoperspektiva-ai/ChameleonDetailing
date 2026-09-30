@@ -594,3 +594,111 @@
  .calculator-preview-manifesto{display:none}
  .calculator-preview-hero{grid-template-columns:1fr}
 }
+
+/* v3.2 — viewport/layout correction against approved reference */
+.calculator-visual-preview{
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.18),transparent 16%,transparent 84%,rgba(0,0,0,.18)),
+    radial-gradient(circle at 82% 12%,rgba(224,178,89,.14),transparent 18%),
+    radial-gradient(circle at 18% 26%,rgba(164,255,0,.055),transparent 22%),
+    linear-gradient(180deg,#080a08 0%,#080a08 34%,#050705 100%);
+  padding-bottom:0;
+}
+.calculator-preview-main{
+  width:min(100% - 24px,520px);
+  padding-top:12px;
+}
+.calculator-preview-main::before{
+  left:-18vw;right:-18vw;top:20px;height:650px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 8%,
+      rgba(215,171,91,.055) 8% 8.4%,
+      transparent 8.4% 67%,
+      rgba(215,171,91,.038) 67% 67.3%,
+      transparent 67.3% 88%,
+      rgba(215,171,91,.05) 88% 88.35%,
+      transparent 88.35%),
+    radial-gradient(ellipse at 83% 34%,rgba(224,183,103,.12),transparent 16%),
+    radial-gradient(ellipse at 86% 50%,rgba(91,117,44,.10),transparent 17%),
+    linear-gradient(180deg,rgba(10,12,10,.12),rgba(4,5,4,.02));
+}
+.calculator-preview-hero{
+  padding:28px 2px 18px;
+  align-items:center;
+}
+.calculator-preview-hero-copy h1{font-size:clamp(2rem,9.1vw,3.2rem)}
+.calculator-preview-car{
+  min-height:278px;
+  padding:15px;
+  grid-template-columns:40px minmax(0,1fr) auto;
+  background:
+    linear-gradient(180deg,rgba(23,26,21,.86),rgba(8,11,8,.90)),
+    radial-gradient(circle at 78% 65%,rgba(214,171,86,.07),transparent 26%);
+}
+.calculator-preview-car-data{
+  max-width:43%;
+  margin-top:58px;
+}
+.calculator-preview-car-image{
+  right:-3%;
+  bottom:-8px;
+  width:72%;
+  height:72%;
+  object-fit:contain;
+  object-position:right bottom;
+  transform:scale(1.04);
+  filter:drop-shadow(0 20px 14px rgba(0,0,0,.72));
+}
+.calculator-preview-other{
+  min-height:76px;
+  margin-top:10px;
+}
+.calculator-preview-section-title{margin:22px 2px 10px}
+.calculator-preview-service-grid>button{min-height:108px}
+.calculator-preview-schedule{margin-top:10px;min-height:60px}
+.calculator-preview-lock{margin:9px 0 14px}
+
+/* Keep the whole approved composition in normal document flow during browser review.
+   This prevents iOS Safari bars from covering the service cards. */
+.calculator-preview-cta{
+  position:relative;
+  left:auto;
+  bottom:auto;
+  transform:none;
+  width:min(100% - 24px,500px);
+  margin:0 auto 8px;
+}
+.calculator-preview-nav{
+  position:relative;
+  left:auto;
+  bottom:auto;
+  transform:none;
+  width:100%;
+  margin-top:0;
+}
+.calculator-preview-space{display:none}
+
+@media(max-width:390px){
+  .calculator-preview-main{width:min(100% - 18px,520px)}
+  .calculator-preview-hero{grid-template-columns:minmax(0,1fr) 76px;gap:10px}
+  .calculator-preview-manifesto{min-width:68px;font-size:.44rem;line-height:1.7;letter-spacing:.23em;padding-left:9px}
+  .calculator-preview-car{min-height:258px;padding:12px}
+  .calculator-preview-car-title b{font-size:1rem}
+  .calculator-preview-car-title small{font-size:.65rem}
+  .calculator-preview-car-data{max-width:47%;margin-top:46px}
+  .calculator-preview-car-data>.brand-badge{width:40px;height:40px}
+  .calculator-preview-car-data strong{font-size:.92rem}
+  .calculator-preview-car-data small{font-size:.64rem}
+  .calculator-preview-car-data em{font-size:.67rem}
+  .calculator-preview-car-image{width:70%;height:69%;right:-5%;bottom:-5px}
+  .calculator-preview-other{grid-template-columns:34px 28px minmax(0,1fr) 18px;padding:10px 12px}
+  .calculator-preview-section-title>span{font-size:.52rem;letter-spacing:.18em}
+  .calculator-preview-service-grid{gap:8px}
+  .calculator-preview-service-grid>button{min-height:102px;padding:11px 8px}
+  .calculator-preview-service-grid .copy b{font-size:.70rem}
+  .calculator-preview-service-grid .copy small{font-size:.56rem}
+  .calculator-preview-schedule{padding:9px 11px}
+  .calculator-preview-cta{width:min(100% - 18px,500px);min-height:64px}
+  .calculator-preview-nav button{min-height:54px}
+}
