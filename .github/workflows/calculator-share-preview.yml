@@ -3,6 +3,11 @@ on:
   push:
     branches:
       - astra/calculator-reference-v2
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
   share:
     runs-on: ubuntu-latest
@@ -18,7 +23,31 @@ jobs:
       - name: Start local preview
         run: |
           nohup npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/vite-preview.log 2>&1 &
-          sleep 2
-          curl -I http://127.0.0.1:4173
-      - name: Open temporary public tunnel
-        run: npx wrangler tunnel quick-start http://127.0.0.1:4173
+          for i in {1..20}; do
+            if curl -sfI http://127.0.0.1:4173 >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/vite-preview.log
+          exit 1
+      - name: Start temporary public tunnel
+        id: tunnel
+        run: |
+          nohup npx wrangler tunnel quick-start http://127.0.0.1:4173 > /tmp/tunnel.log 2>&1 &
+          for i in {1..40}; do
+            URL=$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' /tmp/tunnel.log | head -n1 || true)
+            if [ -n "$URL" ]; then
+              echo "url=$URL" >> "$GITHUB_OUTPUT"
+              echo "Preview URL: $URL?designPreview=1"
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/tunnel.log
+          exit 1
+      - name: Comment preview URL on PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ steps.tunnel.outputs.url }}
+        run: gh pr comment 3 --body "🔎 Calculator preview: ${PREVIEW_URL}?designPreview=1"
+      - name: Keep preview alive
+        run: sleep 3000
