@@ -702,3 +702,105 @@
   .calculator-preview-cta{width:min(100% - 18px,500px);min-height:64px}
   .calculator-preview-nav button{min-height:54px}
 }
+
+/* v3.3 — iPhone reference pass */
+@media(max-width:430px){
+  .calculator-preview-header{min-height:66px;padding:calc(7px + env(safe-area-inset-top)) 14px 7px}
+  .calculator-preview-header .logo{width:43px;height:43px}
+  .calculator-preview-header .brand b{font-size:.91rem}
+  .calculator-preview-header .brand span{font-size:.46rem}
+  .calculator-preview-lang{width:55px;height:44px}
+
+  .calculator-preview-main{width:min(100% - 30px,510px);padding-top:12px}
+  .calculator-preview-progress{grid-template-columns:auto 24px auto 24px auto;gap:5px}
+  .calculator-preview-progress>div{gap:6px}
+  .calculator-preview-progress>div i{width:35px;height:35px}
+  .calculator-preview-progress>div span{font-size:.56rem;line-height:1.05}
+  .calculator-preview-progress>b{width:24px}
+
+  .calculator-preview-hero{
+    grid-template-columns:minmax(0,1fr) 72px;
+    gap:8px;
+    padding:24px 2px 17px;
+  }
+  .calculator-preview-hero-copy>span{font-size:.52rem;letter-spacing:.25em}
+  .calculator-preview-hero-copy h1{
+    max-width:none;
+    margin-top:8px;
+    font-size:clamp(2.05rem,10.3vw,2.65rem);
+    line-height:.98;
+    letter-spacing:-.05em;
+  }
+  .calculator-preview-hero-copy p{
+    max-width:27ch;
+    margin-top:10px;
+    font-size:.82rem;
+    line-height:1.38;
+  }
+  .calculator-preview-manifesto{
+    min-width:67px;
+    padding:0 0 12px 9px;
+    font-size:.43rem;
+    line-height:1.6;
+    letter-spacing:.22em;
+  }
+  .calculator-preview-manifesto i{bottom:12px}
+
+  .calculator-preview-car{
+    min-height:302px;
+    padding:13px;
+    grid-template-columns:40px minmax(0,1fr) auto;
+    border-radius:21px;
+  }
+  .calculator-preview-car-title b{font-size:1rem}
+  .calculator-preview-car-title small{font-size:.64rem}
+  .calculator-preview-change{height:42px;padding:0 10px;font-size:.66rem}
+  .calculator-preview-car-data{
+    max-width:41%;
+    margin-top:54px;
+    gap:8px;
+    align-items:flex-start;
+  }
+  .calculator-preview-car-data>.brand-badge{width:42px;height:42px}
+  .calculator-preview-car-data strong{font-size:.92rem}
+  .calculator-preview-car-data small{font-size:.63rem}
+  .calculator-preview-car-data em{font-size:.66rem;margin-top:4px}
+  .calculator-preview-car-image{
+    width:72%;
+    height:67%;
+    right:-6%;
+    bottom:-2px;
+    transform:none;
+    object-fit:contain;
+    object-position:right bottom;
+    filter:drop-shadow(0 15px 11px rgba(0,0,0,.62));
+  }
+
+  .calculator-preview-other{min-height:74px;margin-top:9px}
+  .calculator-preview-other b{font-size:.88rem}
+  .calculator-preview-other small{font-size:.64rem}
+
+  .calculator-preview-section-title{margin:20px 2px 9px}
+  .calculator-preview-section-title>span{font-size:.49rem;letter-spacing:.16em}
+  .calculator-preview-section-title small{font-size:.62rem}
+
+  .calculator-preview-service-grid{gap:8px}
+  .calculator-preview-service-grid>button{
+    min-height:108px;
+    grid-template-columns:38px minmax(0,1fr) 17px;
+    padding:11px 9px;
+  }
+  .calculator-preview-service-grid .icon,
+  .calculator-preview-service-grid .icon>.premium-main-service-icon{width:37px!important;height:37px!important}
+  .calculator-preview-service-grid .copy b{font-size:.69rem}
+  .calculator-preview-service-grid .copy small{font-size:.54rem;line-height:1.28}
+  .calculator-preview-service-grid>button>i svg{width:16px;height:16px}
+
+  .calculator-preview-schedule{min-height:58px;margin-top:9px}
+  .calculator-preview-schedule b{font-size:.67rem}
+  .calculator-preview-schedule small{font-size:.59rem}
+
+  .calculator-preview-lock{font-size:.54rem;margin:8px 0 10px}
+  .calculator-preview-cta{width:min(100% - 30px,500px);min-height:66px;border-radius:17px}
+  .calculator-preview-nav button{min-height:53px}
+}
