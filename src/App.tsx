@@ -153,10 +153,10 @@ function CalculatorReferencePreview(){
  const [other,setOther]=useState(false);
  const [selected,setSelected]=useState('full-detailing');
  const serviceCards=[
-  {slug:'full-detailing',title:'Повний детейлінг',sub:'Максимальний комплекс догляду за авто'},
-  {slug:'interior-detailing',title:'Детейлінг інтер’єру',sub:'Глибоке очищення та догляд салону'},
-  {slug:'ceramic-coating',title:'Керамічне покриття',sub:'Захист, глибина кольору та блиск'},
-  {slug:'extras',title:'Додаткові послуги',sub:'Окремі процедури під ваше авто'}
+  {slug:'full-detailing',title:'Повний детейлінг',sub:'Комплексне очищення всередині та зовні',kind:'car'},
+  {slug:'interior-detailing',title:'Детейлінг інтер’єру',sub:'Свіжий, чистий і комфортний салон',kind:'interior'},
+  {slug:'ceramic-coating',title:'Керамічне покриття',sub:'Довготривалий захист та глибокий блиск',kind:'shield'},
+  {slug:'extras',title:'Додаткові послуги',sub:'Окремі процедури для вашого авто',kind:'sparkles'}
  ];
  return <div className="calculator-visual-preview">
   <header className="calculator-preview-header">
@@ -185,10 +185,10 @@ function CalculatorReferencePreview(){
     <span className="calculator-preview-car-title"><b>Моє авто</b><small>Вибрати зі свого автопарку</small></span>
     <span className="calculator-preview-change"><Pencil/>Змінити</span>
     <span className="calculator-preview-car-data">
-      <BrandBadge brand="Audi"/>
+      <img className="calculator-preview-audi-logo" src="/car-brand-icons/audi.png" alt="Audi"/>
       <span><strong>Audi A3</strong><small>Sedan</small><em>HA 7535 NA</em></span>
     </span>
-    <img src="/vehicle-types/sedan.png" alt="" className="calculator-preview-car-image"/>
+    <img src="/preview/audi-a3-premium.webp" alt="Audi A3" className="calculator-preview-car-image"/>
    </button>
 
    <button className={`calculator-preview-other ${other?'selected':''}`} onClick={()=>setOther(true)}>
@@ -199,7 +199,7 @@ function CalculatorReferencePreview(){
    <div className="calculator-preview-section-title"><span>ОБЕРІТЬ НАПРЯМОК ДОГЛЯДУ</span><small>Крок 2 з 3</small></div>
    <div className="calculator-preview-service-grid">
     {serviceCards.map(s=><button key={s.slug} className={selected===s.slug?'selected':''} onClick={()=>setSelected(s.slug)}>
-      <span className="icon">{s.slug==='extras'?<Sparkles/>:<PremiumMainServiceIcon slug={s.slug} label={s.title}/>}</span>
+      <span className="icon">{s.kind==='car'?<Car/>:s.kind==='interior'?<UserRound/>:s.kind==='shield'?<ShieldCheck/>:<Sparkles/>}</span>
       <span className="copy"><b>{s.title}</b><small>{s.sub}</small></span>
       <i>{selected===s.slug?<Check/>:<ChevronRight/>}</i>
     </button>)}
