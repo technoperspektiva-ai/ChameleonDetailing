@@ -67,7 +67,8 @@ const applyTheme=(theme?:Session['theme'])=>{
 };
 
 export function App(){
- const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return v==='calculator'||v==='orders'||v==='cars'?v:'home'},[]);
+ const designPreview=useMemo(()=>new URLSearchParams(location.search).get('designPreview')==='1',[]);
+ const initialTab=useMemo<Tab>(()=>{const v=new URLSearchParams(location.search).get('startapp');return designPreview?'calculator':v==='calculator'||v==='orders'||v==='cars'?v:'home'},[designPreview]);
  const [session,setSession]=useState<Session|null>(null),[services,setServices]=useState<Service[]>([]),[serviceOptions,setServiceOptions]=useState<ServiceOption[]>([]),[content,setContent]=useState<Record<string,string>>({}),[socials,setSocials]=useState<SocialLink[]>([]),[specialists,setSpecialists]=useState<Specialist[]>([]),[cars,setCars]=useState<ClientCar[]>([]),[tab,setTab]=useState<Tab>(initialTab);
  const initialLocale=useMemo(()=>normalizeLocale(localStorage.getItem('chameleon.locale')||telegramLanguage()||navigator.language),[]);
  const [locale,setLocaleState]=useState<Locale>(initialLocale),[currency,setCurrency]=useState('PLN');
@@ -78,7 +79,7 @@ export function App(){
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
  useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor,session?.theme?.seasonalMode,session?.theme?.seasonalTheme]);
- useEffect(()=>{initTelegram();(async()=>{const started=Date.now();try{
+ useEffect(()=>{if(designPreview){setLocale('uk');setCurrency('UAH');setSplash(false);return}initTelegram();(async()=>{const started=Date.now();try{
    setStartup({stage:'AUTH',progress:35,error:''});
    const s=await api.session();
    setStartup({stage:'PROFILE',progress:55,error:''});
@@ -91,14 +92,15 @@ export function App(){
    setServices(sv.services);setServiceOptions(opt.options||[]);setContent(ct.content||{});setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[]);setCars(Array.isArray(cr.cars)?cr.cars:[]);
    setStartup({stage:'READY',progress:100,error:''});
    const elapsed=Date.now()-started;if(elapsed<motion.splashMin)await wait(motion.splashMin-elapsed);await wait(160);setSplash(false);
-  }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}if(raw==='SERVICE_TEMPORARILY_UNAVAILABLE_404'){setServiceUnavailable(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[]);
- useEffect(()=>{if(!session)return;Promise.all([api.services(locale,currency),api.options(locale,currency),api.content(locale)]).then(([x,opt,ct])=>{setServices(x.services);setServiceOptions(opt.options||[]);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session]);
- useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>Promise.all([api.socials(),api.specialists()]).then(([sc,sp])=>{if(stopped)return;setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[])}).catch(()=>{});const timer=setInterval(refresh,30000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
+  }catch(e:unknown){const raw=e instanceof Error?e.message:String(e||'');if(raw==='DIRECT_WEB_DISABLED'){setDirectWebBlocked(true);setSplash(false);return}if(raw==='SERVICE_TEMPORARILY_UNAVAILABLE_404'){setServiceUnavailable(true);setSplash(false);return}setStartup(x=>({...x,error:friendlyError(e,t)}));}})()},[designPreview]);
+ useEffect(()=>{if(designPreview||!session)return;Promise.all([api.services(locale,currency),api.options(locale,currency),api.content(locale)]).then(([x,opt,ct])=>{setServices(x.services);setServiceOptions(opt.options||[]);setContent(ct.content||{})}).catch(()=>{})},[locale,currency,session,designPreview]);
+ useEffect(()=>{if(designPreview||!session)return;let stopped=false;const refresh=()=>Promise.all([api.socials(),api.specialists()]).then(([sc,sp])=>{if(stopped)return;setSocials(Array.isArray(sc.socials)?sc.socials:[]);setSpecialists(Array.isArray(sp.specialists)?sp.specialists:[])}).catch(()=>{});const timer=setInterval(refresh,30000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  // Staff can change opening hours from Telegram while the Mini App is already open.
  // Refresh runtime business state automatically so the closed/open banner follows D1
  // without forcing the client to kill and reopen Telegram.
- useEffect(()=>{if(!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
+ useEffect(()=>{if(designPreview||!session)return;let stopped=false;const refresh=()=>api.session().then(fresh=>{if(stopped)return;setSession(prev=>prev?{...prev,...fresh,user:{...prev.user,...fresh.user}}:fresh)}).catch(()=>{});const timer=setInterval(refresh,15000);const onVisibility=()=>{if(document.visibilityState==='visible')refresh()};document.addEventListener('visibilitychange',onVisibility);return()=>{stopped=true;clearInterval(timer);document.removeEventListener('visibilitychange',onVisibility)}},[!!session]);
  const goto=(x:Tab)=>{haptic();setTab(x);scrollTo({top:0,behavior:'smooth'})};
+ if(designPreview)return <CalculatorReferencePreview/>;
  if(splash)return <StartupSplash locale={locale} startup={startup} onRetry={()=>location.reload()} t={t}/>;
  if(directWebBlocked)return <DirectWebGate locale={locale}/>;
  if(serviceUnavailable||session?.blocked)return <Unavailable404 locale={locale}/>;
@@ -147,6 +149,71 @@ function SpecialistsSection({items,locale}:{items:Specialist[];locale:Locale}){i
 function HomePage({t,services,goto,currency,content,socials,specialists,locale}:any){const [sharing,setSharing]=useState(false);const referralTitle=content?.['referral.title']||t('home.referral'),referralSubtitle=content?.['referral.subtitle']||t('home.referralSubtitle'),referralShare=content?.['referral.share_text']||t('home.referralShare');const invite=async()=>{if(sharing)return;haptic();setSharing(true);try{const r=await api.referral();shareTelegramLink(r.url,referralShare);notify('success')}catch{notify('error')}finally{setSharing(false)}};return <><section className="hero"><div className="hero-copy"><div className="eyebrow">{t('home.eyebrow')}</div><h1>{t('home.hero')}</h1><p>{t('home.subtitle')}</p><button className="primary" onClick={()=>goto('calculator')}><Calculator/> <span>{t('home.calculate')}</span><ChevronRight/></button></div><div className="hero-mascot" aria-hidden="true"><img src="/brand/chameleon-logo.webp" alt=""/></div><div className="hero-badges"><span><ShieldCheck/>{t('home.benefitClean')}</span><span><Droplets/>{t('home.benefitProtection')}</span><span><Gem/>{t('home.benefitPremium')}</span></div></section><section><div className="section-title"><h2>{t('home.popular')}</h2><button onClick={()=>goto('services')}>{t('nav.services')}<ChevronRight/></button></div><div className="service-grid">{services.filter((s:any)=>Boolean(s.isPopular)).slice(0,4).map((s:any)=><article className="service-card" key={s.slug}><ServiceArt service={s}/><div><h3>{s.title}</h3><p>{s.description}</p><b>{t('home.from')} {money(s.basePrice,s.currency||currency)}</b>{s.standardBasePrice!=null&&Number(s.standardBasePrice)!==Number(s.basePrice)&&<small className="vip-price-note">{s.promotion?`🏷 -${s.promotion.percentDiscount}%`:`💎 ${t('vip.activePrice')}`} · <del>{money(s.standardBasePrice,s.currency||currency)}</del></small>}</div></article>)}</div></section><SpecialistsSection items={specialists||[]} locale={locale}/><SocialLinksSection items={socials||[]} locale={locale}/><button className="ref-card referral-button" onClick={invite} disabled={sharing} aria-busy={sharing}><Gift/><div><h3>{referralTitle}</h3><p>{sharing?t('home.referralPreparing'):referralSubtitle}</p></div>{sharing?<Loader2 className="spin"/>:<ChevronRight/>}</button></>}
 function ServicesPage({t,services,goto,currency}:any){return <section><div className="page-head"><span>02</span><div><h1>{t('services.title')}</h1><p>{t('services.subtitle')}</p></div></div><div className="stack">{services.map((s:any)=><article className="list-card" key={s.slug}><ServiceArt service={s} small/><div className="grow"><h3>{s.title}</h3><p>{s.description}</p><b>{t('home.from')} {money(s.basePrice,s.currency||currency)} · {s.durationMin} {t('common.minutes')}</b>{s.standardBasePrice!=null&&Number(s.standardBasePrice)!==Number(s.basePrice)&&<small className="vip-price-note">{s.promotion?`🏷 -${s.promotion.percentDiscount}%`:`💎 ${t('vip.activePrice')}`} · <del>{money(s.standardBasePrice,s.currency||currency)}</del></small>}</div><button className="icon-btn" aria-label={t('home.calculate')} onClick={()=>goto('calculator')}><ChevronRight/></button></article>)}</div></section>}
 const ui3=(locale:Locale,uk:string,pl:string,en:string)=>locale==='uk'?uk:locale==='pl'?pl:en;
+function CalculatorReferencePreview(){
+ const [other,setOther]=useState(false);
+ const [selected,setSelected]=useState('full-detailing');
+ const serviceCards=[
+  {slug:'full-detailing',title:'Повний детейлінг',sub:'Максимальний комплекс догляду за авто'},
+  {slug:'interior-detailing',title:'Детейлінг інтер’єру',sub:'Глибоке очищення та догляд салону'},
+  {slug:'ceramic-coating',title:'Керамічне покриття',sub:'Захист, глибина кольору та блиск'},
+  {slug:'extras',title:'Додаткові послуги',sub:'Окремі процедури під ваше авто'}
+ ];
+ return <div className="calculator-visual-preview">
+  <header className="calculator-preview-header">
+   <div className="brand"><img className="logo" src="/brand/chameleon-logo.webp" alt=""/><div><b>Chameleon Detailing</b><span>МІНІ-ЗАСТОСУНОК</span></div></div>
+   <button className="calculator-preview-lang">UA</button>
+  </header>
+
+  <main className="calculator-preview-main">
+   <div className="calculator-preview-progress">
+    <div className="done"><i><Check/></i><span>Автомобіль</span></div><b className="done"/>
+    <div className="active"><i>2</i><span>Напрямок догляду</span></div><b/>
+    <div><i>3</i><span>Результат</span></div>
+   </div>
+
+   <div className="calculator-preview-hero">
+    <span>ПЕРСОНАЛЬНИЙ ПІДХІД</span>
+    <h1>Розпочнемо з вашого автомобіля</h1>
+    <p>Це допоможе підібрати ідеальні рішення та показати точну ціну.</p>
+   </div>
+
+   <button className={`calculator-preview-car ${!other?'selected':''}`} onClick={()=>setOther(false)}>
+    <span className="calculator-preview-car-check">{!other?<Check/>:null}</span>
+    <span className="calculator-preview-car-title"><b>Моє авто</b><small>Вибрати зі свого автопарку</small></span>
+    <span className="calculator-preview-change"><Pencil/>Змінити</span>
+    <span className="calculator-preview-car-data">
+      <BrandBadge brand="Audi"/>
+      <span><strong>Audi RS7</strong><small>Sportback · Sedan</small><em>KA 7777 MM</em></span>
+    </span>
+    <img src="/miniapp-vehicle-icons/sedan.webp" alt="" className="calculator-preview-car-image"/>
+   </button>
+
+   <button className={`calculator-preview-other ${other?'selected':''}`} onClick={()=>setOther(true)}>
+    <span className="radio">{other?<Check/>:null}</span><Car/>
+    <span><b>Інше авто</b><small>Разове замовлення без збереженого профілю</small></span><ChevronRight/>
+   </button>
+
+   <div className="calculator-preview-section-title"><span>ОБЕРІТЬ НАПРЯМОК ДОГЛЯДУ</span><small>Крок 2 з 3</small></div>
+   <div className="calculator-preview-service-grid">
+    {serviceCards.map(s=><button key={s.slug} className={selected===s.slug?'selected':''} onClick={()=>setSelected(s.slug)}>
+      <span className="icon">{s.slug==='extras'?<Sparkles/>:<PremiumMainServiceIcon slug={s.slug} label={s.title}/>}</span>
+      <span className="copy"><b>{s.title}</b><small>{s.sub}</small></span>
+      <i>{selected===s.slug?<Check/>:<ChevronRight/>}</i>
+    </button>)}
+   </div>
+
+   <div className="calculator-preview-schedule"><Clock3/><span><b>Сьогодні сервіс не працює.</b><small>Найближчий запис: завтра · 09:00</small></span><ChevronRight/></div>
+   <div className="calculator-preview-lock"><ShieldCheck/> Ціна фіксується до підтвердження замовлення</div>
+   <div className="calculator-preview-space"/>
+  </main>
+
+  <div className="calculator-preview-cta"><div><small>ВІД</small><b>9 900 ₴</b></div><i/><button>Продовжити <ChevronRight/></button></div>
+  <nav className="calculator-preview-nav">
+   {[[Home,'Головна'],[Car,'Автопарк'],[Sparkles,'Послуги'],[Calculator,'Калькулятор'],[Crown,'VIP'],[UserRound,'Профіль']].map(([I,label]:any)=><button key={label} className={label==='Калькулятор'?'active':''}><I/><span>{label}</span></button>)}
+  </nav>
+ </div>
+}
+
 function CalculatorPage({t,services,options,currency,schedule,cars,refreshCars,locale,goto,referralReward}:any){
  const [step,setStep]=useState(0),[carMode,setCarMode]=useState<'own'|'other'|''>(''),[selected,setSelected]=useState<string[]>([]),[vehicle,setVehicle]=useState('sedan'),[condition,setCondition]=useState('normal'),[extra,setExtra]=useState<string[]>([]),[quote,setQuote]=useState<any>(null),[busy,setBusy]=useState(false),[sent,setSent]=useState(false),[processing,setProcessing]=useState(false),[status,setStatus]=useState(''),[error,setError]=useState(''),[carId,setCarId]=useState<number|null>(null); const timers=useRef<any[]>([]);const [activeReward,setActiveReward]=useState<any>(referralReward||null);
  useEffect(()=>{setActiveReward(referralReward||null)},[referralReward?.id,referralReward?.type,referralReward?.value,referralReward?.currency,referralReward?.service]);
