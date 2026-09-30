@@ -172,9 +172,12 @@ function CalculatorReferencePreview(){
    </div>
 
    <div className="calculator-preview-hero">
-    <span>ПЕРСОНАЛЬНИЙ ПІДХІД</span>
-    <h1>Розпочнемо з вашого автомобіля</h1>
-    <p>Це допоможе підібрати ідеальні рішення та показати точну ціну.</p>
+    <div className="calculator-preview-hero-copy">
+     <span>ПЕРСОНАЛЬНИЙ ПІДХІД</span>
+     <h1>Розпочнемо з вашого автомобіля</h1>
+     <p>Це допоможе підібрати ідеальні рішення та показати точну ціну.</p>
+    </div>
+    <div className="calculator-preview-manifesto"><i/>БІЛЬШЕ<br/>НІЖ ДЕТЕЙЛІНГ</div>
    </div>
 
    <button className={`calculator-preview-car ${!other?'selected':''}`} onClick={()=>setOther(false)}>
@@ -183,7 +186,7 @@ function CalculatorReferencePreview(){
     <span className="calculator-preview-change"><Pencil/>Змінити</span>
     <span className="calculator-preview-car-data">
       <BrandBadge brand="Audi"/>
-      <span><strong>Audi RS7</strong><small>Sportback · Sedan</small><em>KA 7777 MM</em></span>
+      <span><strong>Audi A3</strong><small>Sedan</small><em>HA 7535 NA</em></span>
     </span>
     <img src="/miniapp-vehicle-icons/sedan.webp" alt="" className="calculator-preview-car-image"/>
    </button>
@@ -203,7 +206,7 @@ function CalculatorReferencePreview(){
    </div>
 
    <div className="calculator-preview-schedule"><Clock3/><span><b>Сьогодні сервіс не працює.</b><small>Найближчий запис: завтра · 09:00</small></span><ChevronRight/></div>
-   <div className="calculator-preview-lock"><ShieldCheck/> Ціна фіксується до підтвердження замовлення</div>
+   <div className="calculator-preview-lock"><ShieldCheck/> Персональна ціна буде зафіксована перед підтвердженням</div>
    <div className="calculator-preview-space"/>
   </main>
 
