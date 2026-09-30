@@ -188,7 +188,7 @@ function CalculatorReferencePreview(){
       <BrandBadge brand="Audi"/>
       <span><strong>Audi A3</strong><small>Sedan</small><em>HA 7535 NA</em></span>
     </span>
-    <img src="/miniapp-vehicle-icons/sedan.webp" alt="" className="calculator-preview-car-image"/>
+    <img src="/vehicle-types/sedan.png" alt="" className="calculator-preview-car-image"/>
    </button>
 
    <button className={`calculator-preview-other ${other?'selected':''}`} onClick={()=>setOther(true)}>
