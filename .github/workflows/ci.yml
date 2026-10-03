@@ -2,7 +2,7 @@ name: core-build
 
 on:
   push:
-    branches: [main]
+    branches: [main, "staging/visual-v2"]
   pull_request:
     branches: [main]
 
