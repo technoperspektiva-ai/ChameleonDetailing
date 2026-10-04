@@ -26,6 +26,14 @@
       "migrations_dir": "database/migrations"
     }
   ],
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_id": "ba923545-0c9e-405d-a65a-cb5bdb7b590c"
+      }
+    ]
+  },
   "triggers": {
     "crons": ["* * * * *"]
   },
