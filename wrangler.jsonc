@@ -16,7 +16,8 @@
     "OWNER_TELEGRAM_ID": "375938798",
     "DEFAULT_LOCALE": "en",
     "DEFAULT_CURRENCY": "PLN",
-    "BUSINESS_TIMEZONE": "Europe/Warsaw"
+    "BUSINESS_TIMEZONE": "Europe/Warsaw",
+    "ENVIRONMENT": "production"
   },
   "d1_databases": [
     {
@@ -27,6 +28,9 @@
     }
   ],
   "previews": {
+    "vars": {
+      "ENVIRONMENT": "staging"
+    },
     "d1_databases": [
       {
         "binding": "DB",
