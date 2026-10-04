@@ -5,16 +5,23 @@ import {handleGoogleSheetsTelegramUpdate,isGoogleSheetsUpdate} from './lib/sheet
 import {telegramWebhookSecret} from './lib/bot';
 
 const VERSION='1.3.0';
+const PROD_HOST='chameleondetailing.black-sci-official.workers.dev';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
-const isStaging=(env:SheetsEnv)=>String(env.ENVIRONMENT||'production').toLowerCase()==='staging';
-const safePreviewEnv=(env:SheetsEnv):SheetsEnv=>isStaging(env)?{
+const isStaging=(env:SheetsEnv,url?:URL)=>{
+ const explicit=String(env.ENVIRONMENT||'').toLowerCase();
+ if(explicit==='staging')return true;
+ if(explicit==='production')return false;
+ return !!url&&url.hostname!==PROD_HOST;
+};
+const safePreviewEnv=(env:SheetsEnv):SheetsEnv=>({
  ...env,
+ ENVIRONMENT:'staging',
  BOT_TOKEN:undefined,
  TELEGRAM_WEBHOOK_SECRET:undefined,
  TELEGRAM_SETUP_KEY:undefined,
  GOOGLE_SHEETS_WEBHOOK_URL:undefined,
  GOOGLE_SHEETS_WEBHOOK_SECRET:undefined,
-}:env;
+});
 
 async function ensureStagingCars(env:SheetsEnv){
  if(!env.DB)throw new Error('Staging D1 is not configured');
@@ -75,8 +82,14 @@ async function stagingCarsApi(request:Request,env:SheetsEnv,url:URL):Promise<Res
 export default {
  async fetch(request:Request,env:SheetsEnv,ctx:ExecutionContext):Promise<Response>{
   const url=new URL(request.url);
-  const staging=isStaging(env);
-  if(url.pathname==='/__version')return json({app:'ChameleonDetailing',version:VERSION,database:staging?'chameleondetailing-staging':'chameleondetailing',environment:staging?'staging':'production',worker:true,googleSheetsAppsScript:true,externalEffectsEnabled:!staging});
+  const staging=isStaging(env,url);
+  if(url.pathname==='/__version')return json({app:'ChameleonDetailing',version:VERSION,database:staging?'chameleondetailing-staging':'chameleondetailing',environment:staging?'staging':'production',worker:true,googleSheetsAppsScript:true,externalEffectsEnabled:!staging,host:url.hostname});
+  if(url.pathname==='/__staging-health'){
+   if(!staging)return json({environment:'production',staging:false},404);
+   await ensureStagingCars(env);
+   const count=await env.DB!.prepare('SELECT COUNT(*) n FROM staging_qa_cars').first<any>();
+   return json({environment:'staging',staging:true,databaseConfigured:!!env.DB,qaCars:Number(count?.n||0),externalEffectsEnabled:false,host:url.hostname});
+  }
 
   if(staging){
    if(url.pathname==='/api/telegram/webhook'&&request.method==='POST')return json({ok:true,accepted:false,staging:true,reason:'Telegram webhook processing is disabled in staging'});
