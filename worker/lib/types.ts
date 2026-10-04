@@ -7,6 +7,7 @@ export interface Env {
  DEFAULT_LOCALE: string;
  DEFAULT_CURRENCY: string;
  BUSINESS_TIMEZONE: string;
+ ENVIRONMENT?: 'production'|'staging'|string;
  BOT_TOKEN?: string;
  TELEGRAM_WEBHOOK_SECRET?: string;
  TELEGRAM_SETUP_KEY?: string;
