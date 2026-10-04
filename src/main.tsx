@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { App } from './App';
 import { DesktopApp } from './DesktopApp';
 import './styles.css';
+import './visual-v2.css';
 
 const isDesktop=location.pathname==='/desktop'||location.pathname.startsWith('/desktop/');
 document.documentElement.classList.toggle('desktop-route',isDesktop);
