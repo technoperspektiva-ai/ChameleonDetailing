@@ -8,6 +8,7 @@
     "build": "npm run check:i18n && tsc -b && vite build && npm run verify:dist",
     "preview": "vite preview",
     "deploy": "npm run build && wrangler deploy",
+    "deploy:staging": "npm run build && wrangler deploy --config wrangler.staging.jsonc",
     "cf:typegen": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "db:migrate:remote": "wrangler d1 migrations apply DB --remote",
