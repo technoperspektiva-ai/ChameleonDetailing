@@ -6,11 +6,30 @@ import {telegramWebhookSecret} from './lib/bot';
 
 const VERSION='1.3.0';
 const json=(data:any,status=200)=>new Response(JSON.stringify(data),{status,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store','x-content-type-options':'nosniff'}});
+const isStaging=(env:SheetsEnv)=>String(env.ENVIRONMENT||'production').toLowerCase()==='staging';
+const safePreviewEnv=(env:SheetsEnv):SheetsEnv=>isStaging(env)?{
+ ...env,
+ BOT_TOKEN:undefined,
+ TELEGRAM_WEBHOOK_SECRET:undefined,
+ TELEGRAM_SETUP_KEY:undefined,
+ GOOGLE_SHEETS_WEBHOOK_URL:undefined,
+ GOOGLE_SHEETS_WEBHOOK_SECRET:undefined,
+}:env;
 
 export default {
  async fetch(request:Request,env:SheetsEnv,ctx:ExecutionContext):Promise<Response>{
   const url=new URL(request.url);
-  if(url.pathname==='/__version')return json({app:'ChameleonDetailing',version:VERSION,database:'chameleondetailing',worker:true,googleSheetsAppsScript:true});
+  const staging=isStaging(env);
+  if(url.pathname==='/__version')return json({app:'ChameleonDetailing',version:VERSION,database:staging?'chameleondetailing-staging':'chameleondetailing',environment:staging?'staging':'production',worker:true,googleSheetsAppsScript:true,externalEffectsEnabled:!staging});
+
+  if(staging){
+   if(url.pathname==='/api/telegram/webhook'&&request.method==='POST')return json({ok:true,accepted:false,staging:true,reason:'Telegram webhook processing is disabled in staging'});
+   if(url.pathname==='/api/telegram/bootstrap'&&request.method==='POST')return json({error:'Disabled in staging'},403);
+   if(url.pathname==='/telegram/fix')return json({error:'Disabled in staging'},403);
+   if(url.pathname==='/api/google-sheets/status')return json({configured:false,staging:true,reason:'Google Sheets integration is disabled in staging'});
+   return (originalApp as any).fetch(request,safePreviewEnv(env),ctx);
+  }
+
   if(url.pathname==='/api/google-sheets/status'&&request.method==='GET'){
    const supplied=url.searchParams.get('key')||'';
    const expected=String(env.TELEGRAM_SETUP_KEY||'');
@@ -42,6 +61,10 @@ export default {
   return (originalApp as any).fetch(request,env,ctx);
  },
  async scheduled(controller:ScheduledController,env:SheetsEnv,ctx:ExecutionContext):Promise<void>{
+  if(isStaging(env)){
+   console.log('Staging scheduled event skipped: external jobs are disabled.');
+   return;
+  }
   if(typeof (originalApp as any).scheduled==='function')await (originalApp as any).scheduled(controller,env,ctx);
   await runGoogleSheetsAutoSync(env).catch(error=>console.error('Google Sheets auto sync failed',error));
  }
