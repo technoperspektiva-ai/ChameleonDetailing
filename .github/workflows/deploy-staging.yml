@@ -1,8 +1,6 @@
 name: deploy-staging
 
 on:
-  push:
-    branches: ["staging/visual-v2"]
   workflow_dispatch:
 
 jobs:
