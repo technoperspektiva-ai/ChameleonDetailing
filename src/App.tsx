@@ -77,6 +77,7 @@ export function App(){
  const cycleLocale=()=>{const i=supportedLocales.indexOf(locale);setLocale(supportedLocales[(i+1)%supportedLocales.length]||'en')};
 
  useEffect(()=>{document.documentElement.lang=locale},[locale]);
+ useEffect(()=>{document.documentElement.classList.toggle('legacy-home',tab==='home');return()=>document.documentElement.classList.remove('legacy-home')},[tab]);
  useEffect(()=>{applyTheme(session?.theme)},[session?.theme?.fontH1,session?.theme?.fontH2,session?.theme?.fontBody,session?.theme?.fontSmall,session?.theme?.neonMode,session?.theme?.neonColor,session?.theme?.seasonalMode,session?.theme?.seasonalTheme]);
  useEffect(()=>{initTelegram();(async()=>{const started=Date.now();try{
    setStartup({stage:'AUTH',progress:35,error:''});
