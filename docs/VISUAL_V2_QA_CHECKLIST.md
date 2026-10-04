@@ -70,3 +70,7 @@ QA tester records:
 - Failed:
 - Blocking defects:
 - Decision: APPROVED / NOT APPROVED
+
+## Staging deploy trigger
+- Triggered after Cloudflare repository secrets were configured on 2026-10-04.
+- This marker belongs only to `staging/visual-v2` and must never be copied to `main`.
